@@ -270,7 +270,7 @@ flujo crítico. Un recorrido completo vale más que veinte pruebas de detalle:
 
 | Caso | Qué recorre |
 | --- | --- |
-| Entrar y salir | Sesión, cookie y `GET /api/auth/me` |
+| Entrar y salir | Sesión, cabecera `Authorization` y `GET /api/auth/me` |
 | Crear un ticket | Alta, numeración y bandeja de Soporte |
 | Escalar y resolver | El escalado, el interno, y que **el principal vuelve a Soporte** |
 | Cerrar y reabrir | Cierre, reapertura y limpieza de fechas |

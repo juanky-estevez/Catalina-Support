@@ -15,12 +15,17 @@ escribe código sin un documento aprobado antes.
 | `propósito-y-alcance.md` | **aprobado** (enmendado) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas |
 | `usuarios-y-permisos.md` | **aprobado** (2 enmiendas) | La matriz papel × acción, los tres caminos de entrada (correo, AD, Keycloak), las reglas de convivencia, la sesión, el ciclo de vida de las cuentas y la cuenta de administrador de fábrica |
 | `flujos.md` | **aprobado** | Los seis recorridos paso a paso (alta, triaje, escalado, trabajo de Desarrollo, cierre y reapertura), con los siete avisos por correo |
+| `usuarios.md` | **propuesta** | El módulo `users`: la tabla de cuentas, los endpoints, las reglas del alta, el cambio de papel, la desactivación y el perfil propio. Tiene 5 decisiones por confirmar en su sección 11 |
 | `interfaz-y-experiencia.md` | **aprobado** | Principios, forma de la aplicación, los cuatro enfoques por papel, la vista doble, el lenguaje visual (Tailwind v4 y 19 componentes propios), los ocho temas, multi-dispositivo y accesibilidad |
 | `ambientes.md` | **aprobado** | El runbook de despliegue, las migraciones, las copias de seguridad y las tres capas de pruebas |
 | `tickets.md` | **aprobado** | Modelo de datos, numeración, transiciones de los dos ciclos de vida, adjuntos y la lista cerrada de módulos y endpoints. Aprobado tras dos repasos, con los seis huecos técnicos ya aplicados |
 
-La documentación **está completa**: siete documentos que cubren qué se construye, cómo se comporta,
-cómo se ve y cómo se despliega. **El código puede empezar** por `auth` (`docs/tickets.md`).
+La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
+comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
+justo antes de implementarlo:
+
+1. `autenticación.md` — el módulo `auth`: sesión, los tres caminos de entrada, contraseñas y enlaces.
+2. `usuarios.md` — el módulo `users` (ya escrito, en propuesta).
 
 ## Convenciones
 

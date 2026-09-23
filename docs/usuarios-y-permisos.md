@@ -18,6 +18,19 @@
 > 3. Se añadió la **sección 8**, la cuenta de administrador de fábrica, que entra escribiendo
 >    `admin` y cuya contraseña viene de `ADMIN_PASSWORD` y se aplica en cada arranque. La sección 4
 >    recoge que es la única cuenta que no se identifica por su correo.
+> 8. Al empezar `docs/autenticación.md`: **la sesión deja de ir en cookie** y pasa a un token en
+>    `localStorage` enviado en la cabecera `Authorization`. Se elige así para que el navegador no
+>    mande nada por su cuenta, a cambio de que un XSS pueda leer el token; las compensaciones y la
+>    regla de no añadir scripts de terceros quedan escritas en la sección 6.
+> 7. Al documentar el módulo de usuarios: el papel `administrador` pasa a **ver los tickets en sólo
+>    lectura**, incluidos los internos, y su cuenta de fábrica no existe como fila.
+> 6. Al documentar el módulo de usuarios: se añadió a la matriz el **cambio de papel** (Administrador),
+>    se quitó la **baja** del ciclo de vida —sólo se desactiva—, y la cuenta de fábrica dejó de ser una
+>    fila: **vive en la configuración**.
+> 5. Al empezar `docs/autenticación.md` se cambió la **duración de la sesión a 10 horas** y se
+>    escribió lo que implica un token sin estado: **la sesión no se puede revocar en el servidor**, así
+>    que cerrar sesión borra el token del navegador pero no lo invalida. La cuenta sí se lee en cada
+>    petición, así que desactivar a alguien **bloquea al instante**.
 > 4. Al repasar `docs/tickets.md` se añadió a la matriz el **reseteo de la contraseña**, que pueden
 >    lanzar **Soporte y los administradores**, y la sección 7 recoge las tres formas de tocar una
 >    contraseña: el alta, el cambio propio y el reseteo (que envía correo y nunca asigna una
@@ -50,8 +63,8 @@ El papel es **uno por cuenta** y no se cambia desde la pantalla: se decide al da
 | Acción | Usuario | Soporte | Desarrollo | Administrador |
 | --- | :---: | :---: | :---: | :---: |
 | Ver sus propios tickets | ✅ | ✅ | ✅ | — |
-| Ver **todos** los tickets principales | — | ✅ | ✅ (sólo lectura, regla 2) | — |
-| Ver los tickets **internos** | — | ✅ | ✅ | — |
+| Ver **todos** los tickets principales | — | ✅ | ✅ (sólo lectura, regla 2) | ✅ (sólo lectura) |
+| Ver los tickets **internos** | — | ✅ | ✅ | ✅ (sólo lectura) |
 | Crear un ticket propio | ✅ | ✅ | ✅ | — |
 | Crear un ticket **en nombre de otro usuario** | — | ✅ | — | — |
 | Comentar en el ticket principal | ✅ (el suyo) | ✅ | — | — |
@@ -67,6 +80,7 @@ El papel es **uno por cuenta** y no se cambia desde la pantalla: se decide al da
 | Dar de alta un usuario | — | ✅ (sólo rol `usuario`) | — | ✅ (cualquier rol) |
 | Desactivar o reactivar una cuenta | — | ✅ | — | ✅ |
 | Cambiar el **origen** de una cuenta | — | — | — | ✅ |
+| Cambiar el **papel** de una cuenta | — | — | — | ✅ |
 | Configurar el **prefijo** de la numeración de tickets | — | — | — | ✅ |
 | **Resetear la contraseña** de un usuario | — | ✅ | — | ✅ |
 
@@ -130,14 +144,34 @@ Son las que evitan que la misma persona acabe con dos cuentas, o sin ninguna.
 
 ## 6. La sesión
 
-- **Cookie `httpOnly`, `Secure` y `SameSite=Lax`** con un token firmado dentro (JWT). No se guarda
-  nada en `localStorage`: es la lección del proyecto hermano Calibyou, donde el token en
-  `localStorage` quedó registrado como hallazgo de seguridad.
-- **Duración de 8 horas**, sin renovación deslizante: se entra una vez por jornada. Es lo simple, y
-  lo que evita ventanas de sesión abiertas para siempre.
-- **Cerrar sesión borra la cookie** en el servidor.
-- Las peticiones que **escriben** comprueban además el `Origin`: la cookie viaja sola y conviene
-  asegurarse de quién la manda.
+- **El token viaja en una cabecera `Authorization: Bearer …`**, no en una cookie. El frontend lo
+  guarda y lo adjunta en cada petición con un interceptor; **el navegador no manda nada por su
+  cuenta**, que es lo que se buscaba: todo lo que viaja, viaja porque nuestro código lo pone.
+- **Dónde se guarda: `localStorage`.** Es una decisión **consciente y contraria** a la del proyecto
+  hermano Calibyou, donde el token en `localStorage` quedó registrado como hallazgo de seguridad
+  porque **un fallo de XSS puede leerlo**. Se acepta a cambio de no tener nada automático en el
+  navegador, y se compensa con lo que ya está decidido: política de seguridad estricta en producción
+  (sin scripts en línea ni de terceros), ningún contenido de usuario se pinta como HTML —los
+  comentarios son texto y Angular los escapa— y los `svg` se fuerzan a descarga.
+- **La regla que va con eso**: **no se añaden scripts de terceros a la aplicación**. Cualquier
+  script que se cargue puede leer el token; una analítica, un chat de soporte o una fuente con
+  JavaScript abrirían por la puerta lo que acabamos de aceptar por la ventana.
+- **Duración de 10 horas**, sin renovación deslizante: se entra una vez y aguanta la jornada larga.
+  Es lo simple, y lo que evita ventanas de sesión abiertas para siempre.
+- **Dentro del token va el identificador de quien ha entrado**, y nada más: **la cuenta se lee de la
+  base en cada petición**, que es lo que permite saber su papel y si sigue activa. Cuesta una
+  consulta indexada por petición y a cambio **desactivar y cambiar de papel surten efecto al
+  instante**.
+- **Cerrar sesión borra el token del navegador**, y con eso basta porque **el token no se puede
+  revocar en el servidor**: si alguien se hubiera copiado el token, le seguiría sirviendo hasta que
+  caduque. Es el precio de no tener una tabla de sesiones, y está escrito aquí para que nadie lo dé
+  por hecho.
+- **El interceptor lee el token en cada petición**, no lo guarda en memoria: así, cerrar sesión en
+  una pestaña deja sin sesión a las demás en cuanto vuelvan a pedir algo, en vez de dejarlas
+  trabajando con una sesión que ya no existe.
+- **No hay nada que proteger contra CSRF**: una petición de otro sitio no puede poner la cabecera
+  `Authorization`, porque no tiene el token. Es la ventaja del token explícito, y por eso desaparece
+  la comprobación de `Origin` que se había previsto.
 - El secreto de firma es una **variable de entorno** (`TOKEN_SECRET`), nunca un valor en el código ni
   en git. **El único ajuste que se cambia desde la aplicación es el prefijo de la numeración de los
   tickets**, y lo cambia un Administrador (está en la matriz y en `docs/tickets.md`, sección 2.2).
@@ -176,25 +210,32 @@ y al resto de la gente.
 | **Identificador** | `admin`. Constante en el código: no es variable de entorno, porque nunca cambia |
 | **Contraseña** | La variable de entorno `ADMIN_PASSWORD` |
 | **Papel** | `administrador` |
-| **Correo** | **Ninguno.** Es la única cuenta sin él, y da igual: no atiende tickets y no necesita avisos |
-| **Quién la crea** | El arranque del backend, no la migración |
+| **Correo** | **Ninguno.** Es la única cuenta a la que no se le exige, y da igual: no necesita avisos |
+| **Dónde vive** | **En la configuración, no en la base de datos**: no hay ninguna fila que crear |
 
 Detalles que importan:
 
 - **En desarrollo** la contraseña vale `admin`, y está en `config/env/dev.env`, que se versiona con
   el resto de credenciales del contenedor local.
+- **No existe como fila**: es la única cuenta que no está en la tabla de cuentas. Se entra con ella
+  porque la aplicación reconoce `admin` y **compara la contraseña con la variable de entorno**, no con
+  nada guardado en la base.
 - **En producción es obligatoria**: el backend **no arranca** sin `ADMIN_PASSWORD`, y su valor vive
   sólo en `config/env/prod.env`, que no se versiona. **La contraseña de producción no se escribe en
   esta documentación**, que va al repositorio.
 - **No le aplica la política de contraseñas** de la sección 7: es una credencial de fábrica, y
   exigirle doce caracteres impediría arrancar en desarrollo.
-- **La contraseña se aplica en cada arranque.** Si alguien la cambia desde la aplicación, el
-  siguiente arranque la devuelve a la de la variable. Es a propósito: cambiar la contraseña del
-  administrador es cambiar la variable y reiniciar, y así **nunca se pierde el acceso a la
-  instalación**. Su camino de recuperación es ese, porque no tiene correo con el que pedirla.
-- **No se crea desde la migración** sino desde el arranque: `v1.0.0.sql` no puede leer variables de
-  entorno, y el esquema pertenece a la migración mientras que esto es un dato de arranque.
-- **Es la única cuenta que se siembra.** Todo lo demás lo da de alta una persona.
+- **La contraseña sólo se cambia en la configuración.** No se puede cambiar desde la aplicación
+  —no hay dónde guardarla— ni recuperar por correo —no tiene—. Cambiarla es editar la variable y
+  reiniciar, y así **nunca se pierde el acceso a la instalación**. Nada de «he olvidado la
+  contraseña del administrador».
+- **No la siembra nadie**: no hay nada que sembrar. El resto de cuentas las da de alta una persona,
+  y esta existe desde antes del primer arranque.
+- **Al no ser una fila, no puede aparecer en un ticket** como autor, solicitante ni responsable: los
+  tickets apuntan a cuentas que existen. Su trabajo es dejar el sistema en marcha, no atender.
+- **Ve todo en sólo lectura**, tickets incluidos: puede comprobar qué está pasando, pero no comentar,
+  ni mover estados, ni asignar. El papel `administrador` es el más alto en **configuración**
+  (usuarios, numeración y apariencia) y **sólo lectura** en todo lo demás.
 
 ## 9. Ciclo de vida de una cuenta
 
@@ -203,9 +244,11 @@ Detalles que importan:
 | **Alta** | Administrador o Soporte desde la aplicación (Soporte sólo con rol `usuario`), o automática en el primer acceso por AD o Keycloak. La cuenta de fábrica (sección 8) es la excepción: existe desde el primer arranque |
 | **Primer acceso** | Por enlace del correo si es local; directa si viene del directorio |
 | **Cambio de correo** | Lo cambia un Administrador. Si la cuenta es de directorio, manda el directorio |
-| **Desactivación** | La hacen Administrador o Soporte. Bloquea de verdad en cuentas `local`; en cuentas de directorio, no (regla 6) |
+| **Desactivación** | La hacen Administrador o Soporte. Bloquea **al instante**: la cuenta se comprueba en cada petición, así que la siguiente que haga ya no vale. En cuentas de directorio no bloquea si allí sigue activa (regla 6) |
 | **Reactivación** | Automática si el directorio dice que está activa; explícita (Administrador o Soporte) en cuentas `local` |
-| **Baja** | Borrado lógico (`deleted_at`), nunca físico: los tickets tienen que seguir siendo legibles |
+
+Por eso la tabla de cuentas **no lleva `deleted_at`**: sería una columna que nadie usaría.
+| **Baja** | **No existe**: no hay acción de dar de baja. Una cuenta desactivada sigue siendo legible por los tickets que tenga, y con eso basta |
 
 ## 10. Dónde se comprueba el permiso
 

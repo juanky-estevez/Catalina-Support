@@ -354,30 +354,11 @@ Los dos tipos de ticket viven en **un solo módulo** (`tickets`): son la misma c
 maneras, y separarlos obligaría a que dos módulos compartieran tablas, que es justo lo que la regla
 de modularidad prohíbe.
 
-### `auth`
+### De `auth` y de `users`, en su sitio
 
-| Método y ruta | Qué hace | Quién |
-| --- | --- | --- |
-| `POST /api/auth/login` | Entra. Acepta **correo o usuario** (por la cuenta de fábrica `admin`). Resuelve el origen: `local` valida en la base, `ad` contra el directorio | Cualquiera |
-| `GET /api/auth/keycloak/start` | Empieza el acceso por Keycloak (OIDC) | Cualquiera |
-| `GET /api/auth/keycloak/callback` | Vuelve de Keycloak, vincula o crea la cuenta y abre sesión | Keycloak |
-| `POST /api/auth/logout` | Cierra sesión y borra la cookie | Autenticado |
-| `GET /api/auth/me` | Quién soy: papel, nombre y correo | Autenticado |
-| `POST /api/auth/password/forgot` | Pide el correo de recuperación | Cualquiera |
-| `POST /api/auth/password/reset` | Establece la contraseña con el enlace | Cualquiera con enlace válido |
-| `POST /api/auth/password/change` | Cambia la contraseña **estando dentro**. Sólo cuentas `local`: con AD o Keycloak la gestiona el dominio | Autenticado |
-
-### `users`
-
-| Método y ruta | Qué hace | Quién |
-| --- | --- | --- |
-| `GET /api/users` | Lista de usuarios (nombre y correo) | Soporte y Administrador |
-| `POST /api/users` | Alta. Acepta `origin`; si es de directorio, valida que exista antes de crear | Soporte (sólo `usuario`) y Administrador |
-| `GET /api/users/{id}` | Detalle de una cuenta | Administrador |
-| `POST /api/users/{id}/deactivate` | Desactiva | Soporte y Administrador |
-| `POST /api/users/{id}/activate` | Reactiva | Soporte y Administrador |
-| `POST /api/users/{id}/origin` | Cambia el origen de la cuenta | Administrador |
-| `POST /api/users/{id}/reset-password` | Lanza un reseteo: el usuario recibe el correo de recuperación. Nadie ve ni asigna la contraseña | Soporte y Administrador |
+Los endpoints de esos dos módulos **no se listan aquí**: cada uno los detalla en su documento
+(`docs/autenticación.md` y `docs/usuarios.md`), y esta sección se queda con los de `tickets`. Una
+lista por módulo, y ninguna repetida: dos listas del mismo contrato acaban diciendo cosas distintas.
 
 ### `tickets`
 
@@ -408,8 +389,11 @@ de modularidad prohíbe.
 - **El prefijo vive en el módulo `tickets`**, no en `users`: es la numeración de los tickets, y así
   la pantalla que lo cambia está en el módulo de tickets del frontend y la regla de modularidad no
   se rompe. La ve sólo un Administrador.
-- Las listas van paginadas. El formato de error es el único de la API (`{"error": "..."}`), ya
-  definido en `shared/httpx`.
+- Las listas van paginadas. El formato de error es el único de la API: **`{"error": "clave"}`**, con
+  una **clave** y no un texto montado, definido en `shared/httpx`. El frontend decide cómo se dice y
+  en qué idioma, porque la interfaz está en español y en inglés
+  (`docs/interfaz-y-experiencia.md`). Es el mismo criterio que en Calibyou, donde los errores viajan
+  como `reception.documents.template.unknownField`.
 
 ## 6. La migración
 
