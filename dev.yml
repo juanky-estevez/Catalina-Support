@@ -1,0 +1,75 @@
+name: catalina-support-dev
+
+# Desarrollo: los tres servicios con el código montado como volumen, de modo que se
+# edita en la máquina y el contenedor recarga (Angular con su servidor de desarrollo,
+# Go con air). No hace falta Go ni Node instalados en la máquina.
+#
+#   docker compose -f dev.yml up -d
+#   docker compose -f dev.yml logs -f backend
+#   docker compose -f dev.yml exec backend go test ./...
+#
+# Los puertos publicados son 11001-11003 (no los 10001-10004 de Calibyou) para que los
+# dos proyectos puedan estar levantados a la vez, y sólo se publican en 127.0.0.1.
+
+services:
+  frontend:
+    restart: always
+    container_name: catalina_support_dev_frontend
+    build:
+      context: .
+      dockerfile: config/dockerfiles/frontend.Dockerfile
+    # Los hosts admitidos por el servidor de desarrollo están en angular.json
+    # (serve.options.allowedHosts): el CLI no acepta la lista por línea de comandos y, sin
+    # ella, el servidor de Angular rechaza con 403 el Host del dominio de desarrollo.
+    command: ["npm", "start", "--", "--host", "0.0.0.0", "--port", "11001"]
+    ports:
+      - 127.0.0.1:11001:11001
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+  backend:
+    restart: always
+    container_name: catalina_support_dev_backend
+    build:
+      context: .
+      dockerfile: config/dockerfiles/backend.Dockerfile
+    env_file:
+      - ./config/env/dev.env
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:11002:11002
+    volumes:
+      - ./backend:/app
+      - ./_logs:/logs
+      - ./_files:/files
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
+
+  database:
+    image: postgres:18-alpine
+    container_name: catalina_support_dev_database
+    restart: always
+    env_file:
+      - ./config/env/dev.env
+    ports:
+      - 127.0.0.1:11003:11003
+    volumes:
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -p 11003"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  frontend_node_modules:
+    name: catalina_support_dev_frontend_node_modules
+  backend_go_mod:
+    name: catalina_support_dev_backend_go_mod
+  backend_go_build:
+    name: catalina_support_dev_backend_go_build
+  database:
+    name: catalina_support_dev_database

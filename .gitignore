@@ -1,0 +1,24 @@
+# Dependencias y artefactos de Node/Angular
+node_modules/
+dist/
+.angular/
+
+# Artefactos de Go
+backend/server
+backend/tmp/
+
+# Logs de go-logs: la carpeta se versiona, los archivos no
+_logs/*
+!_logs/.gitkeep
+
+# Adjuntos de los tickets: la carpeta se versiona, los archivos no
+_files/*
+!_files/.gitkeep
+
+# Credenciales: el env de producción nunca se versiona (sólo el ejemplo)
+config/env/prod.env
+
+# Varios
+*.log
+tmp/
+.DS_Store
