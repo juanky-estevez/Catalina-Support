@@ -1,0 +1,25 @@
+# Configuración de air (recarga en desarrollo). Sólo se usa dentro del contenedor de
+# desarrollo: en producción se ejecuta el binario compilado.
+#
+#   air -c .air.toml
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# El binario se compila dentro del contenedor; el código entra por volumen.
+cmd = "go build -o ./tmp/server ."
+# "bin" está en desuso en air: la clave vigente es "entrypoint".
+entrypoint = ["./tmp/server"]
+include_ext = ["go"]
+exclude_dir = ["tmp", "migrations"]
+delay = 500
+stop_on_error = true
+send_interrupt = true
+kill_delay = "1s"
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

@@ -1,0 +1,114 @@
+name: catalina-support-prod
+
+# Producción, con la misma forma que Calibyou: contenedores "finos" (el runtime vive en
+# imágenes base y el código son artefactos construidos) y los builders bajo el perfil
+# "build", que NO se levantan con "up".
+#
+#   docker compose -f prod.yml --profile build run --rm builder_backend
+#   docker compose -f prod.yml --profile build run --rm builder_frontend
+#   docker compose -f prod.yml up -d
+#
+# PENDIENTE: los puertos 21001-21003, el dominio, el TLS y las rutas de artefactos
+# (/srv/catalina-support) tienen que confirmarse en docs/ambientes.md antes del
+# primer despliegue. Este archivo todavía no se ha probado en un servidor.
+#
+# El despliegue a producción está APLAZADO hasta cerrar la versión 1.0.0 (decisión del
+# responsable, 2026-09-22): durante el desarrollo sólo se trabaja contra el entorno de
+# desarrollo (dev.yml). El vhost y el certificado de producción ya están puestos, así que hoy
+# https://support.example.com responde 503 con un aviso de que está en desarrollo.
+
+services:
+  frontend:
+    restart: always
+    container_name: catalina_support_prod_frontend
+    image: nginx:1.27-alpine
+    ports:
+      - 127.0.0.1:21001:21001
+    volumes:
+      - /srv/catalina-support/frontend:/usr/share/nginx/html:ro
+      - ./config/nginx/frontend.prod.conf:/etc/nginx/conf.d/default.conf:ro
+
+  backend:
+    restart: always
+    container_name: catalina_support_prod_backend
+    build:
+      context: .
+      dockerfile: config/dockerfiles/prod_backend_runtime.Dockerfile
+    image: catalina-support-prod-backend-runtime
+    env_file:
+      - ./config/env/prod.env
+    working_dir: /app
+    command: ["/app/catalina-support"]
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:21002:21002
+    volumes:
+      - /srv/catalina-support/backend:/app:ro
+      - /srv/catalina-support/_logs:/logs
+      - /srv/catalina-support/_files:/files
+
+  database:
+    image: postgres:18-alpine
+    container_name: catalina_support_prod_database
+    restart: always
+    env_file:
+      - ./config/env/prod.env
+    ports:
+      - 127.0.0.1:21003:21003
+    volumes:
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -p 21003"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  builder_frontend:
+    profiles: ["build"]
+    container_name: catalina_support_prod_builder_frontend
+    build:
+      context: .
+      dockerfile: config/dockerfiles/prod_frontend_builder.Dockerfile
+    volumes:
+      - /srv/catalina-support/frontend:/out
+    # Angular publica en dist/<proyecto>/browser. Sin "rm -rf /out/*": se copia encima
+    # de lo existente para que nginx no sirva un 404 entre el bundle nuevo y el index
+    # nuevo; los assets con hash del build anterior se podan después de copiar.
+    command:
+      - sh
+      - -lc
+      - |
+        set -eu
+        cp -r /frontend/dist/catalina-support/browser/. /out/
+        cd /out
+        for f in assets/*; do [ -e "/frontend/dist/catalina-support/browser/$$f" ] || rm -f "$$f"; done
+        echo "--- artefacto frontend ---"
+        ls -la /out
+
+  builder_backend:
+    profiles: ["build"]
+    container_name: catalina_support_prod_builder_backend
+    build:
+      context: .
+      dockerfile: config/dockerfiles/prod_backend_builder.Dockerfile
+    volumes:
+      - /srv/catalina-support/backend:/out
+    # mv (rename) en vez de cp sobre el binario en ejecución: evita ETXTBSY y deja el
+    # proceso actual corriendo sobre el inodo viejo hasta el restart.
+    command:
+      - sh
+      - -lc
+      - |
+        set -eu
+        rm -f /out/catalina-support.new
+        cp /build/catalina-support /out/catalina-support.new
+        chmod 755 /out/catalina-support.new
+        mv -f /out/catalina-support.new /out/catalina-support
+        echo "--- artefacto backend ---"
+        ls -la /out
+
+volumes:
+  database:
+    name: catalina_support_prod_database
