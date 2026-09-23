@@ -4,7 +4,11 @@
 > **Última actualización:** 2026-09-22
 >
 > Aprobado por el responsable el 2026-09-22, tras repasarlo en forma de preguntas mientras se
-> escribía. Fija los principios (intuitivo antes que bonito), la forma de la aplicación, la
+> escribía.
+>
+> **Enmendado el mismo día**, al documentar el módulo de usuarios: **no hay barra superior** —el menú
+> lateral lleva el producto, las opciones del papel y, abajo y separados, los controles (perfil, tema
+> y salir)— y el papel `administrador` **ve los tickets en sólo lectura**. Fija los principios (intuitivo antes que bonito), la forma de la aplicación, la
 > experiencia de los cuatro papeles, la vista doble principal/interno, el lenguaje visual con
 > **Tailwind v4 y componentes propios**, los ocho temas y lo que se espera en cada dispositivo.
 >
@@ -44,32 +48,42 @@ El orden importa: cuando dos choquen, gana el de más arriba.
 ### 3.1 El armazón
 
 ```text
-┌───────────────────────────────────────────────────────────┐
-│  cabecera: producto · papel · sesión                      │
-├───────────┬───────────────────────────────────────────────┤
-│  menú     │  contenido                                    │
-│  lateral  │                                               │
+┌───────────┬───────────────────────────────────────────────┐
+│  producto │                                               │
 │           │                                               │
+│  opciones │  contenido                                    │
+│  del papel│                                               │
+│           │                                               │
+│  ───────  │                                               │
+│  controles│                                               │
 └───────────┴───────────────────────────────────────────────┘
 ```
 
-- **Menú lateral** en PC, plegable; se pliega solo en tablet y desaparece en móvil, donde vive en un
-  botón de la cabecera. Ya está previsto en el armazón que existe hoy (`frontend/src/app/core`).
-- El menú **sólo enseña lo que el papel puede usar**: cuatro entradas como mucho.
-- La cabecera lleva el nombre del producto, quién eres, **el selector de tema** (sección 6.2) y el
-  botón de salir. Nada más.
+- **No hay barra superior.** El menú lateral lo lleva todo, y el contenido gana todo el ancho: en
+  una mesa de ayuda la pantalla se llena de listas, conversaciones y adjuntos, y una franja
+  superior es espacio que se le quita a lo que importa.
+- **El menú lateral tiene tres zonas**, separadas visualmente:
+  1. **Arriba**: el producto. Es lo único que no se mueve.
+  2. **En medio**: las **opciones del papel** (sección 3.2). Es lo que cambia de una persona a otra.
+  3. **Abajo, separado por una línea**: los **controles**, que son los mismos para todos —**tu
+     nombre (y tu perfil)**, el **selector de tema** y **salir**—. Es el mismo reparto que usa
+     Calibyou, y evita mezclar «lo que hago aquí» con «quién soy».
+- En PC el menú se puede **plegar** y queda una tira de iconos; en tablet se pliega solo.
+- **En móvil sí hay una tira superior mínima**, con el botón de menú y el nombre del producto: sin
+  ella no habría dónde poner el disparador. Todo lo demás vive en el menú, que se abre como cajón.
 
 ### 3.2 Las entradas del menú, por papel
 
-| Papel | Menú |
+| Papel | Opciones del menú |
 | --- | --- |
 | **Usuario** | Mis tickets · Nuevo ticket |
 | **Soporte** | Bandeja · Usuarios |
 | **Desarrollo** | Mi bandeja |
-| **Administrador** | Usuarios · Numeración · Apariencia |
+| **Administrador** | Bandeja (sólo lectura) · Usuarios · Configuración |
 
-Cuatro entradas como máximo en el caso más cargado. Si algún papel llegara a necesitar más, es señal
-de que algo se ha complicado en otro sitio.
+Cuatro entradas como máximo en el caso más cargado, y **los controles no cuentan**: el perfil, el
+tema y salir van abajo y son iguales para todos. Si algún papel llegara a necesitar más opciones, es
+señal de que algo se ha complicado en otro sitio.
 
 ### 3.3 Las bandejas
 
@@ -179,14 +193,24 @@ que dejar eso claro.
 
 Su trabajo es de una vez al principio, no de todos los días.
 
+- **La primera vez, aterriza en la puesta en marcha**: una pantalla que agrupa el **idioma de la
+  instalación**, la **apariencia** (tema y color primario) y el **prefijo de numeración**, para
+  dejarlo listo de una vez en lugar de ir a buscarlo por tres sitios. Después entra donde quiere, y
+  esa misma pantalla sigue en el menú como **Configuración**.
 - **Al entrar**: la lista de usuarios, que es lo que va a tocar.
 - **Usuarios**: alta (con el rol y el origen), desactivar, reactivar, cambiar el origen y **lanzar un
   reseteo de contraseña**. Toda acción sensible dice lo que va a pasar antes de hacerlo.
 - **Numeración**: el prefijo, con un aviso de que **no cambia los números ya emitidos** — es la
   duda que cualquiera tiene antes de tocarlo.
-- **Apariencia**: el tema y el color primario de la instalación, con una **vista previa antes de
-  guardar**. Cambiar el color institucional no puede ser a ciegas.
-- **Lo que no ve**: tickets. Ni bandeja ni detalle: no atiende.
+- **Configuración**: el idioma de la instalación, la apariencia (con **vista previa antes de
+  guardar**: cambiar el color institucional no puede ser a ciegas) y el prefijo de numeración, con el
+  aviso de que **no cambia los números ya emitidos**. Esta pantalla vive en `core`, como la sesión:
+  es configuración de la instalación y no de un módulo, y **es la segunda excepción** a la regla de
+  que un módulo del frontend sólo llama a su módulo del backend. El prefijo sigue perteneciendo al
+  módulo `tickets` en el backend.
+- **Ve todo, sin tocar nada**: puede mirar cualquier ticket —también los internos y la vista
+  doble— pero **no comenta, no mueve estados, no asigna y no cierra**. Es el precio de ser el papel
+  que lo puede todo en configuración: donde no trabaja, mira.
 
 ## 5. La vista doble: principal e interno
 
@@ -289,7 +313,7 @@ Lo que hay que construir, y nada más:
 `tabla` (con orden y paginación) · `tarjeta` (la lista en móvil) · `diálogo` · `menú` ·
 `conmutador segmentado` (la vista doble y los filtros) · `subida de archivos` con arrastrar y soltar ·
 `adjunto` (con vista previa) · `comentario` (con marcas de editado y eliminado) · `aviso` (éxito,
-error, información) · `estado vacío` · `indicador de carga` · `menú lateral` · `cabecera`.
+error, información) · `estado vacío` · `indicador de carga` · `menú lateral` (con sus tres zonas) · `barra de móvil`.
 
 Diecinueve piezas. Cada una se construye **una vez**, con sus estados (normal, hover, foco,
 deshabilitado, cargando) y su comportamiento de teclado.
@@ -323,7 +347,9 @@ completas. Tablet y móvil tienen que **funcionar de verdad**, no ser una promes
 - **Nunca sólo color** para decir algo: el estado lleva su texto y los avisos llevan su icono.
 - **Etiquetas de verdad** en los campos, no textos de ejemplo que desaparecen al escribir.
 - **Los errores dicen qué pasó y qué hacer**, en el idioma de quien los lee. Un «Error 422» no es un
-  mensaje.
+  mensaje. El backend manda una **clave** (`auth.invalidCredentials`) y la interfaz la traduce: por eso
+  no basta con tener un diccionario de pantallas —**cada clave de error necesita su texto en los dos
+  idiomas**, y una clave sin texto es un error sin mensaje.
 - **Los diálogos cierran con Escape** y no roban el foco sin devolverlo.
 - **Los adjuntos se anuncian** con su nombre y su tamaño antes de descargarlos.
 

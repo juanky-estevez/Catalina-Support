@@ -44,6 +44,32 @@ Cabecera mínima (obligatoria en todos los documentos de `docs/`):
 Si al leer un documento se detecta que ya no coincide con el código (o con la realidad), se
 **reporta como hallazgo** en la propuesta; no se corrige en silencio.
 
+### Cómo se decide antes de escribir: preguntas
+
+Un documento no se escribe de una vez: se escribe **después de acordar lo que va dentro**. Este es el
+procedimiento, y es el que ha funcionado en este proyecto:
+
+1. **Preguntar antes de escribir.** Cada decisión que cambie el diseño se lleva al responsable como
+   una **pregunta con opciones**, no como un párrafo ya redactado. Cada opción dice qué se gana y qué
+   se pierde, y **la recomendada va primera y marcada como tal**.
+2. **Preguntas cortas y en tandas**: de tres a cinco por vez, numeradas, y que se entiendan sin abrir
+   ningún archivo. Una pregunta que obliga a leer dos documentos para contestarla está mal hecha.
+3. **Nada se da por decidido hasta que lo dice el responsable.** Lo que propone el agente es
+   **propuesta**, y va marcado como propuesta también cuando parece evidente.
+4. **El responsable corrige, no sólo elige.** Puede cambiar una opción, mezclarlas o decir otra cosa.
+   Cuando corrige, se aplica lo que dice y se anota **que corrigió** en el registro del documento.
+5. **Los hallazgos se reportan antes de tocar nada.** Si al escribir aparece que un documento
+   aprobado no cuadra —una regla que falta, una fila que no existe, un límite que no se puede
+   cumplir—, se cuenta primero y se propone la enmienda. La enmienda se anota en la cabecera del
+   documento afectado, con la fecha.
+6. **Repaso en modo preguntas antes de cerrar.** Antes de aprobar un documento se repasa preguntando
+   por lo que puede faltar, no releyéndolo en silencio. Ahí han aparecido los huecos de verdad: el
+   aviso que faltaba, la fila que no estaba en la matriz, el límite de subida de nginx y la
+   «devolución a Soporte» que un documento prometía y otro no tenía por dónde hacer.
+7. **Al cerrar no queda nada abierto.** Lo decidido se mueve al cuerpo del documento; el registro
+   del repaso se queda como memoria de **por qué** está así; y la sección de decisiones abiertas
+   desaparece. Un documento aprobado con decisiones pendientes es una contradicción.
+
 ### Qué no requiere el ciclo completo
 
 No necesitan aprobación previa, aunque si afectan a un documento lo actualizan en el mismo
@@ -64,6 +90,7 @@ completo.
 | `docs/flujos.md` | Todavía no cubre código: los recorridos paso a paso de los tickets y sus correos. Se implementará con el módulo `tickets` y su parte del frontend |
 | `docs/ambientes.md` | Todavía no cubre código: el despliegue, las migraciones, las copias y las pruebas. Se implementará con `scripts/prod-build.sh` y `tests/e2e/` |
 | `docs/interfaz-y-experiencia.md` | Todavía no cubre código: la estructura de pantallas, el lenguaje visual y la experiencia de los cuatro papeles. Se implementará con `frontend/src/app/core` y los módulos del frontend |
+| `docs/usuarios.md` | Todavía no cubre código: el módulo `users`, su tabla de cuentas y sus endpoints. Se implementará junto con `auth` |
 | `docs/arquitectura.md` | La forma del repositorio entero: `backend/**`, `frontend/**`, contenedores (`dev.yml`, `prod.yml`, `config/**`), esquema y migraciones, convenciones de módulo y logs. |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
@@ -104,11 +131,13 @@ El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 - `docs/flujos.md` (aprobado): los recorridos paso a paso y sus correos.
 - `docs/ambientes.md` (aprobado): despliegue, migraciones y pruebas.
 - `docs/interfaz-y-experiencia.md` (aprobado): la parte visual y de experiencia.
+- `docs/usuarios.md` (propuesta): el módulo de usuarios.
 - `docs/README.md`: índice de documentación.
 
-La cadena de documentación **está completa**: no hay más documentos previstos, y lo que falte se
-decide en el documento del área que corresponda. **El código puede empezar**: `auth`, `users` y
-`tickets`, en ese orden (`docs/tickets.md`).
+La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo
+antes de implementarlo: `docs/usuarios.md` (propuesta) y `docs/autenticación.md`, que es el
+siguiente. Después, `auth` y `users` se implementan juntos. **El código puede empezar** por ahí
+(`docs/tickets.md`).
 
 ## Estructura de Carpetas
 
@@ -197,11 +226,12 @@ nginx, que parecería una web rota), y es lo decidido.
   (`v1.0.0.sql`, `v1.1.0.sql`…), transaccional e idempotente, aplicado con
   `psql -v ON_ERROR_STOP=1` en orden hasta la versión publicada. Nunca `AutoMigrate` ni un `ALTER`
   a mano (`docs/ambientes.md`, sección 5).
-- **Cuenta de fábrica**: el usuario `admin` (papel `administrador`) lo siembra el **arranque** del
-  backend desde `ADMIN_PASSWORD`, que en producción es obligatoria y **se aplica en cada arranque**.
-  Es la única cuenta sin correo y la única que no sigue la política de contraseñas. El valor de
-  producción vive sólo en `config/env/prod.env` y **nunca se escribe en la documentación ni en el
-  código** (`docs/usuarios-y-permisos.md`, sección 8).
+- **Cuenta de fábrica**: el usuario `admin` (papel `administrador`) **no está en la base de datos**:
+  vive en la configuración y su contraseña es `ADMIN_PASSWORD`, obligatoria en producción y
+  comprobada en cada entrada. Es la única cuenta sin correo, la única que no sigue la política de
+  contraseñas y la única que no aparece en los tickets. El valor de producción vive sólo en
+  `config/env/prod.env` y **nunca se escribe en la documentación ni en el código**
+  (`docs/usuarios-y-permisos.md`, sección 8).
 - **Angular moderno**: componentes standalone sin `NgModule`, señales, `@if`/`@for`, rutas
   perezosas por módulo y un único servicio por módulo que centraliza las llamadas HTTP. Los
   componentes no usan `HttpClient` directamente.
@@ -211,6 +241,14 @@ nginx, que parecería una web rota), y es lo decidido.
   temas** (variables CSS), nunca escritos a mano dentro de un componente. La **accesibilidad**
   —contraste, teclado, foco visible— es requisito y se comprueba al construir cada componente, no al
   final.
+- **La sesión viaja en una cabecera `Authorization: Bearer …`**, con el token en `localStorage`: el
+  navegador no manda nada por su cuenta. Va con **una regla que no se puede saltar: no se añaden
+  scripts de terceros** (analíticas, chats, fuentes con JavaScript), porque cualquiera de ellos puede
+  leer el token. Y como contrapartida, no hay CSRF que proteger
+  (`docs/usuarios-y-permisos.md`, sección 6).
+- **Los errores viajan como claves**, no como texto: el backend responde `{"error": "modulo.clave"}` y
+  el frontend lo traduce al idioma de quien lee. Cada clave nueva necesita su texto en español y en
+  inglés en el mismo cambio, o la pantalla enseñará una clave.
 - **La interfaz no enseña jerga interna**: el usuario nunca ve el ticket interno ni la palabra
   `escalado`, y las acciones se llaman por lo que hacen («Preguntar al usuario», «No es un cambio de
   código») y no por el estado al que llevan.

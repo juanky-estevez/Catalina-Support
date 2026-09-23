@@ -130,8 +130,9 @@ Se mantiene el estilo ya usado en el proyecto hermano Calibyou (`modules/<m>/con
 
 Hoy el repositorio tiene `main.go`, `.air.toml` y `shared/{config,database,httpx,middleware}`.
 `modules/` y `migrations/` **todavía no existen**: nacen con el primer módulo documentado
-(sección 13). `shared/httpx` se añadió al crear el esqueleto para que la forma de las respuestas
-HTTP tenga un solo dueño desde el principio.
+(sección 13). `shared/httpx` se añadió al crear el esqueleto para que la forma de las respuestas HTTP
+tenga un solo dueño desde el principio: hoy escribe `{"error": "clave"}`, con una **clave** que el
+frontend traduce al idioma de quien lee (`docs/interfaz-y-experiencia.md`).
 
 ### `net/http` sin framework
 
