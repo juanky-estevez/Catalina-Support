@@ -306,6 +306,19 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- correos y de la vuelta de Keycloak. Vacía es «no configurada», y entonces se usa la variable de
     -- entorno (docs/modules/settings.md, decisión 14).
     public_app_url text       NOT NULL DEFAULT '',
+    -- **El sello de instalación**: nulo mientras nadie haya terminado el asistente de primer arranque.
+    -- Es lo que hace que la vista de instalación se enseñe **sólo** en una instalación sin configurar y
+    -- que su API rechace configurarla dos veces (docs/primer-arranque.md, sección 2).
+    installed_at  timestamptz,
+    -- **El correo saliente** (docs/primer-arranque.md, sección 5): pasa a vivir aquí, como el directorio
+    -- y Keycloak, y la variable de entorno queda de respaldo. La contraseña **no sale nunca por la API**.
+    smtp_host      text NOT NULL DEFAULT '',
+    smtp_port      text NOT NULL DEFAULT '',
+    smtp_secure    boolean NOT NULL DEFAULT false,
+    smtp_user      text NOT NULL DEFAULT '',
+    smtp_password  text NOT NULL DEFAULT '',
+    smtp_from_name  text NOT NULL DEFAULT '',
+    smtp_from_email text NOT NULL DEFAULT '',
     language      text        NOT NULL DEFAULT 'es',
     primary_color text        NOT NULL DEFAULT '#1d4ed8',
     -- El NOMBRE del archivo del logo, no el archivo: vive en el disco, en _files/brand.
@@ -427,6 +440,36 @@ ALTER TABLE installation_settings
 ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS public_app_url text NOT NULL DEFAULT '';
 
+-- **El sello de instalación, con su relleno, y en un solo bloque**: hay que saber si la columna
+-- **acaba de nacer**, porque sólo entonces las filas que ya existían estaban configuradas y se sellan.
+-- Así queda bien en los tres casos (docs/primer-arranque.md, sección 2):
+--   · base **recién creada**: la columna nace y **la fila todavía no existe** —se inserta al final del
+--     archivo—, así que no se sella nada y la instalación queda **sin instalar**;
+--   · base **que ya existía** (producción): la columna nace y **su fila se sella**, así que el asistente
+--     no aparece por actualizar;
+--   · archivo aplicado **otra vez**: la columna ya está y **no se toca ningún sello**.
+DO $$
+DECLARE
+    columna_nueva boolean := NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'installation_settings' AND column_name = 'installed_at');
+BEGIN
+    IF columna_nueva THEN
+        ALTER TABLE installation_settings ADD COLUMN installed_at timestamptz;
+        UPDATE installation_settings SET installed_at = COALESCE(updated_at, now()) WHERE id = 1;
+    END IF;
+END
+$$;
+
+ALTER TABLE installation_settings
+    ADD COLUMN IF NOT EXISTS smtp_host text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS smtp_port text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS smtp_secure boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS smtp_user text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS smtp_password text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS smtp_from_name text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS smtp_from_email text NOT NULL DEFAULT '';
+
 -- Las restricciones se quitan y se vuelven a poner: no hay `ADD CONSTRAINT IF NOT EXISTS`, y quitarla
 -- antes es lo que hace que se pueda aplicar el archivo dos veces.
 ALTER TABLE installation_settings DROP CONSTRAINT IF EXISTS installation_settings_name_check;
@@ -452,6 +495,12 @@ COMMENT ON COLUMN installation_settings.entry_method IS
 
 COMMENT ON COLUMN installation_settings.time_zone IS
     'La zona horaria de la instalación (nombre IANA). Decide cómo se leen las fechas; las guardadas siguen en UTC.';
+
+COMMENT ON COLUMN installation_settings.installed_at IS
+    'Cuándo se terminó el asistente de primer arranque. Nulo es «sin instalar»: sólo entonces se enseña la vista de instalación.';
+
+COMMENT ON COLUMN installation_settings.smtp_host IS
+    'El servidor de correo saliente. Vacío usa SMTP_HOST del entorno.';
 
 COMMENT ON COLUMN installation_settings.public_app_url IS
     'La dirección pública: base de los enlaces de los correos y de la vuelta de Keycloak. Vacío usa PUBLIC_APP_URL.';

@@ -459,6 +459,53 @@ configuración ni en `PUBLIC_APP_URL`, que queda de respaldo— el enlace **fall
 sesión viajan sin cifrar. **No bloquea nada** —lo eligió así el responsable—, porque la instalación
 tiene que poder probarse en local; el aviso sale en Configuración y no en la pantalla de entrada.
 
+### 5.11 El orden de la pantalla
+
+**Cada tarjeta lleva lo que su título dice** (decisión del responsable, 2026-09-30). La pantalla tenía
+dos incoherencias que se veían al usarla: **«La numeración y el reparto» sólo tenía dentro el idioma
+de la instalación**, y **«Región horaria y dirección pública» tenía dentro el prefijo y todo el
+reparto**. Se ordenó así, de lo que la instalación **es** a cómo **entra**, **trabaja** y **avisa**:
+
+| # | Tarjeta | Qué lleva |
+| --- | --- | --- |
+| 1 | **La instalación** | El nombre y **el idioma** —las dos cosas son *qué es* esta instalación, y el idioma es el de las cuentas nuevas y el de los correos—. Un botón: **Guardar la instalación** |
+| 2 | **La marca** | **El logo y el color institucional**, que son la identidad de la institución y estaban en dos tarjetas sin motivo. El logo se guarda al subirlo; el botón **Guardar la marca** es para el color |
+| 3 | **Método de autenticación** | El método y sus dos configuraciones, con sus pruebas de conexión (sección 5.8) |
+| 4 | **La numeración y el reparto** | El prefijo y el reparto de los dos tipos de ticket (sección 5.8) |
+| 5 | **Región horaria y dirección pública** | La zona horaria y la dirección (sección 5.10) |
+| 6 | **Los correos** | El enlace al editor, que es del módulo `mail` |
+
+**El tope está en una prueba de interfaz**: mira los títulos en orden y comprueba que el nombre y el
+idioma están juntos, que el logo y el color están juntos, que el prefijo y el reparto están en la
+numeración y que la región no lleva la numeración dentro. Es lo que impide que se vuelva a
+descolocar al añadir un campo.
+
+### 5.12 El sello de instalación, y el asistente de primer arranque
+
+**La instalación se configura antes de tener puerta, y se hace una sola vez**
+(`docs/primer-arranque.md`). Lo que lo sostiene es **un sello**: `installation_settings.installed_at`,
+**nulo** mientras nadie haya terminado el asistente.
+
+- **Nulo es «sin instalar»**: la aplicación lleva a `/setup` y la API acepta configurar.
+- **Puesto es «instalada»**: `/setup` lleva a la entrada y **toda** la API del asistente contesta
+  **409** `setup.alreadyInstalled`. Eso es lo que impide reescribir la configuración de una instalación
+  en marcha, y es la única escritura de la aplicación **sin una cuenta detrás**: lo que la protege no es
+  un permiso, es el sello.
+- **El sello se pone al terminar** y se guarda con `installed_at = now()`.
+- **Y no aparece en producción por actualizar**: el relleno de la migración sella las filas que ya
+  existían, y sólo lo hace la primera vez que la columna nace (ver el bloque del relleno en
+  `v1.0.0.sql`).
+
+**Los cuatro pasos** guardan de uno en uno —la instalación, cómo se entra, dónde está y el correo—, y
+cada uno valida **sólo lo suyo**, porque el resto todavía no está puesto. El estado que devuelven
+—`GET /api/setup` y las respuestas de cada paso— es lo que permite **seguir donde se dejó**, y **no
+lleva ningún secreto**: de las contraseñas dice sólo si hay una puesta.
+
+**El correo saliente vive en esta tabla** (sección 5 del documento del asistente) y el módulo `mail` lo
+lee en cada envío a través de la interfaz que él declara. **No hay respaldo en el entorno**: las
+variables `SMTP_*` se retiraron, como se retiraron las del directorio y Keycloak (corrección del
+responsable, 2026-09-30).
+
 ## 6. Los endpoints
 
 | Método y ruta | Qué hace | Quién |

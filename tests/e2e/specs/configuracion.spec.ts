@@ -24,13 +24,13 @@ async function partirDelNombreDeFabrica(page: Page): Promise<void> {
   // directorio, y sin `exact` el localizador encuentra los dos.
   await page.getByLabel('Nombre', { exact: true }).fill('');
 
-  const guardar = page.getByRole('button', { name: 'Guardar el nombre' });
+  const guardar = page.getByRole('button', { name: 'Guardar la instalación' });
   if (!(await guardar.isEnabled())) {
     return;
   }
 
   await guardar.click();
-  await expect(page.getByText('Nombre guardado. Ya se ve en toda la aplicación.')).toBeVisible();
+  await expect(page.getByText('La instalación se ha guardado.')).toBeVisible();
 }
 
 /**
@@ -50,23 +50,24 @@ test.describe('Configuración', () => {
   });
 
   test('enseña el nombre, la marca y el color institucional', async ({ page }) => {
-    // El nombre de la instalación, que es lo que se lee en toda la aplicación.
-    await expect(page.getByRole('heading', { name: 'El nombre de la instalación' })).toBeVisible();
+    // La instalación: el nombre, que es lo que se lee en toda la aplicación, y **el idioma**, que va
+    // con él desde el 2026-09-30.
+    await expect(page.getByRole('heading', { name: 'La instalación' })).toBeVisible();
     await expect(page.getByLabel('Nombre', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('El idioma de la instalación')).toBeVisible();
 
     // La marca: los dos huecos, cada uno con su campo de archivo etiquetado.
-    await expect(page.getByRole('heading', { name: 'El logo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'La marca' })).toBeVisible();
     await expect(page.getByText('Logo para los temas claros')).toBeVisible();
     await expect(page.getByText('Logo para los temas oscuros')).toBeVisible();
     await expect(page.getByLabel('Elegir un archivo')).toHaveCount(2);
 
-    // El color, con su color elegido y la vista previa.
-    await expect(page.getByRole('heading', { name: 'El color institucional' })).toBeVisible();
+    // **El color va dentro de la marca** desde el 2026-09-30: son la misma cosa, la identidad de la
+    // institución, y estaban en dos tarjetas sin motivo.
+    await expect(page.getByLabel('Color', { exact: true })).toBeVisible();
     await expect(page.getByText('Vista previa')).toBeVisible();
 
-    // Y se dice lo que todavía no está, para que nadie lo busque.
-    // El prefijo y el reparto **ya están aquí**, con su aviso: lo que falta es el idioma de la
-    // instalación y el editor de los correos.
+    // Y lo que sí tiene su tarjeta, con su aviso: el prefijo y el reparto.
     await expect(page.getByRole('heading', { name: 'La numeración y el reparto' })).toBeVisible();
     await expect(page.getByLabel('Prefijo de los números')).toBeVisible();
     await expect(page.getByText(/no cambia los números ya emitidos/)).toBeVisible();
@@ -133,9 +134,9 @@ test.describe('Configuración', () => {
     expect(oscuro).toBe('#ffff00');
 
     // Y los botones de guardar y descartar sólo están cuando hay algo que guardar.
-    await expect(page.getByRole('button', { name: 'Guardar el color' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Guardar la marca' })).toBeVisible();
     await page.getByRole('button', { name: 'Descartar' }).click();
-    await expect(page.getByRole('button', { name: 'Guardar el color' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Guardar la marca' })).toHaveCount(0);
   });
 
   /**
@@ -151,8 +152,8 @@ test.describe('Configuración', () => {
 
     await page.getByLabel('Nombre', { exact: true }).fill('Mesa de ayuda de Acme');
 
-    await page.getByRole('button', { name: 'Guardar el nombre' }).click();
-    await expect(page.getByText('Nombre guardado. Ya se ve en toda la aplicación.')).toBeVisible();
+    await page.getByRole('button', { name: 'Guardar la instalación' }).click();
+    await expect(page.getByText('La instalación se ha guardado.')).toBeVisible();
 
     // En el menú lateral, que es donde se lee junto al logo.
     await expect(page.getByRole('complementary').getByText('Mesa de ayuda de Acme')).toBeVisible();
@@ -334,5 +335,45 @@ test.describe('Configuración', () => {
       headers: { Authorization: `Bearer ${peticion}` },
       data: { ...antes, publicAppUrl: 'https://dev.catalina-support.example.com' },
     });
+  });
+  test('las tarjetas de Configuración están en su orden y cada cosa en la suya', async ({ page }) => {
+    // **La pantalla se ordenó el 2026-09-30** (decisión del responsable): cada tarjeta lleva lo que su
+    // título dice. Antes, «La numeración y el reparto» tenía dentro el idioma, y el prefijo y el reparto
+    // vivían en «Región horaria y dirección pública». Esta prueba es el tope que impide que se vuelva a
+    // descolocar: mira los títulos en orden y dónde está cada campo.
+    await entrarComo(page, FABRICA.email, FABRICA.password);
+    await page.goto('/settings');
+
+    const tarjetas = page.locator('app-tarjeta');
+    await expect(tarjetas).toHaveCount(6);
+
+    // Los títulos, en orden: de lo que la instalación **es** a cómo se entra, cómo trabaja y cómo avisa.
+    for (const [i, titulo] of [
+      'La instalación',
+      'La marca',
+      'Método de autenticación',
+      'La numeración y el reparto',
+      'Región horaria y dirección pública',
+      'Los correos',
+    ].entries()) {
+      await expect(tarjetas.nth(i).getByRole('heading').first()).toHaveText(titulo);
+    }
+
+    // **El nombre y el idioma, juntos**: los dos son lo que la instalación es.
+    await expect(tarjetas.nth(0).getByLabel('Nombre')).toBeVisible();
+    await expect(tarjetas.nth(0).getByLabel('El idioma de la instalación')).toBeVisible();
+
+    // **El logo y el color, juntos**: los dos son la marca.
+    await expect(tarjetas.nth(1).locator('input[type="color"]')).toBeVisible();
+    await expect(tarjetas.nth(1).getByText('Logo para los temas claros')).toBeVisible();
+
+    // **El prefijo y el reparto, en la numeración**, que es lo que dice su título.
+    await expect(tarjetas.nth(3).getByLabel('Prefijo de los números')).toBeVisible();
+    await expect(tarjetas.nth(3).getByLabel('Reparto').first()).toBeVisible();
+
+    // **Y la región y la dirección van juntas**, sin la numeración dentro.
+    await expect(tarjetas.nth(4).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
+    await expect(tarjetas.nth(4).getByLabel('Dirección pública')).toBeVisible();
+    await expect(tarjetas.nth(4).getByLabel('Prefijo de los números')).toHaveCount(0);
   });
 });

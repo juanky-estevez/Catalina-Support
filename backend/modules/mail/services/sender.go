@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/smtp"
 	"time"
-
-	"catalina-support/backend/shared/config"
 )
 
 // ErrNotConfigured se devuelve cuando falta la configuración de SMTP. Es un error propio y no un
@@ -26,26 +24,39 @@ type Sender struct {
 	fromEmail string
 	secure    bool
 	timeout   time.Duration
+	// instalacion da el correo saliente: **vive en la configuración**, como el directorio y Keycloak.
+	// Ya no hay respaldo en el entorno (decisión del responsable, 2026-09-30).
+	instalacion Instalacion
 }
 
 // NewSender construye el remitente a partir de la configuración del entorno.
-func NewSender(cfg config.Config) *Sender {
-	return &Sender{
-		host:      cfg.SMTPHost,
-		port:      cfg.SMTPPort,
-		user:      cfg.SMTPUser,
-		password:  cfg.SMTPPassword,
-		fromName:  cfg.SMTPFromName,
-		fromEmail: cfg.SMTPFromEmail,
-		secure:    cfg.SMTPSecure,
-		timeout:   15 * time.Second,
+func NewSender() *Sender {
+	return &Sender{timeout: 15 * time.Second}
+}
+
+// SetInstalacion fija de dónde sale el correo saliente cuando la instalación tiene uno puesto. Lo
+// llama el servicio, y el respaldo es lo del entorno.
+func (s *Sender) SetInstalacion(instalacion Instalacion) { s.instalacion = instalacion }
+
+// datos es el correo saliente de este envío: **el de la configuración**, que es donde vive. Sin él no
+// hay con qué enviar, y el envío falla con su error claro en lugar de intentar una conexión a ninguna
+// parte (docs/primer-arranque.md, sección 5).
+func (s *Sender) datos() CorreoSaliente {
+	if s.instalacion == nil {
+		return CorreoSaliente{}
 	}
+
+	correo, _ := s.instalacion.SMTP()
+
+	return correo
 }
 
 // Configured dice si hay con qué enviar. Sin esto, el envío falla con un error claro en lugar de
 // intentar una conexión a ninguna parte.
 func (s *Sender) Configured() bool {
-	return s.host != "" && s.port != "" && s.fromEmail != ""
+	correo := s.datos()
+
+	return correo.Host != "" && correo.Port != "" && correo.FromEmail != ""
 }
 
 // Send arma el mensaje y lo entrega.
@@ -60,52 +71,54 @@ func (s *Sender) Send(to []string, subject, htmlBody string) error {
 		return errors.New("mail.to.empty")
 	}
 
-	message, err := Build(s.fromName, s.fromEmail, to, subject, htmlBody)
+	correo := s.datos()
+
+	message, err := Build(correo.FromName, correo.FromEmail, to, subject, htmlBody)
 	if err != nil {
 		return err
 	}
 
-	address := net.JoinHostPort(s.host, s.port)
+	address := net.JoinHostPort(correo.Host, correo.Port)
 
 	// Conexión cifrada desde el principio (el puerto 465 de siempre).
-	if s.secure {
-		return s.sendSecure(address, to, message)
+	if correo.Secure {
+		return s.sendSecure(address, to, message, correo)
 	}
 
 	// Sin cifrado explícito se usa el camino de la biblioteca estándar, que negocia STARTTLS si el
 	// servidor lo ofrece.
 	var auth smtp.Auth
-	if s.user != "" {
-		auth = smtp.PlainAuth("", s.user, s.password, s.host)
+	if correo.User != "" {
+		auth = smtp.PlainAuth("", correo.User, correo.Password, correo.Host)
 	}
 
-	return smtp.SendMail(address, auth, s.fromEmail, to, message)
+	return smtp.SendMail(address, auth, correo.FromEmail, to, message)
 }
 
-func (s *Sender) sendSecure(address string, to []string, message []byte) error {
+func (s *Sender) sendSecure(address string, to []string, message []byte, correo CorreoSaliente) error {
 	connection, err := tls.DialWithDialer(
 		&net.Dialer{Timeout: s.timeout},
 		"tcp",
 		address,
-		&tls.Config{ServerName: s.host, MinVersion: tls.VersionTLS12},
+		&tls.Config{ServerName: correo.Host, MinVersion: tls.VersionTLS12},
 	)
 	if err != nil {
 		return fmt.Errorf("mail.smtp.connect: %w", err)
 	}
 
-	client, err := smtp.NewClient(connection, s.host)
+	client, err := smtp.NewClient(connection, correo.Host)
 	if err != nil {
 		return fmt.Errorf("mail.smtp.handshake: %w", err)
 	}
 	defer client.Close()
 
-	if s.user != "" {
-		if err := client.Auth(smtp.PlainAuth("", s.user, s.password, s.host)); err != nil {
+	if correo.User != "" {
+		if err := client.Auth(smtp.PlainAuth("", correo.User, correo.Password, correo.Host)); err != nil {
 			return fmt.Errorf("mail.smtp.auth: %w", err)
 		}
 	}
 
-	if err := client.Mail(s.fromEmail); err != nil {
+	if err := client.Mail(correo.FromEmail); err != nil {
 		return fmt.Errorf("mail.smtp.from: %w", err)
 	}
 	for _, recipient := range to {

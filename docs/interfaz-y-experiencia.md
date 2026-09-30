@@ -3,6 +3,13 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-09-27
 >
+> **Enmendado el 2026-09-30 (novena vez)**: **las tarjetas de Configuración se ordenaron y cada una
+> lleva lo que su título dice**. Estaban descolocadas desde el cambio anterior: «La numeración y el
+> reparto» tenía dentro sólo el idioma, y el prefijo y el reparto vivían en «Región horaria y dirección
+> pública». Ahora son seis, en este orden: **La instalación** (nombre e idioma) · **La marca** (logo y
+> color) · **Método de autenticación** · **La numeración y el reparto** · **Región horaria y dirección
+> pública** · **Los correos** (`docs/modules/settings.md`, sección 5.11).
+>
 > **Enmendado el 2026-09-29 (octava vez)**: en **Configuración** entran **la región de la instalación** y
 > **la dirección pública** (decisiones 13 a 15 de `docs/modules/settings.md`). La región se elige de una
 > **lista de zonas con buscador** y la pantalla enseña **la hora que es en ella y su desfase**; la

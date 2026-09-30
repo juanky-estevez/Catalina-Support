@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Controles } from '../components/controles';
 import { Logo } from '../components/logo';
@@ -71,6 +71,15 @@ import { Tarjeta } from '../../shared/components/tarjeta';
 
             @if (mensajeError(); as error) {
               <app-aviso forma="error" [texto]="error" />
+            }
+
+            <!--
+              Quien llega aquí desde /setup con la instalación ya terminada tiene que saber por qué
+              no ve el asistente, en vez de encontrarse la entrada sin explicación
+              (docs/primer-arranque.md, sección 6).
+            -->
+            @if (yaInstalada()) {
+              <app-aviso forma="informacion" [texto]="t().instalacion.terminada" />
             }
 
             @if (sesionCaducada()) {
@@ -160,6 +169,7 @@ export class LoginPage implements OnInit {
   private readonly sesion = inject(SessionService);
   private readonly marca = inject(BrandService);
   private readonly router = inject(Router);
+  private readonly ruta = inject(ActivatedRoute);
 
   protected readonly email = signal('');
   protected readonly password = signal('');
@@ -167,6 +177,14 @@ export class LoginPage implements OnInit {
   protected readonly mensajeError = signal('');
   protected readonly sesionCaducada = this.sesion.sesionCaducada;
   protected readonly caminos = this.sesion.caminos;
+
+  /**
+   * Si se ha llegado aquí **desde `/setup` con la instalación ya terminada**.
+   *
+   * Lo pone la guarda del primer arranque con `?installed=1`: es lo que explica por qué esta
+   * instalación no vuelve a enseñar el asistente (`docs/primer-arranque.md`, sección 6).
+   */
+  protected readonly yaInstalada = signal(false);
 
   /**
    * Si se ha pedido la puerta de la cuenta de fábrica.
@@ -211,6 +229,10 @@ export class LoginPage implements OnInit {
    * enseñar el formulario ahí es pedir dos veces lo mismo.
    */
   async ngOnInit(): Promise<void> {
+    // Quien llega desde `/setup` con la instalación ya sellada trae la marca en la dirección: se lee
+    // aquí y se le cuenta, en vez de dejarle delante de la entrada sin saber qué ha pasado.
+    this.yaInstalada.set(this.ruta.snapshot.queryParamMap.get('installed') === '1');
+
     // La vuelta de Keycloak llega aquí, con lo que haya pasado **en el fragmento**: el token si se ha
     // entrado, y la clave del fallo si no. Se lee antes que nada y se borra de la dirección en el
     // mismo momento, para que no quede en el historial ni al recargar (decisiones 13 y 30).

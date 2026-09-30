@@ -22,6 +22,22 @@ import (
 type Instalacion interface {
 	DireccionPublica() string
 	ZonaHoraria() string
+	// SMTP es **el correo saliente configurado en la instalación**. El segundo valor dice si hay
+	// alguno puesto: en falso, el remitente usa el del entorno, que es como funcionaba antes
+	// (docs/primer-arranque.md, sección 5).
+	SMTP() (CorreoSaliente, bool)
+}
+
+// CorreoSaliente es el correo saliente tal y como lo necesita el remitente. Lo declara este
+// módulo y lo cumple el módulo de configuración, traducido por el cableado.
+type CorreoSaliente struct {
+	Host      string
+	Port      string
+	Secure    bool
+	User      string
+	Password  string
+	FromName  string
+	FromEmail string
 }
 
 type Service struct {
@@ -40,7 +56,14 @@ func NewService(repo *repositories.TemplateRepository, sender *Sender, publicApp
 
 // SetInstalacion fija de dónde salen la dirección pública y la zona horaria. Lo llama el cableado,
 // con el módulo de configuración: así este módulo no sabe quién se las da (docs/arquitectura.md, 4).
-func (s *Service) SetInstalacion(instalacion Instalacion) { s.instalacion = instalacion }
+func (s *Service) SetInstalacion(instalacion Instalacion) {
+	s.instalacion = instalacion
+	// **El remitente resuelve en cada envío**, así que se le da el mismo proveedor: cambiarlo en la
+	// pantalla vale sin reiniciar nada (docs/primer-arranque.md, sección 5).
+	if s.sender != nil {
+		s.sender.SetInstalacion(instalacion)
+	}
+}
 
 // baseDeLosEnlaces es la dirección pública: **la de la configuración** y, si no hay, la del entorno.
 func (s *Service) baseDeLosEnlaces() string {

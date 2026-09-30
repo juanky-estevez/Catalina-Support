@@ -185,7 +185,7 @@ func run() error {
 	// sitio y a la vista: se construye el de cuentas y se le conecta después el de contraseñas. Se
 	// rompe con una interfaz declarada por quien la usa, de modo que ninguno de los dos módulos
 	// importa al otro (docs/arquitectura.md, sección 4).
-	mailService := services.NewService(repositories.NewTemplateRepository(db), services.NewSender(cfg), cfg.PublicAppURL)
+	mailService := services.NewService(repositories.NewTemplateRepository(db), services.NewSender(), cfg.PublicAppURL)
 
 	settingsService := settingsservices.NewService(settingsrepositories.NewSettingsRepository(db), cfg.FilesPath)
 
@@ -300,6 +300,10 @@ func run() error {
 
 	usersController := usercontrollers.NewUserController(usersService)
 	authController := authcontrollers.NewAuthController(authService)
+	// **El motor de IA es opcional**, y el asistente lo dice en su resumen: el cableado le da al módulo
+	// de configuración con qué preguntarlo (docs/primer-arranque.md, sección 4).
+	settingsService.SetProberDeIA(aiService)
+	setupController := settingscontrollers.NewSetupController(settingsService)
 	settingsController := settingscontrollers.NewSettingsController(settingsService)
 
 	// Entrar y pedir el enlace son públicos: son justo los sitios por los que se pasa cuando todavía
@@ -317,6 +321,16 @@ func run() error {
 	// (docs/modules/auth.md, secciones 5.3 y 8).
 	mux.HandleFunc("GET /api/auth/keycloak/start", authController.KeycloakStart)
 	mux.HandleFunc("GET /api/auth/keycloak/callback", authController.KeycloakCallback)
+
+	// **La vista de primer arranque**: no lleva sesión —todavía no hay puerta por la que entrar— y lo
+	// que la protege es el sello: en cuanto la instalación está sellada, todas contestan 409
+	// (docs/primer-arranque.md, sección 6).
+	mux.HandleFunc("GET /api/setup", setupController.Show)
+	mux.HandleFunc("POST /api/setup/installation", setupController.SaveInstallation)
+	mux.HandleFunc("POST /api/setup/entry", setupController.SaveEntry)
+	mux.HandleFunc("POST /api/setup/location", setupController.SaveLocation)
+	mux.HandleFunc("POST /api/setup/mail", setupController.SaveMail)
+	mux.HandleFunc("POST /api/setup/finish", setupController.Finish)
 
 	// El resto de la sesión exige haber entrado, sin mirar el papel.
 	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authController.Me)))
@@ -528,3 +542,22 @@ func (i instalacionesDeLaConfiguracion) DireccionPublica() string {
 }
 
 func (i instalacionesDeLaConfiguracion) ZonaHoraria() string { return i.settings.ZonaHoraria() }
+
+// SMTP traduce el correo saliente de la configuración al tipo que declara el módulo de correo, y
+// **dice si hay alguno puesto**: en falso, el remitente usa el del entorno.
+func (i instalacionesDeLaConfiguracion) SMTP() (services.CorreoSaliente, bool) {
+	correo, err := i.settings.SMTP()
+	if err != nil || !correo.Set {
+		return services.CorreoSaliente{}, false
+	}
+
+	return services.CorreoSaliente{
+		Host:      correo.Host,
+		Port:      correo.Port,
+		Secure:    correo.Secure,
+		User:      correo.User,
+		Password:  correo.Password,
+		FromName:  correo.FromName,
+		FromEmail: correo.FromEmail,
+	}, true
+}

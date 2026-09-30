@@ -3,6 +3,16 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-09-27
 >
+> **Enmendado el 2026-09-30 (cuarta vez)**: la migración **`v1.0.0.sql`** trae además **el sello de
+> instalación** (`installation_settings.installed_at`) y **el correo saliente** (`smtp_*`), que pasa a
+> vivir en la base **y deja de estar en el entorno**: las variables `SMTP_*` se retiran del entorno y de los
+> archivos de ejemplo (corrección del responsable, 2026-09-30). **Una instalación que las tuviera puestas
+> pone el correo una vez** en la vista de instalación o en Configuración. **El sello se rellena solo en las
+> instalaciones que ya existían** —y sólo la primera vez que la columna nace—, así que una instalación
+> en marcha **no ve el asistente** por actualizar, y una base recién creada **nace sin sellar**, que es
+> «sin instalar»: al abrirla aparece `/setup` (`docs/primer-arranque.md`). En desarrollo **el archivo de
+> ejemplos sella la instalación**, para que el asistente no salga en cada arranque ni en las pruebas.
+>
 > **Enmendado el 2026-09-29 (tercera vez)**: **`PUBLIC_APP_URL` deja de ser obligatoria**: la dirección
 > pública de la instalación pasa a **Configuración** (`docs/modules/settings.md`, decisión 14) y la
 > variable queda **como respaldo** para una instalación que ya la tuviera puesta. Una instalación nueva

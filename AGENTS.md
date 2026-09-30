@@ -91,6 +91,7 @@ completo.
 | `docs/ambientes.md` | El runbook: **el despliegue a producción** —`scripts/prod-build.sh`, hecho y usado en el primer despliegue—, las migraciones, **las copias de seguridad** —`scripts/backup-db.sh`, con las dos bases en el `cron`— y las tres capas de pruebas (`tests/e2e/`) |
 | `docs/interfaz-y-experiencia.md` | Cubre `frontend/src/app/core/**` (el armazón, los controles, las pantallas de la sesión y Configuración), `frontend/src/app/shared/components/**` y **la forma de las pantallas de producto**: las de usuarios (3.6), las de tickets (3.7) y el editor de los correos (3.8), todas hechas |
 | `docs/modules/settings.md` | Cubre `backend/modules/settings/**`, `backend/shared/version/**`, **las cuatro tablas de configuración de una fila** (`installation_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`) y `frontend/src/app/core/pages/settings-page.*` (el nombre de la instalación, **cómo se entra y las dos configuraciones de directorio con sus pruebas de conexión**, la marca, el color, el idioma, el prefijo y el reparto). **Está entero** |
+| `docs/primer-arranque.md` | **as-built**: la vista de primer arranque, que pide lo necesario para dejar la instalación en marcha en cuatro pasos. Es el **sello** de `installation_settings`, `backend/modules/settings/**` (la API `/api/setup/**`), `frontend/src/app/core/pages/setup-page.*` y el correo saliente del módulo `mail` |
 | `docs/modules/ai.md` | **aprobado**: los dos resúmenes del ticket —**motivo** y **última acción**— que redacta el **motor de IA de un contenedor aparte**, en español y en inglés. Cubre `backend/modules/ai/**`, la tabla `ai_insights` y el `ai.yml` del motor. Lo consume `tickets` a través de una interfaz que él mismo declara |
 | `docs/modules/mail.md` | Cubre `backend/modules/mail/**`, las plantillas de `backend/migrations/v1.0.0.sql` y **el editor de `frontend/src/app/modules/mail/**`**. **Está entero**, backend y editor |
 | `docs/modules/auth.md` | Cubre `backend/modules/auth/**`, el token de sesión y el `state` de OIDC de `shared/auth`, `shared/auth/methods.go`, el middleware y `frontend/src/app/core/**` (sesión, interceptor, guarda y las seis pantallas). **Está entero**: los tres caminos de entrada —local, AD y Keycloak— hechos y verificados, **con la instalación entrando por uno a la vez y la cuenta de fábrica siempre dentro** |
@@ -197,6 +198,15 @@ correos** (alta, restablecer) **y de la vuelta de Keycloak**; antes era la varia
 que queda como respaldo. **Si la dirección no es https, Configuración lo avisa** —la sesión y la
 contraseña viajan sin cifrar— sin bloquear nada, que es lo que permite probar la instalación en local
 y usarla en serio (`docs/modules/settings.md`, decisiones 13 a 15). Va **en la propia migración `v1.0.0.sql`**: la versión sigue abierta.
+
+**La instalación tiene vista de primer arranque** (2026-09-30): en una instalación **sin sellar** la
+aplicación lleva a **`/setup`**, que pide en cuatro pasos **la instalación** (nombre e idioma), **cómo
+se entra** (con su prueba), **dónde está** (región y dirección) y **el correo saliente** (que vive en la base:
+las variables `SMTP_*` del entorno se retiraron), y al terminar **sella** la instalación: la vista no vuelve y su API
+contesta **409** (`docs/primer-arranque.md`). El sello vive en `installation_settings.installed_at`, y
+**una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
+asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
+(`ADMIN_PASSWORD`): el asistente no la pide.
 
 **El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (MIT)**,
 cómo **participar**, y **cómo levantarlo** —en local con `dev.yml` y en serio con `prod-build.sh`, la
@@ -310,7 +320,7 @@ de soporte manual (decisión del responsable, 2026-09-25).
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f dev.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra el entorno de
-desarrollo, en PC y en móvil, con **206 casos** (188 en verde y 18 que se saltan: los de un
+desarrollo, en PC y en móvil, con **212 casos** (194 en verde y 18 que se saltan: los de un
 dispositivo o de las herramientas y siete de los caminos de directorio, que se prueban una sola vez
 porque no dependen del ancho). Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no
@@ -335,6 +345,7 @@ El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 - `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
 - `docs/README.md`: índice de documentación.
 
+- `docs/primer-arranque.md` (**as-built**): la vista de primer arranque y su sello.
 - `docs/modules/ai.md` (**aprobado**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia.
 
 La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo
