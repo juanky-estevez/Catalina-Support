@@ -3,6 +3,21 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-09-27
 >
+> **Enmendado el 2026-09-30 (quinta vez, y corregida el mismo día)**: **la red compartida con el motor
+> de IA la crea el entorno**, y el motor **entra en ella**. Los contenedores de `dev.yml`, `prod.yml` y
+> `ai.yml` entran en la red `catalina-support-ai`. Al principio estaba declarada **externa en los tres**
+> —«alguien tiene que crearla»— y eso **rompía el arranque en una máquina nueva**: `docker compose -f
+> dev.yml up -d` fallaba con «network catalina-support-ai declares as external, but could not be found»,
+> y el README no lo decía. Se arregló con un guion, y **el responsable lo corrigió**: un `.sh` deja fuera
+> a Windows.
+>
+> **Ahora no hay guion**: **`dev.yml` y `prod.yml` poseen la red** —con su nombre fijo y sin `external`—
+> y **`ai.yml` la declara externa**, porque el motor se levanta **después**, con el entorno en marcha, y
+> **no puede intentar recrearla** (si los tres se creyeran dueños, arrancar el motor con el entorno
+> levantado falla: se probó y falló). Así `docker compose -f dev.yml up -d` **a secas funciona en una
+> máquina nueva** —verificado bajando todo y levantando sólo el de desarrollo: la crea— y el motor se
+> puede añadir después —verificado con el entorno en marcha: arranca sano y el backend lo ve—. Vale
+> igual en Linux, macOS y Windows.
 > **Enmendado el 2026-09-30 (cuarta vez)**: la migración **`v1.0.0.sql`** trae además **el sello de
 > instalación** (`installation_settings.installed_at`) y **el correo saliente** (`smtp_*`), que pasa a
 > vivir en la base **y deja de estar en el entorno**: las variables `SMTP_*` se retiran del entorno y de los
