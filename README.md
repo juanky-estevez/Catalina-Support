@@ -85,6 +85,12 @@ docker compose -f dev.yml up -d
 docker compose -f dev.yml ps
 ```
 
+**Es un solo comando de Docker, igual en Linux, macOS y Windows**: no hay que crear nada a mano ni
+ejecutar ningún guion. Los contenedores comparten la red `catalina-support-ai` con **el motor de IA**
+—que vive en su propio compose porque un solo motor sirve a desarrollo y a producción—: **la crea el
+entorno** y **el motor entra en ella**, así que puedes levantar el motor cuando quieras, con el entorno
+ya en marcha. El motor sigue siendo opcional: `docker compose -f ai.yml up -d`.
+
 - **La interfaz, en `http://127.0.0.1:11001`.** Así se prueba sin nginx y sin certificados, que es
   lo más cómodo para un primer contacto. El backend queda en `http://127.0.0.1:11002`
   (`GET /api/health` responde).

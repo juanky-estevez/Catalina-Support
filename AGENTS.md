@@ -391,7 +391,10 @@ Todo se ejecuta **dentro de los contenedores**: la máquina no tiene Go ni Node 
 debe tenerlos). `docs/arquitectura.md`, sección 10.
 
 ```bash
-# Los servicios de desarrollo (frontend, backend, database y el buzón de pruebas)
+# Los servicios de desarrollo (frontend, backend, database y el buzón de pruebas).
+# **Un solo comando de Docker, igual en Linux, macOS y Windows**: la red compartida con el motor de IA
+# (`catalina-support-ai`) la crea el primero que arranca, así que no hay que crear nada a mano. Para el
+# motor, que es opcional: `docker compose -f ai.yml up -d`
 docker compose -f dev.yml up -d
 docker compose -f dev.yml ps
 docker compose -f dev.yml logs -f backend
