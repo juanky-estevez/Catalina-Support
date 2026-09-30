@@ -17,15 +17,21 @@ name: catalina-support-prod
 # desarrollo (dev.yml). El vhost y el certificado de producción ya están puestos, así que hoy
 # https://catalina-support.calibyou.com responde 503 con un aviso de que está en desarrollo.
 
+# **Las rutas de los volúmenes son relativas al propio archivo** (decisión del responsable,
+# 2026-09-30): así el despliegue funciona desde cualquier carpeta y en cualquier sistema, y no hay
+# ninguna ruta de esta máquina escrita en el repositorio. Para eso **este archivo se copia a la carpeta
+# de despliegue** y el despliegue se ejecuta desde ahí: `scripts/prod-build.sh` lo publica junto a los
+# artefactos y a `config/`, y levanta el compose **desde esa carpeta**. `./frontend` es entonces
+# `/root/prod/catalina-support/frontend`, que es exactamente lo que era antes.
 services:
   frontend:
     restart: always
     container_name: catalina_support_prod_frontend
     image: nginx:1.27-alpine
     ports:
-      - 127.0.0.1:21001:21001
+      - 21001:21001
     volumes:
-      - /root/prod/catalina-support/frontend:/usr/share/nginx/html:ro
+      - ./frontend:/usr/share/nginx/html:ro
       - ./config/nginx/frontend.prod.conf:/etc/nginx/conf.d/default.conf:ro
 
   backend:
@@ -43,11 +49,11 @@ services:
       database:
         condition: service_healthy
     ports:
-      - 127.0.0.1:21002:21002
+      - 21002:21002
     volumes:
-      - /root/prod/catalina-support/backend:/app:ro
-      - /root/prod/catalina-support/_logs:/logs
-      - /root/prod/catalina-support/_files:/files
+      - ./backend:/app:ro
+      - ./_logs:/logs
+      - ./_files:/files
     networks:
       # El motor de IA: **el mismo contenedor que usa desarrollo**, en su propio compose (`ai.yml`),
       # porque dos modelos no caben en esta máquina (`docs/modules/ai.md`, decisión 1).
@@ -61,7 +67,7 @@ services:
     env_file:
       - ./config/env/prod.env
     ports:
-      - 127.0.0.1:21003:21003
+      - 21003:21003
     volumes:
       - database:/var/lib/postgresql
     healthcheck:
@@ -77,7 +83,7 @@ services:
       context: .
       dockerfile: config/dockerfiles/prod_frontend_builder.Dockerfile
     volumes:
-      - /root/prod/catalina-support/frontend:/out
+      - ./frontend:/out
     # Angular publica en dist/<proyecto>/browser. Sin "rm -rf /out/*": se copia encima
     # de lo existente para que nginx no sirva un 404 entre el bundle nuevo y el index
     # nuevo; los assets con hash del build anterior se podan después de copiar.
@@ -99,7 +105,7 @@ services:
       context: .
       dockerfile: config/dockerfiles/prod_backend_builder.Dockerfile
     volumes:
-      - /root/prod/catalina-support/backend:/out
+      - ./backend:/out
     # mv (rename) en vez de cp sobre el binario en ejecución: evita ETXTBSY y deja el
     # proceso actual corriendo sobre el inodo viejo hasta el restart.
     command:

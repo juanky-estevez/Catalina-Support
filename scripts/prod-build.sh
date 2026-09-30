@@ -15,7 +15,11 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="/root/prod/catalina-support"
-COMPOSE=(docker compose -f "$REPO_DIR/prod.yml")
+# **Se despliega desde la carpeta de despliegue**, no desde el repositorio: `prod.yml` lleva las rutas
+# de los volúmenes **relativas a sí mismo**, así que el archivo (y lo que necesita: `config/`) tienen
+# que estar al lado de los artefactos. Así el despliegue funciona desde cualquier carpeta y en
+# cualquier sistema, y `./frontend` es `$OUT_DIR/frontend`, que es lo que era con las rutas absolutas.
+COMPOSE=(docker compose -f "$OUT_DIR/prod.yml")
 
 ONLY=""
 DEPLOY=1
@@ -37,6 +41,14 @@ esac
 # Los tres directorios que montan los contenedores, y el de las copias de la base que ya
 # usa scripts/backup-db.sh prod (docs/ambientes.md, sección 6).
 mkdir -p "$OUT_DIR/frontend" "$OUT_DIR/backend" "$OUT_DIR/_files" "$OUT_DIR/_logs"
+
+# **El compose y lo que necesita van a la carpeta de despliegue, antes de construir**: las etapas de
+# construcción escriben en `./frontend` y `./backend`, que son relativas al propio `prod.yml`, así que
+# el archivo tiene que estar ya ahí para que apunten a los artefactos y no al repositorio.
+cp "$REPO_DIR/prod.yml" "$OUT_DIR/prod.yml"
+rm -rf "$OUT_DIR/config"
+cp -a "$REPO_DIR/config" "$OUT_DIR/config"
+
 
 # ---------------------------------------------------------------------------------------
 # Qué se está construyendo
