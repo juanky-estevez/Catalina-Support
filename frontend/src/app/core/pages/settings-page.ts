@@ -183,10 +183,21 @@ export class SettingsPage {
   /** El nombre que se está escribiendo, antes de guardarlo. */
   protected readonly nombreElegido = signal('');
 
-  /** Si hay algo que guardar en el nombre: sin cambios, el botón está apagado. */
-  protected readonly cambioDeNombrePendiente = computed(
-    () => this.nombreElegido().trim() !== (this.configuracion()?.name ?? ''),
-  );
+  /**
+   * **Si hay algo que guardar en la instalación**: el nombre o el idioma. La tarjeta lleva los dos
+   * (decisión del responsable, 2026-09-29) y tiene un solo botón, así que el botón se enciende con
+   * cualquiera de los dos.
+   */
+  protected readonly cambioDeInstalacionPendiente = computed(() => {
+    const configuracion = this.configuracion();
+    if (!configuracion) {
+      return false;
+    }
+
+    return (
+      this.nombreElegido().trim() !== configuracion.name || this.idioma() !== configuracion.language
+    );
+  });
 
   /** El color que se está eligiendo, y **cómo quedaría de verdad**, resuelto por el backend. */
   protected readonly colorElegido = signal('#1d4ed8');
@@ -526,7 +537,7 @@ export class SettingsPage {
             primaryColor: this.colorElegido(),
           }),
         ),
-      this.t().configuracion.colorGuardado,
+      this.t().configuracion.marcaGuardada,
       () => {
         this.colorResuelto.set(null);
         // Y la marca se relee, para que el cambio se aplique en toda la aplicación ahora mismo.
@@ -557,9 +568,12 @@ export class SettingsPage {
           this.http.put<Configuracion>('/api/settings', {
             ...configuracion,
             name: this.nombreElegido().trim(),
+            // **El idioma va con el nombre** (decisión del responsable, 2026-09-29): los guarda el mismo
+            // botón, y sin esto se mandaría el que estaba cargado y no el que se acaba de elegir.
+            language: this.idioma(),
           }),
         ),
-      this.t().configuracion.nombreGuardado,
+      this.t().configuracion.instalacionGuardada,
     );
   }
 

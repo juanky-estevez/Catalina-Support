@@ -3,6 +3,11 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-09-27
 >
+> **Enmendado el 2026-09-30**: **el correo saliente se lee de la configuración de la instalación**
+> —la vista de primer arranque lo pide— y **las variables `SMTP_*` del entorno se retiraron**: un dato que vive en la base no se configura en dos sitios (corrección del responsable, 2026-09-30). El
+> remitente lo resuelve **en cada envío**, así que cambiarlo en la pantalla vale sin reiniciar nada
+> (`docs/primer-arranque.md`, sección 5).
+>
 > **Enmendado el 2026-09-27**, al entrar **las menciones de los tickets** (`docs/modules/tickets.md`,
 > decisión 58): nace la **plantilla número once**, `ticket.mentioned` —«Te han etiquetado en {{numero}}:
 > {{asunto}}»—, que va **a cada persona mencionada** cuando se la menciona por primera vez. **Los correos

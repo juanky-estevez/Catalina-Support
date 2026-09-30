@@ -111,17 +111,6 @@ type Config struct {
 	// (docs/modules/mail.md, sección 4).
 	PublicAppURL string
 
-	// SMTP es lo que necesita el módulo mail para enviar. Puede faltar en desarrollo: en ese caso
-	// el envío falla con un error claro y la acción que lo provocó sigue adelante
-	// (docs/arquitectura.md, sección 9).
-	SMTPHost      string
-	SMTPPort      string
-	SMTPUser      string
-	SMTPPassword  string
-	SMTPSecure    bool
-	SMTPFromName  string
-	SMTPFromEmail string
-
 	// AI es el motor de IA que redacta el motivo y la última acción del ticket
 	// (docs/modules/ai.md). **Puede faltar**: sin motor, los dos campos se quedan sin texto y la
 	// mesa de ayuda funciona entera; es la condición que manda sobre este módulo.
@@ -148,13 +137,6 @@ func Load() (Config, error) {
 		TokenSecret:   strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 		PublicAppURL:  strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
-		SMTPHost:      strings.TrimSpace(os.Getenv("SMTP_HOST")),
-		SMTPPort:      strings.TrimSpace(os.Getenv("SMTP_PORT")),
-		SMTPUser:      strings.TrimSpace(os.Getenv("SMTP_USER")),
-		SMTPPassword:  os.Getenv("SMTP_PASSWORD"),
-		SMTPSecure:    strings.EqualFold(get("SMTP_SECURE", "false"), "true"),
-		SMTPFromName:  get("SMTP_FROM_NAME", "Catalina Support"),
-		SMTPFromEmail: strings.TrimSpace(os.Getenv("SMTP_FROM_EMAIL")),
 		AIURL:         strings.TrimSpace(os.Getenv("AI_URL")),
 		AIModel:       get("AI_MODEL", "qwen2.5-1.5b-instruct"),
 		AIPalabras:    getInt("AI_PALABRAS", 40),

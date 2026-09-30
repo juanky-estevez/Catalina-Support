@@ -18,16 +18,16 @@ export const ES = {
 
   configuracion: {
     titulo: 'Configuración',
-    nombre: 'El nombre de la instalación',
-    nombreAyuda:
-      'La institución, la empresa o el equipo. Es lo que se lee en la pantalla de entrada, en el menú y en la pestaña del navegador.',
+    instalacion: 'La instalación',
+    instalacionAyuda:
+      'La institución, la empresa o el equipo, y el idioma con el que habla. El nombre es lo que se lee en la pantalla de entrada, en el menú y en la pestaña del navegador.',
     nombreCampo: 'Nombre',
     nombreDeFabrica: 'Si lo dejas vacío, vuelve el nombre de fábrica (Catalina Support).',
-    guardarNombre: 'Guardar el nombre',
-    nombreGuardado: 'Nombre guardado. Ya se ve en toda la aplicación.',
-    marca: 'El logo',
+    guardarInstalacion: 'Guardar la instalación',
+    instalacionGuardada: 'La instalación se ha guardado.',
+    marca: 'La marca',
     marcaAyuda:
-      'El logo de la instalación, junto a su nombre. Se enseña en la pantalla de entrada y en el menú.',
+      'El logo y el color de la institución. El logo se enseña en la pantalla de entrada y en el menú, y el color tiñe los dos temas de fábrica.',
     logoClaro: 'Logo para los temas claros',
     logoClaroAyuda: 'Se enseña en Claro, Papel, Niebla y Alto contraste.',
     logoOscuro: 'Logo para los temas oscuros',
@@ -43,14 +43,11 @@ export const ES = {
     volverAlDeFabrica: 'Volver al de fábrica',
     logoSubido: 'Logo subido. Ya se está usando.',
     logoQuitado: 'Ese hueco ha vuelto al logo de fábrica.',
-    color: 'El color institucional',
-    colorAyuda:
-      'El color de la casa. Se aplica a los dos temas de fábrica, y el resto de temas llevan el suyo.',
     colorElegido: 'Color',
-    guardarColor: 'Guardar el color',
+    guardarMarca: 'Guardar la marca',
     guardando: 'Guardando…',
     descartar: 'Descartar',
-    colorGuardado: 'Color guardado.',
+    marcaGuardada: 'La marca se ha guardado.',
     ejemploBoton: 'Un botón de ejemplo',
     ejemploTexto: 'y un texto al lado, para ver cómo queda el conjunto.',
     colorResuelto: 'En los temas claros queda',
@@ -157,6 +154,52 @@ export const ES = {
     avisoAlAsignado: 'Al asignado',
     guardarNumeracion: 'Guardar la numeración y el reparto',
     numeracionGuardada: 'La numeración y el reparto están guardados.',
+  },
+
+  // La vista de primer arranque: lo que se pide **antes de que la instalación tenga puerta**
+  // (`docs/primer-arranque.md`). La mayoría de los campos reutilizan las claves de `configuracion`:
+  // son los mismos datos, y tenerlos escritos dos veces sería la forma segura de que digan cosas
+  // distintas. Aquí sólo viven los textos propios del asistente.
+  instalacion: {
+    titulo: 'Primer arranque',
+    intro:
+      'Cuatro pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
+    paso1: 'La instalación',
+    paso2: 'Cómo se entra',
+    paso3: 'Dónde está',
+    paso4: 'El correo',
+    pasoDeCuatro: 'Paso {paso} de {total}',
+    siguiente: 'Siguiente',
+    anterior: 'Anterior',
+    terminar: 'Terminar la instalación',
+    resumen: 'Resumen',
+    motorResponde: 'El motor de IA responde: los dos resúmenes del ticket están disponibles.',
+    motorNoEsta: 'El motor de IA no está: la mesa de ayuda funciona igual, sin los dos resúmenes.',
+    // La contraseña de la cuenta de fábrica **no se pide aquí**: vive en el entorno, y contarlo es
+    // justo lo que evita que alguien la busque en la pantalla (sección 4 del documento).
+    cuentaDeFabrica:
+      'La cuenta de fábrica se llama «admin» y su contraseña es ADMIN_PASSWORD, del archivo de entorno del servidor. Es la puerta que entra siempre, sea cual sea el método elegido, y aquí no se pide: no vive en la base de datos.',
+    correoOpcional:
+      'El correo es opcional: si no pones servidor, la instalación funciona igual, pero no saldrá ningún correo —ni un alta, ni un restablecer, ni un aviso—.',
+    correoPuesto: 'Hay un correo saliente configurado.',
+    correoSinPoner: 'No hay correo saliente configurado: no saldrá ningún correo.',
+    terminada: 'Esta instalación ya está terminada: no se configura dos veces.',
+    correoHost: 'Servidor de correo',
+    correoHostAyuda:
+      'El nombre o la dirección del servidor saliente. Ejemplo: smtp.mi-institucion.org.',
+    correoPuerto: 'Puerto',
+    correoPuertoAyuda: '587 para el envío con TLS, 465 para TLS directo y 25 sin cifrar.',
+    correoTls: 'Conexión cifrada (TLS)',
+    correoTlsAyuda: 'En producción, sí: por ahí viajan las credenciales del correo.',
+    correoUsuario: 'Usuario',
+    correoUsuarioAyuda:
+      'El usuario con el que se autentica el envío. Si el servidor no pide credenciales, se deja vacío.',
+    correoContrasena: 'Contraseña',
+    correoContrasenaPuesta: 'Hay una contraseña guardada. Déjalo vacío para no cambiarla.',
+    correoContrasenaVacia: 'No hay ninguna contraseña guardada.',
+    correoRemitenteNombre: 'Nombre del remitente',
+    correoRemitenteCorreo: 'Correo del remitente',
+    correoRemitenteCorreoAyuda: 'La dirección que verá quien reciba el correo.',
   },
 
   menu: {
@@ -908,6 +951,11 @@ export const ES = {
     'settings.timeZone.unknown': 'Esa zona horaria no existe. Elige una de la lista.',
     'settings.publicUrl.invalid':
       'La dirección tiene que empezar por http:// o https:// y llevar su servidor.',
+    // Las tres claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
+    'setup.alreadyInstalled': 'Esta instalación ya está terminada: no se configura dos veces.',
+    'setup.step.incomplete': 'A este paso le falta algún dato. Repásalo y vuelve a intentarlo.',
+    'setup.mail.incomplete':
+      'Para el correo hacen falta el servidor, el puerto y la dirección del remitente.',
     'auth.publicUrl.missing':
       'No hay dirección pública configurada: sin ella no se puede armar el enlace que va en el correo. Se configura en Configuración.',
     'users.accountInactive': 'Esa cuenta está desactivada: actívala antes de mandarle un enlace.',

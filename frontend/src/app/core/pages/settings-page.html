@@ -9,7 +9,7 @@
     <p class="text-sm text-apagado">{{ t().comun.cargando }}</p>
   } @else {
     <!-- ------------------------------------------------- el nombre de la instalación -->
-    <app-tarjeta nivel="h2" [titulo]="t().configuracion.nombre" [descripcion]="t().configuracion.nombreAyuda">
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.instalacion" [descripcion]="t().configuracion.instalacionAyuda">
       <div class="flex flex-wrap items-end gap-3">
         <div class="min-w-64 flex-1">
           <app-campo
@@ -22,11 +22,25 @@
           />
         </div>
 
+      <!--
+        **El idioma de la instalación** va con el nombre (decisión del responsable, 2026-09-29): es lo que
+        la instalación *es*, y es el que se le pone a una cuenta nueva cuando quien la da de alta no
+        elige otro, y el de los correos que se le escriben.
+      -->
+      <app-selector
+        identificador="idioma-instalacion"
+        [etiqueta]="t().configuracion.idioma"
+        [ayuda]="t().configuracion.idiomaAyuda"
+        [opciones]="opcionesDeIdioma()"
+        [valor]="idioma()"
+        (valorChange)="idioma.set($event)"
+      />
+
         <app-boton
-          [texto]="t().configuracion.guardarNombre"
+          [texto]="t().configuracion.guardarInstalacion"
           [textoTrabajando]="t().configuracion.guardando"
           [trabajando]="guardando()"
-          [deshabilitado]="!cambioDeNombrePendiente()"
+          [deshabilitado]="!cambioDeInstalacionPendiente()"
           (pulsado)="guardarNombre()"
         />
       </div>
@@ -105,6 +119,61 @@
             </div>
           </section>
         }
+
+
+        <div class="flex flex-wrap items-end gap-4">
+          <label class="flex flex-col gap-1 text-sm font-medium text-texto">
+            {{ t().configuracion.colorElegido }}
+            <input
+              type="color"
+              [value]="colorElegido()"
+              class="h-11 w-24 rounded-md border border-borde-fuerte bg-superficie"
+              (input)="previsualizarColor($any($event.target).value)"
+            />
+          </label>
+
+          <p class="text-sm text-apagado">{{ colorElegido() }}</p>
+
+          @if (cambioDeColorPendiente()) {
+            <div class="flex gap-2">
+              <app-boton
+                [texto]="t().configuracion.guardarMarca"
+                [textoTrabajando]="t().configuracion.guardando"
+                [trabajando]="guardando()"
+                (pulsado)="guardarColor()"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().configuracion.descartar"
+                [deshabilitado]="guardando()"
+                (pulsado)="descartarColor()"
+              />
+            </div>
+          }
+        </div>
+
+        <!-- La vista previa: se ve cómo queda de verdad, ya resuelto por el backend. -->
+        <div class="rounded-md border border-borde bg-superficie-suave p-4">
+          <p class="mb-3 text-sm font-medium text-texto">{{ t().configuracion.vistaPrevia }}</p>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex min-h-11 items-center rounded-md px-4 py-2 text-sm font-medium"
+              [style.background-color]="colorResuelto()?.light ?? colorElegido()"
+              [style.color]="colorResuelto()?.onLight ?? '#ffffff'">
+              {{ t().configuracion.ejemploBoton }}
+            </span>
+
+            <span class="text-sm text-texto">{{ t().configuracion.ejemploTexto }}</span>
+          </div>
+
+          @if (colorResuelto(); as colors) {
+            <p class="mt-3 text-xs text-apagado">
+              {{ t().configuracion.colorResuelto }}: {{ colors.light }} ·
+              {{ t().configuracion.colorResueltoOscuro }}: {{ colors.dark }}
+            </p>
+          }
+        </div>
+      
       </div>
     </app-tarjeta>
 
@@ -333,79 +402,66 @@
       </div>
     </app-tarjeta>
 
-    <!-- ------------------------------------------------- el color institucional -->
-    <app-tarjeta nivel="h2" [titulo]="t().configuracion.color" [descripcion]="t().configuracion.colorAyuda">
-      <div class="flex flex-col gap-4">
-        <div class="flex flex-wrap items-end gap-4">
-          <label class="flex flex-col gap-1 text-sm font-medium text-texto">
-            {{ t().configuracion.colorElegido }}
-            <input
-              type="color"
-              [value]="colorElegido()"
-              class="h-11 w-24 rounded-md border border-borde-fuerte bg-superficie"
-              (input)="previsualizarColor($any($event.target).value)"
-            />
-          </label>
 
-          <p class="text-sm text-apagado">{{ colorElegido() }}</p>
-
-          @if (cambioDeColorPendiente()) {
-            <div class="flex gap-2">
-              <app-boton
-                [texto]="t().configuracion.guardarColor"
-                [textoTrabajando]="t().configuracion.guardando"
-                [trabajando]="guardando()"
-                (pulsado)="guardarColor()"
-              />
-              <app-boton
-                forma="secundario"
-                [texto]="t().configuracion.descartar"
-                [deshabilitado]="guardando()"
-                (pulsado)="descartarColor()"
-              />
-            </div>
-          }
-        </div>
-
-        <!-- La vista previa: se ve cómo queda de verdad, ya resuelto por el backend. -->
-        <div class="rounded-md border border-borde bg-superficie-suave p-4">
-          <p class="mb-3 text-sm font-medium text-texto">{{ t().configuracion.vistaPrevia }}</p>
-
-          <div class="flex flex-wrap items-center gap-3">
-            <span class="inline-flex min-h-11 items-center rounded-md px-4 py-2 text-sm font-medium"
-              [style.background-color]="colorResuelto()?.light ?? colorElegido()"
-              [style.color]="colorResuelto()?.onLight ?? '#ffffff'">
-              {{ t().configuracion.ejemploBoton }}
-            </span>
-
-            <span class="text-sm text-texto">{{ t().configuracion.ejemploTexto }}</span>
-          </div>
-
-          @if (colorResuelto(); as colors) {
-            <p class="mt-3 text-xs text-apagado">
-              {{ t().configuracion.colorResuelto }}: {{ colors.light }} ·
-              {{ t().configuracion.colorResueltoOscuro }}: {{ colors.dark }}
-            </p>
-          }
-        </div>
-      </div>
-    </app-tarjeta>
 
     <!-- ------------------------------------------- la numeración y el reparto -->
     <app-tarjeta nivel="h2" [titulo]="t().configuracion.numeracion" [descripcion]="t().configuracion.numeracionAyuda">
       <div class="flex flex-col gap-6">
-        <!--
-          El idioma de la instalación: es el que se le pone a una cuenta nueva cuando quien la da de
-          alta no elige, y el de los correos que se le escriben.
-        -->
-        <app-selector
-          identificador="idioma-instalacion"
-          [etiqueta]="t().configuracion.idioma"
-          [ayuda]="t().configuracion.idiomaAyuda"
-          [opciones]="opcionesDeIdioma()"
-          [valor]="idioma()"
-          (valorChange)="idioma.set($event)"
+
+
+        <app-campo
+          identificador="prefijo"
+          [etiqueta]="t().configuracion.prefijo"
+          [ayuda]="t().configuracion.prefijoAyuda"
+          [ejemplo]="'CS'"
+          [valor]="prefijo()"
+          (valorChange)="prefijo.set($event)"
         />
+
+        <!-- El aviso que hace falta antes de tocar el prefijo: lo que ya está emitido no se toca. -->
+        <app-aviso forma="informacion" [texto]="t().configuracion.prefijoAviso" />
+
+        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoPrincipal }}</h3>
+
+          <app-selector
+            identificador="reparto-principal"
+            [etiqueta]="t().configuracion.asignacion"
+            [opciones]="opcionesDeAsignacion()"
+            [valor]="asignacionPrincipal()"
+            (valorChange)="cambiarAsignacion('principal', $event)"
+          />
+
+          <app-selector
+            identificador="aviso-principal"
+            [etiqueta]="t().configuracion.aviso"
+            [opciones]="opcionesDeAviso(asignacionPrincipal())"
+            [valor]="avisoPrincipal()"
+            (valorChange)="avisoPrincipal.set($event)"
+          />
+        </div>
+
+        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoInterno }}</h3>
+
+          <app-selector
+            identificador="reparto-interno"
+            [etiqueta]="t().configuracion.asignacion"
+            [opciones]="opcionesDeAsignacion()"
+            [valor]="asignacionInterno()"
+            (valorChange)="cambiarAsignacion('interno', $event)"
+          />
+
+          <app-selector
+            identificador="aviso-interno"
+            [etiqueta]="t().configuracion.aviso"
+            [opciones]="opcionesDeAviso(asignacionInterno())"
+            [valor]="avisoInterno()"
+            (valorChange)="avisoInterno.set($event)"
+          />
+        </div>
+
+        
 
         <div>
           <app-boton
@@ -503,58 +559,6 @@
           @if (direccionInsegura()) {
             <app-aviso forma="atencion" [texto]="t().configuracion.direccionInsegura" />
           }
-        </div>
-
-        <app-campo
-          identificador="prefijo"
-          [etiqueta]="t().configuracion.prefijo"
-          [ayuda]="t().configuracion.prefijoAyuda"
-          [ejemplo]="'CS'"
-          [valor]="prefijo()"
-          (valorChange)="prefijo.set($event)"
-        />
-
-        <!-- El aviso que hace falta antes de tocar el prefijo: lo que ya está emitido no se toca. -->
-        <app-aviso forma="informacion" [texto]="t().configuracion.prefijoAviso" />
-
-        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
-          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoPrincipal }}</h3>
-
-          <app-selector
-            identificador="reparto-principal"
-            [etiqueta]="t().configuracion.asignacion"
-            [opciones]="opcionesDeAsignacion()"
-            [valor]="asignacionPrincipal()"
-            (valorChange)="cambiarAsignacion('principal', $event)"
-          />
-
-          <app-selector
-            identificador="aviso-principal"
-            [etiqueta]="t().configuracion.aviso"
-            [opciones]="opcionesDeAviso(asignacionPrincipal())"
-            [valor]="avisoPrincipal()"
-            (valorChange)="avisoPrincipal.set($event)"
-          />
-        </div>
-
-        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
-          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoInterno }}</h3>
-
-          <app-selector
-            identificador="reparto-interno"
-            [etiqueta]="t().configuracion.asignacion"
-            [opciones]="opcionesDeAsignacion()"
-            [valor]="asignacionInterno()"
-            (valorChange)="cambiarAsignacion('interno', $event)"
-          />
-
-          <app-selector
-            identificador="aviso-interno"
-            [etiqueta]="t().configuracion.aviso"
-            [opciones]="opcionesDeAviso(asignacionInterno())"
-            [valor]="avisoInterno()"
-            (valorChange)="avisoInterno.set($event)"
-          />
         </div>
 
         <div>

@@ -98,6 +98,8 @@ type Service struct {
 	filesPath string
 	prober    Prober
 	now       func() time.Time
+	// ia dice si el motor de IA responde, para poder contarlo en la instalación.
+	ia ProberDeIA
 }
 
 // NewService construye el servicio.
@@ -474,11 +476,8 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 	}
 
 	direccion := direccionPublicaDe(input.PublicAppURL)
-	if direccion != "" {
-		u, err := url.Parse(direccion)
-		if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
-			return Config{}, ErrPublicURLInvalid
-		}
+	if err := validarDireccionPublica(direccion); err != nil {
+		return Config{}, err
 	}
 
 	err = s.repo.UpdateInstallation(map[string]any{
@@ -953,6 +952,22 @@ func zonaHorariaDe(guardada string) string {
 
 // direccionPublicaDe deja la direccion publica como se guarda y como se usa en un enlace: sin
 // espacios y sin la barra del final, que es lo que se le pega a /set-password/...
+// validarDireccionPublica comprueba que una dirección sirva para un enlace: http o https, con su
+// host. Vacía es válida: es «no configurada». La usan la pantalla de Configuración y el paso de la
+// dirección del asistente, para que las dos digan lo mismo (docs/primer-arranque.md, sección 3).
+func validarDireccionPublica(direccion string) error {
+	if direccion == "" {
+		return nil
+	}
+
+	u, err := url.Parse(direccion)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return ErrPublicURLInvalid
+	}
+
+	return nil
+}
+
 func direccionPublicaDe(guardada string) string {
 	return strings.TrimRight(strings.TrimSpace(guardada), "/")
 }

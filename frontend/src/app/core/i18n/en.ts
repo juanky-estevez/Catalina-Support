@@ -17,15 +17,16 @@ export const EN: Textos = {
 
   configuracion: {
     titulo: 'Settings',
-    nombre: 'The installation name',
-    nombreAyuda:
-      'The institution, the company or the team. It is what is read on the sign-in screen, in the menu and in the browser tab.',
+    instalacion: 'The installation',
+    instalacionAyuda:
+      'The institution, the company or the team, and the language it speaks. The name is what is read on the sign-in screen, in the menu and in the browser tab.',
     nombreCampo: 'Name',
     nombreDeFabrica: 'Leave it empty and the factory name comes back (Catalina Support).',
-    guardarNombre: 'Save the name',
-    nombreGuardado: 'Name saved. It is already visible across the application.',
-    marca: 'The logo',
-    marcaAyuda: 'The logo of the installation. It is shown on the sign-in screen and in the menu.',
+    guardarInstalacion: 'Save the installation',
+    instalacionGuardada: 'The installation has been saved.',
+    marca: 'The brand',
+    marcaAyuda:
+      'The logo and the colour of the institution. The logo is shown on the sign-in screen and in the menu, and the colour tints the two factory themes.',
     logoClaro: 'Logo for light themes',
     logoClaroAyuda: 'Shown in Light, Paper, Mist and High contrast.',
     logoOscuro: 'Logo for dark themes',
@@ -41,14 +42,11 @@ export const EN: Textos = {
     volverAlDeFabrica: 'Back to the factory one',
     logoSubido: 'Logo uploaded. It is already in use.',
     logoQuitado: 'That slot is back to the factory logo.',
-    color: 'The institutional colour',
-    colorAyuda:
-      'The colour of the house. It applies to the two factory themes; the other themes carry their own.',
     colorElegido: 'Colour',
-    guardarColor: 'Save the colour',
+    guardarMarca: 'Save the brand',
     guardando: 'Saving…',
     descartar: 'Discard',
-    colorGuardado: 'Colour saved.',
+    marcaGuardada: 'The brand has been saved.',
     ejemploBoton: 'A sample button',
     ejemploTexto: 'and some text next to it, to see how it all looks.',
     colorResuelto: 'On light themes it becomes',
@@ -156,6 +154,51 @@ export const EN: Textos = {
     avisoAlAsignado: 'The assignee',
     guardarNumeracion: 'Save the numbering and the sharing out',
     numeracionGuardada: 'The numbering and the sharing out are saved.',
+  },
+
+  // The first-start view: what is asked for **before the installation has a door**
+  // (`docs/primer-arranque.md`). Most fields reuse the `configuracion` keys: they are the same data,
+  // and writing them twice would be the sure way for the two to say different things.
+  instalacion: {
+    titulo: 'First start',
+    intro:
+      'Four steps to get this installation running. Each step is saved as you move on, so you can close it and pick up where you left off.',
+    paso1: 'The installation',
+    paso2: 'How people sign in',
+    paso3: 'Where it is',
+    paso4: 'Email',
+    pasoDeCuatro: 'Step {paso} of {total}',
+    siguiente: 'Next',
+    anterior: 'Back',
+    terminar: 'Finish the installation',
+    resumen: 'Summary',
+    motorResponde: 'The AI engine answers: both ticket summaries are available.',
+    motorNoEsta:
+      'The AI engine is not there: the help desk works the same, without the two summaries.',
+    // The factory account password **is not asked for here**: it lives in the environment, and
+    // saying so is exactly what stops anyone looking for it on the screen (section 4 of the doc).
+    cuentaDeFabrica:
+      'The factory account is called “admin” and its password is ADMIN_PASSWORD, from the server environment file. It is the door that always opens, whatever method you choose, and it is not asked for here: it does not live in the database.',
+    correoOpcional:
+      'Email is optional: if you leave the server empty, the installation works the same, but no email will go out — no invitation, no password reset, no notice.',
+    correoPuesto: 'An outgoing email server is configured.',
+    correoSinPoner: 'There is no outgoing email server configured: no email will go out.',
+    terminada: 'This installation is already finished: it is not configured twice.',
+    correoHost: 'Email server',
+    correoHostAyuda: 'The name or address of the outgoing server. Example: smtp.my-company.org.',
+    correoPuerto: 'Port',
+    correoPuertoAyuda: '587 for sending with TLS, 465 for direct TLS and 25 without encryption.',
+    correoTls: 'Encrypted connection (TLS)',
+    correoTlsAyuda: 'In production, yes: the email credentials travel through there.',
+    correoUsuario: 'User',
+    correoUsuarioAyuda:
+      'The user the outgoing mail authenticates with. If the server needs no credentials, leave it empty.',
+    correoContrasena: 'Password',
+    correoContrasenaPuesta: 'A password is stored. Leave it empty to keep it.',
+    correoContrasenaVacia: 'No password is stored.',
+    correoRemitenteNombre: 'Sender name',
+    correoRemitenteCorreo: 'Sender address',
+    correoRemitenteCorreoAyuda: 'The address whoever receives the email will see.',
   },
 
   menu: {
@@ -867,6 +910,11 @@ export const EN: Textos = {
     'settings.timeZone.unknown': 'That time zone does not exist. Pick one from the list.',
     'settings.publicUrl.invalid':
       'The address must start with http:// or https:// and carry its server.',
+    // The three keys of the first-start wizard (docs/primer-arranque.md, section 6).
+    'setup.alreadyInstalled': 'This installation is already finished: it is not configured twice.',
+    'setup.step.incomplete': 'This step is missing something. Check it and try again.',
+    'setup.mail.incomplete':
+      'Email needs the server, the port and the sender address.',
     'auth.publicUrl.missing':
       'There is no public address configured: without it the link for the e-mail cannot be built. It is configured in Settings.',
     'users.accountInactive': 'That account is deactivated: activate it before sending it a link.',

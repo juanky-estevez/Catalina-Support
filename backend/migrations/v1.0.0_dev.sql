@@ -844,8 +844,21 @@ UPDATE keycloak_settings SET
 WHERE id = 1;
 
 UPDATE installation_settings
-   SET time_zone      = 'America/Guayaquil',
+   SET installation_name = 'Catalina Support',
+       -- **El correo saliente de desarrollo vive aquí**, no en el entorno (decisión del responsable,
+       -- 2026-09-30): es el buzón de pruebas, y sin él no saldría ningún correo en el entorno.
+       smtp_host       = 'mail',
+       smtp_port       = '1025',
+       smtp_secure     = false,
+       smtp_user       = '',
+       smtp_password   = '',
+       smtp_from_name  = 'Catalina Support',
+       smtp_from_email = 'no-responder@catalina-support.local',
+       time_zone      = 'America/Guayaquil',
        public_app_url = 'https://dev-catalina-support.calibyou.com',
+       -- **Desarrollo queda instalado**: el asistente de primer arranque se prueba a mano, quitándole
+       -- el sello, y no puede salir en cada arranque del entorno ni en las pruebas.
+       installed_at   = COALESCE(installed_at, now()),
        updated_at     = now()
  WHERE id = 1;
 

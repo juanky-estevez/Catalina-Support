@@ -31,6 +31,19 @@ type InstallationSettings struct {
 	// y la vuelta de Keycloak. Vacía es «no configurada» y se usa la variable de entorno
 	// (docs/modules/settings.md, decisión 14).
 	PublicAppURL string `gorm:"column:public_app_url"`
+	// InstalledAt es **el sello de instalación**: nulo mientras nadie haya terminado el asistente de
+	// primer arranque. Nulo es «sin instalar»: sólo entonces se enseña la vista de instalación y su API
+	// acepta configurar (docs/primer-arranque.md, sección 2).
+	InstalledAt *time.Time `gorm:"column:installed_at"`
+	// **El correo saliente** (docs/primer-arranque.md, sección 5): vive aquí, como el directorio y
+	// Keycloak, y la variable de entorno queda de respaldo. La contraseña **no sale nunca por la API**.
+	SMTPHost      string `gorm:"column:smtp_host"`
+	SMTPPort      string `gorm:"column:smtp_port"`
+	SMTPSecure    bool   `gorm:"column:smtp_secure"`
+	SMTPUser      string `gorm:"column:smtp_user"`
+	SMTPPassword  string `gorm:"column:smtp_password"`
+	SMTPFromName  string `gorm:"column:smtp_from_name"`
+	SMTPFromEmail string `gorm:"column:smtp_from_email"`
 	// LogoLight y LogoDark son el **nombre del archivo** en el disco, no el archivo. Nulo es «no hay
 	// logo propio» y se usa el de fábrica (docs/modules/settings.md, sección 5.3).
 	LogoLight   *string   `gorm:"column:logo_light"`
