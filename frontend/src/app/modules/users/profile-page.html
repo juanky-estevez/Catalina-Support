@@ -1,0 +1,70 @@
+<main class="mx-auto flex max-w-3xl flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-texto">{{ t().perfil.titulo }}</h1>
+    <p class="text-sm text-apagado">{{ t().perfil.descripcion }}</p>
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  <app-tarjeta>
+    <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); guardar()">
+      <app-campo
+        identificador="perfil-nombre"
+        [etiqueta]="t().perfil.nombre"
+        [valor]="nombre()"
+        (valorChange)="nombre.set($event)"
+      />
+
+      <app-campo
+        identificador="perfil-apellidos"
+        [etiqueta]="t().perfil.apellidos"
+        [valor]="apellidos()"
+        (valorChange)="apellidos.set($event)"
+      />
+
+      <!-- El correo y el papel se ven, pero no se tocan: son decisiones de un Administrador. -->
+      <div class="flex flex-col gap-1">
+        <p class="text-sm font-medium text-texto">{{ t().perfil.correo }}</p>
+        <p class="text-sm text-texto">{{ correo() }}</p>
+        <p class="text-sm text-apagado">{{ t().perfil.correoAyuda }}</p>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <p class="text-sm font-medium text-texto">{{ t().perfil.papel }}</p>
+        <p class="text-sm text-texto">{{ papel() }}</p>
+        <p class="text-sm text-apagado">{{ t().perfil.papelAyuda }}</p>
+      </div>
+
+      <app-selector
+        identificador="perfil-idioma"
+        [etiqueta]="t().perfil.idioma"
+        [opciones]="opcionesDeIdioma()"
+        [ayuda]="t().perfil.idiomaAyuda"
+        [valor]="idioma()"
+        (valorChange)="idioma.set($event)"
+      />
+
+      <div>
+        <app-boton
+          tipo="submit"
+          [texto]="t().perfil.guardar"
+          [textoTrabajando]="t().perfil.guardando"
+          [trabajando]="guardando()"
+          [deshabilitado]="!hayCambios()"
+        />
+      </div>
+    </form>
+  </app-tarjeta>
+
+  <!-- La contraseña es de `auth`, no del perfil: aquí sólo se enseña el camino. -->
+  <app-tarjeta nivel="h2" [titulo]="t().perfil.contrasena">
+    <a
+      routerLink="/change-password"
+      class="inline-flex min-h-11 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+    >
+      {{ t().perfil.cambiarContrasena }}
+    </a>
+  </app-tarjeta>
+</main>

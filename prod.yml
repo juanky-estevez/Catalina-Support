@@ -48,6 +48,11 @@ services:
       - /srv/catalina-support/backend:/app:ro
       - /srv/catalina-support/_logs:/logs
       - /srv/catalina-support/_files:/files
+    networks:
+      # El motor de IA: **el mismo contenedor que usa desarrollo**, en su propio compose (`ai.yml`),
+      # porque dos modelos no caben en esta máquina (`docs/modules/ai.md`, decisión 1).
+      - default
+      - catalina-support-ai
 
   database:
     image: postgres:18-alpine
@@ -108,6 +113,11 @@ services:
         mv -f /out/catalina-support.new /out/catalina-support
         echo "--- artefacto backend ---"
         ls -la /out
+
+networks:
+  # La red del motor de IA, creada por `ai.yml`: aquí sólo se entra en ella.
+  catalina-support-ai:
+    external: true
 
 volumes:
   database:

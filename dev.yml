@@ -1,15 +1,19 @@
 name: catalina-support-dev
 
-# Desarrollo: los tres servicios con el código montado como volumen, de modo que se
-# edita en la máquina y el contenedor recarga (Angular con su servidor de desarrollo,
-# Go con air). No hace falta Go ni Node instalados en la máquina.
+# Desarrollo: los servicios con el código montado como volumen, de modo que se edita
+# en la máquina y el contenedor recarga (Angular con su servidor de desarrollo, Go con
+# air). No hace falta Go ni Node instalados en la máquina.
 #
 #   docker compose -f dev.yml up -d
 #   docker compose -f dev.yml logs -f backend
 #   docker compose -f dev.yml exec backend go test ./...
 #
-# Los puertos publicados son 11001-11003 (no los 10001-10004 de Calibyou) para que los
+# Los puertos publicados son 11001-11004 (no los 10001-10004 de Calibyou) para que los
 # dos proyectos puedan estar levantados a la vez, y sólo se publican en 127.0.0.1.
+#
+# `mail` es el buzón de pruebas: recoge todo el correo que manda la aplicación y lo
+# enseña en http://127.0.0.1:11004. Sin él no se puede completar el alta de una cuenta
+# local en desarrollo, porque la contraseña se establece desde el enlace del correo.
 
 services:
   frontend:
@@ -47,6 +51,127 @@ services:
       - ./_files:/files
       - backend_go_mod:/go/pkg/mod
       - backend_go_build:/root/.cache/go-build
+    networks:
+      # El motor de IA vive en su propio compose (`ai.yml`) porque **un solo contenedor sirve a
+      # desarrollo y a producción**: no caben dos modelos en esta máquina. Se entra a él por esta
+      # red, que existe fuera de aquí (`docs/modules/ai.md`, decisión 1).
+      - default
+      - catalina-support-ai
+
+  # Buzón de pruebas: nada de lo que salga de aquí va a ningún destinatario real. Su
+  # puerto 1025 es el SMTP al que apunta dev.env, y el 8025 es la web donde se leen los
+  # correos (publicado en 11004 para no chocar con Calibyou).
+  mail:
+    image: axllent/mailpit:latest
+    container_name: catalina_support_dev_mail
+    restart: always
+    ports:
+      - 127.0.0.1:11004:8025
+    environment:
+      MP_MAX_MESSAGES: 200
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  # Pruebas de interfaz. No se levanta con el resto (`up -d` no lo arranca): se pide a propósito,
+  # porque abre un navegador de verdad contra desarrollo.
+  #
+  #   docker compose -f dev.yml run --rm e2e
+  #
+  # La imagen trae los navegadores instalados: es lo que permite cumplir la regla de que en la
+  # máquina no se instala nada (docs/ambientes.md, sección 8.3).
+  # ---------------------------------------------------------------------------
+  # El directorio de pruebas, para el camino de AD. Va detrás de un perfil para que no estorbe en el
+  # día a día: sólo se levanta cuando se está probando ese camino
+  # (`docker compose -f dev.yml --profile auth up -d`; docs/modules/auth.md, sección 11).
+  # ---------------------------------------------------------------------------
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: catalina_support_dev_ldap
+    profiles: ["auth"]
+    # **Sin `restart: always`, y a propósito**: los guiones de arranque de este contenedor no son
+    # idempotentes —al volver a arrancarlo intenta copiar los LDIF a una carpeta que ya no está y
+    # muere—, así que reiniciarlo solo lo dejaría en un bucle de arranques fallidos y el camino de AD
+    # caído. Se levanta a mano y, si hay que reiniciarlo, recreándolo
+    # (docs/modules/auth.md, sección 11).
+    environment:
+      LDAP_ORGANISATION: Catalina Support
+      LDAP_DOMAIN: ejemplo.com
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-admin-directorio}
+      # Las personas de prueba viven en el repositorio, no en un volumen que haya que mantener.
+      LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
+      # La configuración de arranque no se queda en el contenedor: es de las pruebas, no del servicio.
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
+      LDAP_NOFILE: "1024"
+    volumes:
+      - ./config/ldap:/ldifs:ro
+    ports:
+      - "127.0.0.1:11005:389"
+
+  # ---------------------------------------------------------------------------
+  # Keycloak, para el camino de OIDC. Va detrás del mismo perfil que el directorio: son los dos
+  # caminos de entrada que una instalación puede tener o no, y no estorban en el día a día.
+  #
+  # **El reino vive en el repositorio** (`config/keycloak/`) y se importa al arrancar, igual que las
+  # personas del directorio: no hay nada que configurar a mano ni que se pierda entre reinicios. Con
+  # `--import-realm`, si el reino ya existe no se toca.
+  #
+  # **El navegador llega a Keycloak por el mismo dominio que a la aplicación, y por un camino**
+  # (`/sso/`, que nginx manda a este contenedor). Así el emisor es uno solo —el que ve el
+  # navegador— y no hay dos direcciones que puedan discrepar: el backend usa el mismo
+  # `OIDC_ISSUER`, y por eso la vuelta se firma y se comprueba siempre contra el mismo sitio
+  # (docs/modules/auth.md, sección 5.3).
+  # ---------------------------------------------------------------------------
+  keycloak:
+    # Como el directorio, **sin `restart: always`**: son los dos servicios de pruebas y se levantan a
+    # mano con `--profile auth` (docs/modules/auth.md, sección 11).
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: catalina_support_dev_keycloak
+    profiles: ["auth"]
+    # `start-dev` es el modo de desarrollo: sin TLS propio y sin clúster, que es lo que tiene al lado.
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-keycloak}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      # El camino por el que nginx lo publica, y el nombre con el que firma lo que devuelve.
+      KC_HTTP_RELATIVE_PATH: /sso
+      KC_HOSTNAME: https://dev.catalina-support.example.com/sso
+      # Detrás de nginx: las cabeceras `X-Forwarded-*` que pone el vhost son de fiar.
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "127.0.0.1:11006:8080"
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    container_name: catalina_support_dev_e2e
+    profiles: ["e2e"]
+    working_dir: /e2e
+    # **El comando va aquí y no se pasa a mano**, y esto es un arreglo del 2026-09-26: sin él,
+    # `docker compose -f dev.yml run --rm e2e` —que es lo que dicen los documentos— **arrancaba el
+    # contenedor, no ejecutaba ni un caso y salía con código 0**. Un verde sin pruebas es lo peor que
+    # puede hacer una capa de pruebas, y estuvo así desde el principio del proyecto.
+    #
+    # Se sigue pudiendo pedir otra cosa: `... run --rm e2e npx playwright test tickets`, o
+    # `... run --rm e2e sh -c "npx playwright test --reporter=line"`.
+    command: ["npx", "playwright", "test"]
+    # El entorno de desarrollo, para poder entrar con la cuenta de fábrica y para leer el buzón.
+    env_file:
+      - ./config/env/dev.env
+    environment:
+      BASE_URL: https://dev.catalina-support.example.com
+      # El buzón, por dentro de la red de los contenedores: es donde acaban los correos que manda
+      # la aplicación, y es lo que permite probar el enlace del correo de verdad.
+      MAILPIT_URL: http://mail:8025
+      # Para volcar lo que hay en pantalla cuando algo no se ve como debería, se ejecuta la
+      # herramienta de diagnóstico: `docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e`.
+
+    volumes:
+      - ./tests/e2e:/e2e
+      - e2e_node_modules:/e2e/node_modules
 
   database:
     image: postgres:18-alpine
@@ -64,6 +189,13 @@ services:
       timeout: 5s
       retries: 12
 
+networks:
+  # La red del motor de IA. Es **externa** porque la crea `ai.yml`, que es quien levanta el
+  # contenedor: aquí sólo se entra en ella. Si no está creada, `up -d` lo dice y se arregla
+  # levantando el motor (`docker compose -f ai.yml up -d`).
+  catalina-support-ai:
+    external: true
+
 volumes:
   frontend_node_modules:
     name: catalina_support_dev_frontend_node_modules
@@ -73,3 +205,5 @@ volumes:
     name: catalina_support_dev_backend_go_build
   database:
     name: catalina_support_dev_database
+  e2e_node_modules:
+    name: catalina_support_dev_e2e_node_modules

@@ -1,0 +1,583 @@
+<main class="mx-auto flex max-w-3xl flex-col gap-6">
+  <h1 class="text-xl font-semibold text-texto">{{ t().configuracion.titulo }}</h1>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  @if (cargando()) {
+    <p class="text-sm text-apagado">{{ t().comun.cargando }}</p>
+  } @else {
+    <!-- ------------------------------------------------- el nombre de la instalación -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.nombre" [descripcion]="t().configuracion.nombreAyuda">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="min-w-64 flex-1">
+          <app-campo
+            identificador="nombre-instalacion"
+            [etiqueta]="t().configuracion.nombreCampo"
+            [ayuda]="t().configuracion.nombreDeFabrica"
+            [maximo]="60"
+            [valor]="nombreElegido()"
+            (valorChange)="nombreElegido.set($event)"
+          />
+        </div>
+
+        <app-boton
+          [texto]="t().configuracion.guardarNombre"
+          [textoTrabajando]="t().configuracion.guardando"
+          [trabajando]="guardando()"
+          [deshabilitado]="!cambioDeNombrePendiente()"
+          (pulsado)="guardarNombre()"
+        />
+      </div>
+    </app-tarjeta>
+
+    <!-- ---------------------------------------------------------------- la marca -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.marca" [descripcion]="t().configuracion.marcaAyuda">
+      <div class="flex flex-col gap-6">
+        @for (hueco of [{ oscuro: false }, { oscuro: true }]; track hueco.oscuro) {
+          <section class="flex flex-col gap-3">
+            <h3 class="text-sm font-medium text-texto">
+              {{ hueco.oscuro ? t().configuracion.logoOscuro : t().configuracion.logoClaro }}
+            </h3>
+            <p class="text-sm text-apagado">
+              {{ hueco.oscuro ? t().configuracion.logoOscuroAyuda : t().configuracion.logoClaroAyuda }}
+            </p>
+
+            <div class="flex flex-wrap items-center gap-4">
+              <!-- La vista previa: lo que se ve es lo que hay puesto, con el hueco que toca. -->
+              <span
+                class="inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-borde bg-superficie p-1"
+              >
+                <img
+                  [src]="vistaPrevia(hueco.oscuro)"
+                  [alt]="t().configuracion.vistaPrevia"
+                  class="max-h-full max-w-full object-contain"
+                />
+              </span>
+
+              <div class="flex flex-1 flex-col gap-2">
+                @if (hayLogoPropio(hueco.oscuro)) {
+                  <p class="text-sm text-apagado">
+                    {{ t().configuracion.logoPuesto }}
+                    @if (configuracion()?.brand; as marca) {
+                      @if (hueco.oscuro ? marca.dark.size : marca.light.size; as bytes) {
+                        <span>· {{ peso(bytes) }}</span>
+                      }
+                    }
+                  </p>
+                } @else {
+                  <p class="text-sm text-apagado">{{ t().configuracion.logoDeFabrica }}</p>
+                }
+
+                <!-- El campo de archivo va etiquetado: es lo que hace visible que ahí se elige uno. -->
+                <label class="flex flex-col gap-1 text-sm font-medium text-texto">
+                  {{ t().configuracion.elegirArchivo }}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    class="rounded-md border border-borde-fuerte bg-superficie px-2 py-1.5 text-sm text-texto"
+                    (change)="elegirArchivo(hueco.oscuro, $event)"
+                  />
+                </label>
+
+                <p class="text-xs text-apagado">{{ t().configuracion.formatos }}</p>
+
+                <div class="flex flex-wrap gap-2">
+                  <app-boton
+                    [texto]="t().configuracion.subir"
+                    [textoTrabajando]="t().configuracion.subiendo"
+                    [trabajando]="guardando()"
+                    [deshabilitado]="!(hueco.oscuro ? archivoOscuro() : archivoClaro())"
+                    (pulsado)="subir(hueco.oscuro)"
+                  />
+
+                  @if (hayLogoPropio(hueco.oscuro)) {
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().configuracion.volverAlDeFabrica"
+                      [deshabilitado]="guardando()"
+                      (pulsado)="volverAlDeFabrica(hueco.oscuro)"
+                    />
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+    </app-tarjeta>
+
+    <!-- ------------------------------------------------------------ cómo se entra -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.entrada" [descripcion]="t().configuracion.entradaAyuda">
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-3">
+          <app-selector
+            identificador="metodo-entrada"
+            [etiqueta]="t().configuracion.metodo"
+            [opciones]="opcionesDeMetodo()"
+            [valor]="metodo()"
+            (valorChange)="metodo.set($event)"
+          />
+
+          <!-- Qué quiere decir el método elegido, que es lo que hace falta saber antes de guardarlo. -->
+          <p class="text-sm text-apagado">{{ ayudaDelMetodo() }}</p>
+
+          @if (!directorioConfigurado()) {
+            <p class="text-sm text-apagado">{{ t().configuracion.metodoSinConfigurar }}</p>
+          }
+        </div>
+
+        <!--
+          **El directorio sólo se configura cuando se entra por la organización**: su panel sale al
+          elegir su método, y con «Cuentas de la aplicación» no hay ninguno de los dos (decisión del
+          responsable, 2026-09-27).
+        -->
+        @if (metodo() === 'ad') {
+        <!-- El directorio de la organización: lo que hace falta para el camino de AD. -->
+        <section class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <div>
+            <h3 class="text-sm font-medium text-texto">{{ t().configuracion.directorio }}</h3>
+            <p class="mt-1 text-sm text-apagado">{{ t().configuracion.directorioAyuda }}</p>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <app-campo
+              identificador="dir-servidor"
+              [etiqueta]="t().configuracion.dirServidor"
+              [ayuda]="t().configuracion.dirServidorAyuda"
+              [ejemplo]="'ldap'"
+              [valor]="dirServidor()"
+              (valorChange)="dirServidor.set($event)"
+            />
+
+            <app-campo
+              identificador="dir-puerto"
+              [etiqueta]="t().configuracion.dirPuerto"
+              [ayuda]="t().configuracion.dirPuertoAyuda"
+              [ejemplo]="'389'"
+              [valor]="dirPuerto()"
+              (valorChange)="dirPuerto.set($event)"
+            />
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-texto">
+            <input
+              type="checkbox"
+              [checked]="dirTls()"
+              (change)="dirTls.set($any($event.target).checked)"
+              class="h-4 w-4 rounded border-borde-fuerte"
+            />
+            <span>{{ t().configuracion.dirTls }}</span>
+          </label>
+          <p class="-mt-3 text-xs text-apagado">{{ t().configuracion.dirTlsAyuda }}</p>
+
+          <app-campo
+            identificador="dir-cuenta"
+            [etiqueta]="t().configuracion.dirCuenta"
+            [ayuda]="t().configuracion.dirCuentaAyuda"
+            [valor]="dirCuenta()"
+            (valorChange)="dirCuenta.set($event)"
+          />
+
+          <app-campo
+            identificador="dir-contrasena"
+            tipo="password"
+            autocomplete="new-password"
+            [etiqueta]="t().configuracion.dirContrasena"
+            [ayuda]="
+              configuracion()?.directory?.passwordSet
+                ? t().configuracion.dirContrasenaPuesta
+                : t().configuracion.dirContrasenaVacia
+            "
+            [valor]="dirContrasena()"
+            (valorChange)="dirContrasena.set($event)"
+          />
+
+          <app-campo
+            identificador="dir-base"
+            [etiqueta]="t().configuracion.dirBase"
+            [ayuda]="t().configuracion.dirBaseAyuda"
+            [valor]="dirBase()"
+            (valorChange)="dirBase.set($event)"
+          />
+
+          <app-campo
+            identificador="dir-filtro"
+            [etiqueta]="t().configuracion.dirFiltro"
+            [ayuda]="t().configuracion.dirFiltroAyuda"
+            [ejemplo]="'(mail=%s)'"
+            [valor]="dirFiltro()"
+            (valorChange)="dirFiltro.set($event)"
+          />
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <app-campo
+              identificador="dir-atributo-correo"
+              [etiqueta]="t().configuracion.dirAtributoCorreo"
+              [ejemplo]="'mail'"
+              [valor]="dirCorreo()"
+              (valorChange)="dirCorreo.set($event)"
+            />
+
+            <app-campo
+              identificador="dir-atributo-nombre"
+              [etiqueta]="t().configuracion.dirAtributoNombre"
+              [ejemplo]="'givenName'"
+              [valor]="dirNombre()"
+              (valorChange)="dirNombre.set($event)"
+            />
+
+            <app-campo
+              identificador="dir-atributo-apellidos"
+              [etiqueta]="t().configuracion.dirAtributoApellidos"
+              [ejemplo]="'sn'"
+              [valor]="dirApellidos()"
+              (valorChange)="dirApellidos.set($event)"
+            />
+
+            <app-campo
+              identificador="dir-atributo-id"
+              [etiqueta]="t().configuracion.dirAtributoId"
+              [ayuda]="t().configuracion.dirAtributoIdAyuda"
+              [ejemplo]="'objectGUID'"
+              [valor]="dirId()"
+              (valorChange)="dirId.set($event)"
+            />
+          </div>
+
+          <div>
+            <app-boton
+              forma="secundario"
+              [texto]="t().configuracion.probarDirectorio"
+              [textoTrabajando]="t().configuracion.probando"
+              [trabajando]="guardando()"
+              (pulsado)="probarDirectorio()"
+            />
+          </div>
+        </section>
+        }
+
+        <!--
+          **El reino sólo se configura cuando se entra por Keycloak** (decisión del responsable,
+          2026-09-27): su panel sale al elegir su método y se esconde con los demás. Enseñar las dos
+          configuraciones a la vez era ofrecer trabajo que no toca.
+        -->
+        @if (metodo() === 'keycloak') {
+        <!-- Keycloak: lo que hace falta para el camino de OIDC. -->
+        <section class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <div>
+            <h3 class="text-sm font-medium text-texto">{{ t().configuracion.keycloak }}</h3>
+            <p class="mt-1 text-sm text-apagado">{{ t().configuracion.keycloakAyuda }}</p>
+          </div>
+
+          <app-campo
+            identificador="kc-emisor"
+            [etiqueta]="t().configuracion.kcEmisor"
+            [ayuda]="t().configuracion.kcEmisorAyuda"
+            [valor]="kcEmisor()"
+            (valorChange)="kcEmisor.set($event)"
+          />
+
+          <app-campo
+            identificador="kc-cliente"
+            [etiqueta]="t().configuracion.kcCliente"
+            [ayuda]="t().configuracion.kcClienteAyuda"
+            [valor]="kcCliente()"
+            (valorChange)="kcCliente.set($event)"
+          />
+
+          <app-campo
+            identificador="kc-secreto"
+            tipo="password"
+            autocomplete="new-password"
+            [etiqueta]="t().configuracion.kcSecreto"
+            [ayuda]="
+              configuracion()?.keycloak?.secretSet
+                ? t().configuracion.kcSecretoPuesto
+                : t().configuracion.kcSecretoVacio
+            "
+            [valor]="kcSecreto()"
+            (valorChange)="kcSecreto.set($event)"
+          />
+
+          <app-campo
+            identificador="kc-vuelta"
+            [etiqueta]="t().configuracion.kcVuelta"
+            [ayuda]="t().configuracion.kcVueltaAyuda"
+            [valor]="kcVuelta()"
+            (valorChange)="kcVuelta.set($event)"
+          />
+
+          <div>
+            <app-boton
+              forma="secundario"
+              [texto]="t().configuracion.probarKeycloak"
+              [textoTrabajando]="t().configuracion.probando"
+              [trabajando]="guardando()"
+              (pulsado)="probarKeycloak()"
+            />
+          </div>
+        </section>
+        }
+
+        <div>
+          <app-boton
+            [texto]="t().configuracion.guardarEntrada"
+            [textoTrabajando]="t().configuracion.guardando"
+            [trabajando]="guardando()"
+            [deshabilitado]="!cambioDeEntradaPendiente()"
+            (pulsado)="guardarEntrada()"
+          />
+        </div>
+      </div>
+    </app-tarjeta>
+
+    <!-- ------------------------------------------------- el color institucional -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.color" [descripcion]="t().configuracion.colorAyuda">
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-wrap items-end gap-4">
+          <label class="flex flex-col gap-1 text-sm font-medium text-texto">
+            {{ t().configuracion.colorElegido }}
+            <input
+              type="color"
+              [value]="colorElegido()"
+              class="h-11 w-24 rounded-md border border-borde-fuerte bg-superficie"
+              (input)="previsualizarColor($any($event.target).value)"
+            />
+          </label>
+
+          <p class="text-sm text-apagado">{{ colorElegido() }}</p>
+
+          @if (cambioDeColorPendiente()) {
+            <div class="flex gap-2">
+              <app-boton
+                [texto]="t().configuracion.guardarColor"
+                [textoTrabajando]="t().configuracion.guardando"
+                [trabajando]="guardando()"
+                (pulsado)="guardarColor()"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().configuracion.descartar"
+                [deshabilitado]="guardando()"
+                (pulsado)="descartarColor()"
+              />
+            </div>
+          }
+        </div>
+
+        <!-- La vista previa: se ve cómo queda de verdad, ya resuelto por el backend. -->
+        <div class="rounded-md border border-borde bg-superficie-suave p-4">
+          <p class="mb-3 text-sm font-medium text-texto">{{ t().configuracion.vistaPrevia }}</p>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex min-h-11 items-center rounded-md px-4 py-2 text-sm font-medium"
+              [style.background-color]="colorResuelto()?.light ?? colorElegido()"
+              [style.color]="colorResuelto()?.onLight ?? '#ffffff'">
+              {{ t().configuracion.ejemploBoton }}
+            </span>
+
+            <span class="text-sm text-texto">{{ t().configuracion.ejemploTexto }}</span>
+          </div>
+
+          @if (colorResuelto(); as colors) {
+            <p class="mt-3 text-xs text-apagado">
+              {{ t().configuracion.colorResuelto }}: {{ colors.light }} ·
+              {{ t().configuracion.colorResueltoOscuro }}: {{ colors.dark }}
+            </p>
+          }
+        </div>
+      </div>
+    </app-tarjeta>
+
+    <!-- ------------------------------------------- la numeración y el reparto -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.numeracion" [descripcion]="t().configuracion.numeracionAyuda">
+      <div class="flex flex-col gap-6">
+        <!--
+          El idioma de la instalación: es el que se le pone a una cuenta nueva cuando quien la da de
+          alta no elige, y el de los correos que se le escriben.
+        -->
+        <app-selector
+          identificador="idioma-instalacion"
+          [etiqueta]="t().configuracion.idioma"
+          [ayuda]="t().configuracion.idiomaAyuda"
+          [opciones]="opcionesDeIdioma()"
+          [valor]="idioma()"
+          (valorChange)="idioma.set($event)"
+        />
+
+        <div>
+          <app-boton
+            [texto]="t().configuracion.guardarNumeracion"
+            [textoTrabajando]="t().configuracion.guardando"
+            [trabajando]="guardando()"
+            [deshabilitado]="!cambioDeNumeracionPendiente()"
+            (pulsado)="guardarNumeracion()"
+          />
+        </div>
+      </div>
+    </app-tarjeta>
+
+    <!--
+      **La región horaria y la dirección pública tienen su tarjeta** (decisión del responsable,
+      2026-09-29): son de la instalación entera, no de la numeración, y el botón de la otra tarjeta
+      decía «Guardar la numeración y el reparto» mientras guardaba también esto. Una tarjeta, un
+      botón, y cada uno guarda lo suyo.
+    -->
+    <app-tarjeta
+      nivel="h2"
+      [titulo]="t().configuracion.regionYDireccion"
+      [descripcion]="t().configuracion.regionYDireccionAyuda"
+    >
+      <div class="flex flex-col gap-6">
+        <!--
+          La región horaria: **se elige de la lista, no se escribe**. El buscador filtra el catálogo
+          IANA que da el navegador —o la lista corta si no lo trae—, la lista tiene su tope y se
+          desplaza, y debajo se explica la elegida con la hora que es en ella ahora mismo. Se guarda
+          con el mismo botón que el resto de esta tarjeta.
+        -->
+        <div class="flex flex-col gap-2" role="group" aria-labelledby="region-titulo">
+          <h3 id="region-titulo" class="text-sm font-medium text-texto">
+            {{ t().configuracion.region }}
+          </h3>
+          <p class="text-sm text-apagado">{{ t().configuracion.regionAyuda }}</p>
+
+          <label for="zona-busqueda" class="text-sm font-medium text-texto">
+            {{ t().configuracion.buscarZona }}
+          </label>
+          <input
+            id="zona-busqueda"
+            type="search"
+            autocomplete="off"
+            [value]="busquedaZona()"
+            (input)="busquedaZona.set($any($event.target).value)"
+            class="rounded-md border border-borde-fuerte bg-superficie px-3 py-2 text-sm text-texto min-h-11"
+          />
+
+          <ul
+            role="listbox"
+            [attr.aria-label]="t().configuracion.region"
+            class="max-h-56 overflow-y-auto rounded-md border border-borde-fuerte bg-superficie p-1"
+          >
+            @for (zona of zonasFiltradas(); track zona) {
+              <li role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  [attr.aria-selected]="zona === zonaElegida()"
+                  (click)="elegirZona(zona)"
+                  class="w-full rounded px-2 py-1.5 text-left text-sm text-texto hover:bg-superficie-suave focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                  [class.bg-superficie-suave]="zona === zonaElegida()"
+                  [class.font-medium]="zona === zonaElegida()"
+                >
+                  {{ zona }}
+                </button>
+              </li>
+            } @empty {
+              <li role="presentation" class="px-2 py-1.5 text-sm text-apagado">
+                {{ t().configuracion.sinZonas }}
+              </li>
+            }
+          </ul>
+
+          @if (horaDeLaZona(); as hora) {
+            <p class="text-sm text-apagado">{{ hora }}</p>
+          }
+        </div>
+
+        <!--
+          La dirección pública. El aviso de que no va cifrada **sale mientras se escribe y no bloquea
+          nada**: se puede guardar igual, pero quien configura la instalación tiene que saberlo.
+        -->
+        <div class="flex flex-col gap-2">
+          <app-campo
+            identificador="direccion-publica"
+            [etiqueta]="t().configuracion.direccion"
+            [ayuda]="t().configuracion.direccionAyuda"
+            [ejemplo]="t().configuracion.direccionEjemplo"
+            [valor]="direccionPublica()"
+            (valorChange)="direccionPublica.set($event)"
+          />
+
+          @if (direccionInsegura()) {
+            <app-aviso forma="atencion" [texto]="t().configuracion.direccionInsegura" />
+          }
+        </div>
+
+        <app-campo
+          identificador="prefijo"
+          [etiqueta]="t().configuracion.prefijo"
+          [ayuda]="t().configuracion.prefijoAyuda"
+          [ejemplo]="'CS'"
+          [valor]="prefijo()"
+          (valorChange)="prefijo.set($event)"
+        />
+
+        <!-- El aviso que hace falta antes de tocar el prefijo: lo que ya está emitido no se toca. -->
+        <app-aviso forma="informacion" [texto]="t().configuracion.prefijoAviso" />
+
+        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoPrincipal }}</h3>
+
+          <app-selector
+            identificador="reparto-principal"
+            [etiqueta]="t().configuracion.asignacion"
+            [opciones]="opcionesDeAsignacion()"
+            [valor]="asignacionPrincipal()"
+            (valorChange)="cambiarAsignacion('principal', $event)"
+          />
+
+          <app-selector
+            identificador="aviso-principal"
+            [etiqueta]="t().configuracion.aviso"
+            [opciones]="opcionesDeAviso(asignacionPrincipal())"
+            [valor]="avisoPrincipal()"
+            (valorChange)="avisoPrincipal.set($event)"
+          />
+        </div>
+
+        <div class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+          <h3 class="text-sm font-medium text-texto">{{ t().configuracion.repartoInterno }}</h3>
+
+          <app-selector
+            identificador="reparto-interno"
+            [etiqueta]="t().configuracion.asignacion"
+            [opciones]="opcionesDeAsignacion()"
+            [valor]="asignacionInterno()"
+            (valorChange)="cambiarAsignacion('interno', $event)"
+          />
+
+          <app-selector
+            identificador="aviso-interno"
+            [etiqueta]="t().configuracion.aviso"
+            [opciones]="opcionesDeAviso(asignacionInterno())"
+            [valor]="avisoInterno()"
+            (valorChange)="avisoInterno.set($event)"
+          />
+        </div>
+
+        <div>
+          <app-boton
+            [texto]="t().configuracion.guardarRegion"
+            [textoTrabajando]="t().configuracion.guardando"
+            [trabajando]="guardando()"
+            [deshabilitado]="!cambioDeRegionPendiente()"
+            (pulsado)="guardarRegion()"
+          />
+        </div>
+      </div>
+    </app-tarjeta>
+
+    <!-- Los correos se editan en su módulo, y desde aquí se llega: es el enlace, no la pantalla. -->
+    <app-tarjeta nivel="h2" [titulo]="t().configuracion.correos" [descripcion]="t().configuracion.correosAyuda">
+      <a
+        routerLink="/mail"
+        class="inline-flex min-h-11 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+      >
+        {{ t().configuracion.editarCorreos }}
+      </a>
+    </app-tarjeta>
+
+  }
+</main>

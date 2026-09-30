@@ -1,27 +1,25 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
-import { HealthService } from './core/services/health.service';
+import { SinServidor } from './core/components/sin-servidor';
+import { AvailabilityService } from './core/services/availability.service';
 
 /**
- * Armazón de la aplicación: cabecera, contenido y pie.
+ * El armazón de la aplicación.
  *
- * El contenido lo pone cada módulo a través del enrutador; aquí no hay ninguna regla de
- * negocio (docs/arquitectura.md, sección 6).
+ * Aquí **no hay ninguna regla de negocio**: es el sitio donde se pone el aviso de que el servidor
+ * no responde, que puede pasar en cualquier pantalla y por eso no es de ninguna
+ * (`docs/interfaz-y-experiencia.md`, sección 9). El menú lateral y los temas llegan con las
+ * pantallas de producto.
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, SinServidor],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App implements OnInit {
-  private readonly health = inject(HealthService);
+export class App {
+  private readonly disponibilidad = inject(AvailabilityService);
 
-  protected readonly title = signal('Catalina Support');
-  protected readonly estadoServicio = this.health.estado;
-
-  ngOnInit(): void {
-    this.health.comprobar();
-  }
+  protected readonly sinServidor = this.disponibilidad.sinServidor;
 }

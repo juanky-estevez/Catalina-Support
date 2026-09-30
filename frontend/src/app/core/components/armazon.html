@@ -1,0 +1,199 @@
+<!--
+  El armazón: el menú lateral y el contenido, sin barra superior (interfaz-y-experiencia, 3.1).
+-->
+<div class="flex min-h-dvh">
+  <!-- En móvil, la tira mínima: sin ella no habría dónde poner el disparador del menú. -->
+  <header
+    class="fixed inset-x-0 top-0 z-30 flex items-center gap-3 border-b border-borde bg-superficie px-3 py-2 lg:hidden"
+  >
+    <button
+      type="button"
+      class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-borde-fuerte text-texto"
+      [attr.aria-label]="t().menu.abrir"
+      [attr.aria-expanded]="cajonAbierto()"
+      (click)="abrirCajon()"
+    >
+      <app-icono nombre="menu" />
+    </button>
+
+    <app-logo tamano="menu" />
+    <span class="truncate text-sm font-medium text-texto">{{ nombreDeLaInstalacion() }}</span>
+  </header>
+
+  <!-- El fondo oscuro del cajón: al tocarlo se cierra, como cualquier cajón. -->
+  @if (cajonAbierto()) {
+    <div class="fixed inset-0 z-30 bg-black/40 lg:hidden" (click)="cerrarCajon()" aria-hidden="true"></div>
+  }
+
+  <!--
+    El menú, con sus tres zonas. En PC va fijo y se puede plegar; en móvil se abre como cajón.
+
+    **Su alto es el de la zona visible (`h-dvh`), no el del documento**, y **se desplaza por dentro** si
+    su contenido no cabe. Con `inset-y-0` medía el alto del documento: en un móvil con barra del
+    navegador —donde lo visible son 839 px de 890— el botón de salir acababa **por debajo de lo que se
+    ve**, imposible de pulsar, y en PC con una lista larga los controles quedaban al final de la página.
+    Lo encontró Playwright: decía que otro elemento interceptaba el clic, y el problema era que el botón
+    no estaba en pantalla (sección 3.1).
+  -->
+  <aside
+    class="fixed left-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto border-r border-borde bg-superficie transition-transform duration-200 lg:sticky lg:translate-x-0"
+    [class]="
+      (cajonAbierto() ? 'translate-x-0 ' : '-translate-x-full ') + (plegadoEfectivo() ? 'w-16 px-2' : 'w-60 px-3')
+    "
+  >
+    <!-- Zona 1: el producto. Es lo único que no se mueve. -->
+    <div class="flex items-center gap-2 border-b border-borde py-3" [class.justify-center]="plegadoEfectivo()">
+      <app-logo tamano="menu" />
+
+      @if (plegadoEfectivo()) {
+        <button
+          type="button"
+          class="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
+          [attr.aria-label]="t().menu.desplegar"
+          (click)="alternarPlegado()"
+        >
+          <app-icono nombre="plegar" />
+        </button>
+      } @else {
+        <span class="truncate text-sm font-semibold text-texto">{{ nombreDeLaInstalacion() }}</span>
+
+        @if (esAncha()) {
+          <!-- Plegar sólo donde hay sitio para la tira de iconos. -->
+          <button
+            type="button"
+            class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto"
+            [attr.aria-label]="t().menu.plegar"
+            (click)="alternarPlegado()"
+          >
+            <app-icono nombre="plegar" />
+          </button>
+        }
+
+        <!-- Y el cajón se cierra con su botón: en móvil el menú tapa el contenido. -->
+        <button
+          type="button"
+          class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-apagado hover:text-texto lg:hidden"
+          [attr.aria-label]="t().menu.cerrar"
+          (click)="cerrarCajon()"
+        >
+          <app-icono nombre="cerrar" />
+        </button>
+      }
+    </div>
+
+    <!-- Zona 2: las opciones del papel. Es lo que cambia de una persona a otra. -->
+    <nav class="flex flex-1 flex-col gap-1 py-3" [attr.aria-label]="t().menu.opciones">
+      @for (entrada of entradas(); track entrada.ruta) {
+        <a
+          [routerLink]="entrada.ruta"
+          routerLinkActive="bg-superficie-suave font-medium text-texto"
+          [routerLinkActiveOptions]="{ exact: entrada.ruta === '/' }"
+          class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-apagado hover:bg-superficie-suave hover:text-texto"
+          [class.justify-center]="plegadoEfectivo()"
+          [attr.title]="plegadoEfectivo() ? etiquetaDe(entrada) : null"
+          (click)="cerrarCajon()"
+        >
+          <app-icono [nombre]="entrada.icono" />
+          <!-- Plegado, el texto desaparece de la vista pero sigue ahí para quien no ve la pantalla. -->
+          <span [class]="plegadoEfectivo() ? 'sr-only' : 'truncate'">{{ etiquetaDe(entrada) }}</span>
+        </a>
+      }
+    </nav>
+
+    <!-- Zona 3: los controles, iguales para todos, separados por una línea. -->
+    <div class="flex flex-col gap-3 border-t border-borde py-3">
+      @if (plegadoEfectivo()) {
+        <!-- Plegado no hay sitio para el nombre ni para los controles: se despliega para usarlos. -->
+        <button
+          type="button"
+          class="flex items-center justify-center rounded-md px-3 py-2 text-sm text-apagado hover:bg-superficie-suave hover:text-texto"
+          [attr.title]="t().menu.desplegar"
+          (click)="alternarPlegado()"
+        >
+          <app-icono nombre="plegar" />
+          <span class="sr-only">{{ t().menu.desplegar }}</span>
+        </button>
+      } @else {
+        <!--
+          Tu nombre es el camino a tu perfil: es lo que dice la sección 3.6, y evita una entrada más en
+          el menú. La cuenta de fábrica no tiene perfil, así que ahí es texto y no enlace.
+        -->
+        @if (esDeFabrica()) {
+          <div class="px-1">
+            <p class="truncate text-sm font-medium text-texto">{{ nombre() }}</p>
+            <p class="truncate text-xs text-apagado">{{ papel() }}</p>
+          </div>
+        } @else {
+          <a
+            routerLink="/profile"
+            class="block rounded-md px-1 py-1 hover:bg-superficie-suave"
+            [attr.title]="t().perfil.abrir"
+            (click)="cerrarCajon()"
+          >
+            <p class="truncate text-sm font-medium text-texto">{{ nombre() }}</p>
+            <p class="truncate text-xs text-apagado">{{ papel() }}</p>
+            <span class="sr-only">{{ t().perfil.abrir }}</span>
+          </a>
+        }
+
+        <app-controles [vertical]="true" />
+      }
+
+      <!--
+        **La fila de salir lleva la versión del sistema, alineada a la derecha** (decisión del
+        responsable, 2026-09-25): es un dato de la instalación y no una opción, así que no es un botón
+        ni ocupa una fila propia —va con el control que ya está ahí—. **Plegado no se enseña**: un
+        número suelto al lado de un icono no dice nada (docs/interfaz-y-experiencia.md, sección 3.1).
+      -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-apagado hover:bg-superficie-suave hover:text-texto"
+          [class.w-full]="plegadoEfectivo()"
+          [class.flex-1]="!plegadoEfectivo()"
+          [class.justify-center]="plegadoEfectivo()"
+          [attr.title]="plegadoEfectivo() ? t().sesion.salir : null"
+          (click)="preguntarPorLaSalida()"
+        >
+          <app-icono nombre="salir" />
+          <span [class]="plegadoEfectivo() ? 'sr-only' : 'truncate'">{{ t().sesion.salir }}</span>
+        </button>
+
+        @if (!plegadoEfectivo() && versionDelSistema(); as version) {
+          <span class="shrink-0 pr-1 text-xs text-apagado">{{ version }}</span>
+        }
+      </div>
+    </div>
+  </aside>
+
+  <!--
+    **Salir se confirma** (decisión del responsable, 2026-09-29): se pierde la sesión y hay que volver a
+    entrar, así que se pregunta antes. El diálogo es el de siempre —nativo, con su foco y su Escape— y
+    los dos botones dicen lo que hacen.
+  -->
+  <app-dialogo
+    [titulo]="t().sesion.salirPregunta"
+    [abierto]="confirmandoLaSalida()"
+    (cerrado)="cerrarLaConfirmacion()"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ t().sesion.salirConsecuencia }}</p>
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton [texto]="t().sesion.salir" (pulsado)="salir()" />
+        <app-boton
+          forma="secundario"
+          [texto]="t().comun.cancelar"
+          (pulsado)="cerrarLaConfirmacion()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+
+  <!-- El contenido. En móvil se le deja sitio para la tira de arriba, y **el hueco es más ancho en
+       pantallas grandes sin llegar a ocupar todo** (quinta enmienda del 2026-09-29): `px-5` de base y
+       `px-10` a partir de tablet/escritorio. -->
+  <main class="min-w-0 flex-1 px-5 pb-10 pt-20 lg:px-10 lg:pt-8">
+    <router-outlet />
+  </main>
+</div>

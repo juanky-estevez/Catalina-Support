@@ -1,10 +1,275 @@
+@import 'tailwindcss';
+
+/*
+ * Dónde están las clases. Tailwind v4 busca solo, pero aquí se lo decimos **explícitamente**: en
+ * este proyecto las plantillas no son archivos `.html`, van dentro de los componentes `.ts`, y con
+ * la detección automática no generaba **ni una sola utilidad** —la página salía como texto sin
+ * estilos—. Declararlo es además lo que hace que las clases nuevas no dependan de una heurística.
+ *
+ * La ruta es relativa a este archivo (`src/styles.css`).
+ */
+@source './app';
+@source './index.html';
+
+/*
+ * LOS COLORES NO SE ESCRIBEN A MANO EN LOS COMPONENTES: salen de aquí
+ * (docs/interfaz-y-experiencia.md, sección 6.2).
+ *
+ * Cada color se declara **una sola vez** con `light-dark(claro, oscuro)`: cuál de los dos se usa lo
+ * decide `color-scheme`, y `color-scheme` lo decide el tema. Así no hay dos listas de colores que se
+ * puedan desincronizar —el riesgo de escribir la paleta dos veces— y añadir una paleta nueva son
+ * unas líneas.
+ *
+ * El tema se elige con un atributo en `<html>`:
+ *   - sin atributo → los dos temas de fábrica, siguiendo al sistema (lo que pida el navegador)
+ *   - `data-theme="<tema>"` → lo fuerza. Hay ocho: dos de fábrica (`claro`, `oscuro`) y seis fijos
+ * Lo pone `ThemeService` y, antes de arrancar, `main.ts`. **Nunca un script incrustado en el
+ * `index.html`**: la CSP de producción es `script-src 'self'` y no lo permitiría.
+ *
+ * Los nombres están en español porque son los del producto, y son los mismos que usan las clases de
+ * Tailwind (`bg-superficie`, `text-apagado`).
+ */
 :root {
+  /* Por defecto, claro u oscuro según lo que pida el sistema. */
+  color-scheme: light dark;
+
+  --fondo: light-dark(#f5f6f8, #14181d);
+  --superficie: light-dark(#ffffff, #1c2229);
+  --superficie-suave: light-dark(#f0f2f5, #232a33);
+  --borde: light-dark(#d8dde4, #333c47);
+  --borde-fuerte: light-dark(#7b8b9f, #607080);
+  --texto: light-dark(#1b2430, #eef1f5);
+  --texto-apagado: light-dark(#5a6572, #a9b3c0);
+  /*
+   * El color institucional **lo pone la instalación** (docs/modules/settings.md): el administrador
+   * elige uno y el backend calcula los cuatro valores que hacen falta para que se lea en los dos
+   * temas de fábrica. Esto de aquí es el de fábrica, y `BrandService` lo sobrescribe en cuanto lo
+   * lee. Los seis temas fijos no lo usan: llevan su propio acento.
+   */
+  --institucional-claro: #1d4ed8;
+  --institucional-oscuro: #7ea2ff;
+  --institucional-texto-claro: #ffffff;
+  --institucional-texto-oscuro: #0d0f12;
+
+  --primario: light-dark(var(--institucional-claro), var(--institucional-oscuro));
+  --primario-texto: light-dark(var(--institucional-texto-claro), var(--institucional-texto-oscuro));
+  --peligro: light-dark(#b3261e, #ff8a80);
+  --peligro-suave: light-dark(#fdecea, #3a2220);
+  --exito: light-dark(#1b6b3a, #7ed09b);
+  --exito-suave: light-dark(#e7f5ec, #1e3227);
+  --aviso: light-dark(#8a5300, #f0c070);
+  --aviso-suave: light-dark(#fdf3e2, #352c1b);
+  --foco: light-dark(#1d4ed8, #7ea2ff);
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/*
+ * Forzar uno de los dos temas de fábrica es cambiar `color-scheme`: sus colores ya están declarados
+ * arriba, con `light-dark()`. Son los dos **personalizables**, los que llevan el color institucional
+ * que fija el administrador.
+ */
+:root[data-theme='claro'] {
   color-scheme: light;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root[data-theme='oscuro'] {
+  color-scheme: dark;
+}
+
+/* ============================================================================================
+ * Los seis temas fijos (docs/interfaz-y-experiencia.md, sección 6.2)
+ *
+ * Cada uno es **un conjunto de valores de las mismas variables**, y ninguno toca los componentes:
+ * añadir un tema nuevo es copiar un bloque y cambiar los colores. Todos tienen **su propio color de
+ * acento** (decisión del responsable, 2026-09-23), elegido para no confundirse con los colores de
+ * estado: el verde, el rojo y el ámbar ya significan algo.
+ *
+ * Los contrastes están medidos —texto sobre fondo, texto apagado, acento, el texto del botón y los
+ * tres colores de estado sobre su fondo— y **hay una prueba que los vuelve a medir en el navegador
+ * para los ocho temas**: una paleta que no se lee no entra.
+ * ============================================================================================ */
+
+/* Papel (claro, cálido) */
+:root[data-theme='papel'] {
+  color-scheme: light;
+
+  --fondo: #f8f5ef;
+  --superficie: #fffdf9;
+  --superficie-suave: #f1ece1;
+  --borde: #ded5c4;
+  --borde-fuerte: #99896e;
+  --texto: #241f19;
+  --texto-apagado: #5d5346;
+  --primario: #6a3fb0;
+  --primario-texto: #ffffff;
+  --peligro: #a3211a;
+  --peligro-suave: #fbe9e6;
+  --exito: #1a5c33;
+  --exito-suave: #e6f2e9;
+  --aviso: #7a4a00;
+  --aviso-suave: #fbf0dd;
+}
+
+/* Niebla (claro, frío) */
+:root[data-theme='niebla'] {
+  color-scheme: light;
+
+  --fondo: #eef2f7;
+  --superficie: #ffffff;
+  --superficie-suave: #e2e9f2;
+  --borde: #ccd8e6;
+  --borde-fuerte: #7089a8;
+  --texto: #16202b;
+  --texto-apagado: #4f5f70;
+  --primario: #0e6d8c;
+  --primario-texto: #ffffff;
+  --peligro: #a8231c;
+  --peligro-suave: #fbe8e7;
+  --exito: #15603a;
+  --exito-suave: #e2f0ea;
+  --aviso: #7d4a00;
+  --aviso-suave: #fbefdc;
+}
+
+/* Alto contraste (claro) */
+:root[data-theme='contraste'] {
+  color-scheme: light;
+
+  --fondo: #ffffff;
+  --superficie: #ffffff;
+  --superficie-suave: #f0f0f0;
+  --borde: #5c5c5c;
+  --borde-fuerte: #000000;
+  --texto: #000000;
+  --texto-apagado: #454545;
+  --primario: #0b3ea8;
+  --primario-texto: #ffffff;
+  --peligro: #a30000;
+  --peligro-suave: #ffe6e6;
+  --exito: #005c2e;
+  --exito-suave: #dff5e7;
+  --aviso: #6b3d00;
+  --aviso-suave: #ffefd4;
+}
+
+/* Grafito (oscuro, neutro) */
+:root[data-theme='grafito'] {
+  color-scheme: dark;
+
+  --fondo: #15171a;
+  --superficie: #1e2126;
+  --superficie-suave: #262a30;
+  --borde: #373d45;
+  --borde-fuerte: #646e78;
+  --texto: #f0f2f5;
+  --texto-apagado: #b0b7c0;
+  --primario: #c0aaff;
+  --primario-texto: #0d0f12;
+  --peligro: #ff9188;
+  --peligro-suave: #3b2220;
+  --exito: #86d6a3;
+  --exito-suave: #1d3227;
+  --aviso: #f2c577;
+  --aviso-suave: #372c18;
+}
+
+/* Noche (oscuro, azulado) */
+:root[data-theme='noche'] {
+  color-scheme: dark;
+
+  --fondo: #0e1622;
+  --superficie: #16202e;
+  --superficie-suave: #1e2a3a;
+  --borde: #2c3a4c;
+  --borde-fuerte: #596d89;
+  --texto: #e9eef7;
+  --texto-apagado: #a7b6ca;
+  --primario: #5ed0e6;
+  --primario-texto: #0d0f12;
+  --peligro: #ff9a90;
+  --peligro-suave: #3a2126;
+  --exito: #82d7a6;
+  --exito-suave: #17301f;
+  --aviso: #f3c97e;
+  --aviso-suave: #332a16;
+}
+
+/* Sepia (oscuro, cálido) */
+:root[data-theme='sepia'] {
+  color-scheme: dark;
+
+  --fondo: #191512;
+  --superficie: #231d18;
+  --superficie-suave: #2c2620;
+  --borde: #3e352c;
+  --borde-fuerte: #786956;
+  --texto: #f4efe7;
+  --texto-apagado: #bcae9c;
+  --primario: #f0a0c0;
+  --primario-texto: #0d0f12;
+  --peligro: #ff9d92;
+  --peligro-suave: #3a231d;
+  --exito: #94d7a6;
+  --exito-suave: #1f3123;
+  --aviso: #f0c583;
+  --aviso-suave: #362b18;
+}
+
+
+/*
+ * `inline` es lo que hace que las utilidades de Tailwind lean estas variables en vez de copiar su
+ * valor: así un tema puede cambiarlas en caliente, sin recompilar nada.
+ */
+/*
+  **Una mención se ve como una mención** (decisión del responsable, 2026-09-29): va dentro del texto del
+  comentario —es texto, no un adorno— y tiene que **distinguirse a simple vista** de lo que se escribió a
+  mano. La arroba **la pone el estilo**, no el texto guardado: así las menciones que ya estaban escritas
+  se ven igual que las nuevas, y lo que se guarda sigue siendo el nombre (que es lo que se lee en los
+  correos y en el historial). El color y el fondo salen del tema, así que vale en los ocho.
+*/
+[data-mencion] {
+  color: var(--primario);
+  font-weight: 500;
+  background: var(--superficie-suave);
+  border-radius: 0.25rem;
+  padding: 0 0.15rem;
+}
+
+[data-mencion]::before {
+  content: '@';
+}
+
+@theme inline {
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-superficie-suave: var(--superficie-suave);
+  --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
+  --color-texto: var(--texto);
+  --color-apagado: var(--texto-apagado);
+  --color-primario: var(--primario);
+  --color-primario-texto: var(--primario-texto);
+  --color-peligro: var(--peligro);
+  --color-peligro-suave: var(--peligro-suave);
+  --color-exito: var(--exito);
+  --color-exito-suave: var(--exito-suave);
+  --color-aviso: var(--aviso);
+  --color-aviso-suave: var(--aviso-suave);
+  --color-foco: var(--foco);
 }
 
 body {
   margin: 0;
-  background: #f6f7f9;
-  color: #1f2937;
+  background-color: var(--fondo);
+  color: var(--texto);
+}
+
+/*
+ * El foco siempre visible: es requisito de accesibilidad y se comprueba al construir cada
+ * componente, no al final (docs/interfaz-y-experiencia.md, sección 8).
+ */
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
 }

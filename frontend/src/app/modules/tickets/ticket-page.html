@@ -1,0 +1,123 @@
+<main class="mx-auto flex max-w-[88rem] flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <!--
+        **El botón de volver va a la izquierda del número y es sólo un icono** (quinta enmienda del
+        2026-09-29, punto 3): una flecha del proyecto, cuadrada, con su nombre accesible —sigue siendo
+        `t().tickets.volver`— para quien no ve el dibujo.
+      -->
+      <app-boton
+        forma="secundario"
+        [soloIcono]="true"
+        nombreDeIcono="volver"
+        [etiqueta]="t().tickets.volver"
+        (pulsado)="irALaBandeja()"
+      />
+
+      <!--
+        **El número del ticket manda en la pantalla** (decisión del responsable, 2026-09-29): era del
+        mismo tamaño que todo lo demás y se perdía entre el estado, el conmutador y las acciones. Ahora es
+        el texto más grande de la fila, y crece un poco más en pantallas anchas.
+      -->
+      <h1 class="text-2xl font-bold text-texto sm:text-3xl">{{ numeroDeArriba() }}</h1>
+
+      <!--
+        **Y el número del otro lado, como referencia** (decisiones del 2026-09-28 y del 2026-09-29): el
+        título es **el ticket del equipo de quien mira** —el interno para Desarrollo, el principal para
+        Soporte y el Administrador— y el otro va al lado, en apagado, para saber a cuál pertenece.
+      -->
+      @if (numeroDeReferencia(); as referencia) {
+        <span class="rounded border border-borde px-1.5 py-0.5 text-xs text-apagado">{{ referencia }}</span>
+      }
+
+      @if (estadoDeArriba(); as estado) {
+        <app-estado [estado]="estado.estado" [texto]="estado.texto" />
+      }
+
+      <!--
+        **Copiar el número es un botón de sólo icono** (decisión del responsable, 2026-09-27): el
+        portapapeles, y al copiar **un visto verde durante dos segundos**, que es la confirmación sin
+        sacar un aviso aparte. El nombre accesible va en `etiqueta`, y **cambia con el estado**: quien
+        no ve el color oye «Copiado».
+      -->
+      <app-boton
+        [forma]="copiado() ? 'exito' : 'secundario'"
+        [nombreDeIcono]="copiado() ? 'visto' : 'copiar'"
+        [soloIcono]="true"
+        [etiqueta]="copiado() ? t().tickets.copiado : t().tickets.copiarNumero"
+        (pulsado)="copiar()"
+      />
+    </div>
+
+    <!--
+      **El conmutador y el desplegable de estados, en la fila de arriba** (decisiones 78 y 80): con un
+      solo ticket a la vista, el control de estados va aquí, junto a «Principal · Los dos · Interno».
+      Con los dos a la vista no hay desplegable aquí —`detalleUnico()` es nulo—: cada columna
+      lleva el suyo en su cabecera, porque cada ticket tiene su estado. **El volver ya no está aquí**:
+      pasó al principio de la fila, a la izquierda del número, y es sólo un icono.
+    -->
+    <div class="flex flex-wrap items-center gap-3">
+      @if (hayInterno()) {
+        <app-conmutador
+          [etiqueta]="t().tickets.vistaEtiqueta"
+          [opciones]="opcionesDeVista()"
+          [valor]="forma()"
+          (valorChange)="forma.set($any($event))"
+        />
+      }
+
+      @if (detalleUnico(); as detalle) {
+        <app-acciones-del-ticket [ticket]="detalle.ticket" (cambio)="recargar()" />
+      }
+    </div>
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  @if (cargando()) {
+    <p class="text-sm text-apagado">{{ t().tickets.cargandoTicket }}</p>
+  } @else if (forma() === 'principal' && principal(); as detalle) {
+    <app-ticket-vista
+      [detalle]="detalle"
+      [responsables]="responsables()"
+      [categorias]="categorias()"
+      (cambio)="recargar()"
+    />
+  } @else if (forma() === 'interno' && interno(); as detalle) {
+    <app-ticket-vista
+      [detalle]="detalle"
+      [responsables]="responsables()"
+      [categorias]="categorias()"
+      (cambio)="recargar()"
+    />
+  } @else if (forma() === 'losdos') {
+    <div class="grid gap-6 xl:grid-cols-2">
+      @if (principal(); as detalle) {
+        <!-- **Sólo la conversación**: en «Los dos» las fichas no se enseñan (decisión del responsable,
+             2026-09-27); con las cuatro columnas la pantalla se ve saturada. Para actuar sobre uno de
+             los dos, se elige con el conmutador. -->
+        <app-ticket-vista
+          [detalle]="detalle"
+          [responsables]="responsables()"
+          [categorias]="categorias()"
+          [soloLaConversacion]="true"
+          [conCabecera]="true"
+          (cambio)="recargar()"
+        />
+      }
+
+      @if (interno(); as detalle) {
+        <app-ticket-vista
+          [detalle]="detalle"
+          [responsables]="responsables()"
+          [categorias]="categorias()"
+          [soloLaConversacion]="true"
+          [conCabecera]="true"
+          (cambio)="recargar()"
+        />
+      }
+    </div>
+  }
+</main>

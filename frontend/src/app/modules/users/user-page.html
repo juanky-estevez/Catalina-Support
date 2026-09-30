@@ -1,0 +1,226 @@
+<main class="mx-auto flex max-w-3xl flex-col gap-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <!--
+      **El volver va a la izquierda y es sólo un icono** (quinta enmienda del 2026-09-29, punto 3): la
+      flecha del proyecto, cuadrada, con su nombre accesible para quien no ve el dibujo.
+    -->
+    <a
+      routerLink="/users"
+      class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-borde-fuerte text-texto hover:bg-superficie-suave focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+      [attr.aria-label]="t().usuarios.volver"
+      [attr.title]="t().usuarios.volver"
+    >
+      <app-icono nombre="volver" />
+    </a>
+
+    <h1 class="text-xl font-semibold text-texto">
+      @if (cuenta(); as quien) {
+        {{ nombreCompleto(quien) }}
+      } @else {
+        {{ t().usuarios.fichaTitulo }}
+      }
+    </h1>
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  @if (cargando()) {
+    <p class="text-sm text-apagado">{{ t().usuarios.cargando }}</p>
+  } @else if (cuenta(); as quien) {
+    <!-- Los datos: lo que se puede cambiar, de una vez y con un solo botón. -->
+    <app-tarjeta nivel="h2" [titulo]="t().usuarios.datos">
+      <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); guardar()">
+        <app-campo
+          identificador="ficha-nombre"
+          [etiqueta]="t().usuarios.nombre"
+          [valor]="nombre()"
+          (valorChange)="nombre.set($event)"
+        />
+
+        <app-campo
+          identificador="ficha-apellidos"
+          [etiqueta]="t().usuarios.apellidos"
+          [valor]="apellidos()"
+          (valorChange)="apellidos.set($event)"
+        />
+
+        <app-campo
+          identificador="ficha-correo"
+          tipo="email"
+          [etiqueta]="t().usuarios.correo"
+          [valor]="correo()"
+          (valorChange)="correo.set($event)"
+        />
+
+        <app-selector
+          identificador="ficha-papel"
+          [etiqueta]="t().usuarios.papel"
+          [opciones]="opcionesDePapel()"
+          [valor]="papel()"
+          (valorChange)="papel.set($event)"
+        />
+
+        <app-selector
+          identificador="ficha-idioma"
+          [etiqueta]="t().usuarios.idioma"
+          [opciones]="opcionesDeIdioma()"
+          [valor]="idioma()"
+          (valorChange)="idioma.set($event)"
+        />
+
+        <div class="flex flex-wrap items-center gap-3">
+          <app-boton
+            tipo="submit"
+            [texto]="t().usuarios.guardar"
+            [deshabilitado]="!hayCambios() || trabajando()"
+          />
+
+          @if (!hayCambios()) {
+            <span class="text-sm text-apagado">{{ t().usuarios.sinCambios }}</span>
+          }
+        </div>
+      </form>
+    </app-tarjeta>
+
+    <!-- Lo que no se cambia escribiendo: el estado, la última entrada y de dónde sale la contraseña. -->
+    <app-tarjeta nivel="h2" [titulo]="t().usuarios.estado">
+      <dl class="flex flex-col gap-3 text-sm">
+        <div class="flex flex-wrap gap-x-2">
+          <dt class="font-medium text-texto">{{ t().usuarios.estado }}:</dt>
+          <dd [class]="quien.isActive ? 'text-exito' : 'text-apagado'">
+            {{ quien.isActive ? t().usuarios.activa : t().usuarios.desactivada }}
+          </dd>
+        </div>
+
+        <div class="flex flex-wrap gap-x-2">
+          <dt class="font-medium text-texto">{{ t().usuarios.columnaOrigen }}:</dt>
+          <dd class="text-texto">{{ etiquetaDeOrigen(quien.origin) }}</dd>
+        </div>
+
+        <div class="flex flex-wrap gap-x-2">
+          <dt class="font-medium text-texto">{{ t().usuarios.ultimaEntrada }}:</dt>
+          <dd class="text-apagado">{{ ultimaEntrada(quien) }}</dd>
+        </div>
+
+        <div class="flex flex-wrap gap-x-2">
+          <dt class="font-medium text-texto">{{ t().usuarios.contrasena }}:</dt>
+          <dd class="text-apagado">
+            {{ quien.hasPassword ? t().usuarios.contrasenaPropia : t().usuarios.contrasenaDirectorio }}
+          </dd>
+        </div>
+      </dl>
+    </app-tarjeta>
+
+    <!-- El cambio de origen: una de las dos acciones que pueden dejar a alguien sin poder entrar. -->
+    <app-tarjeta nivel="h2" [titulo]="t().usuarios.cambiarOrigen" [descripcion]="t().usuarios.cambiarOrigenAyuda">
+      <div class="flex flex-wrap items-end gap-3">
+        <app-selector
+          identificador="ficha-origen"
+          [etiqueta]="t().usuarios.origen"
+          [opciones]="opcionesDeOrigen()"
+          [valor]="origenElegido()"
+          (valorChange)="origenElegido.set($event)"
+        />
+
+        <app-boton
+          [texto]="t().usuarios.guardarOrigen"
+          [deshabilitado]="!cambiaElOrigen() || trabajando()"
+          (pulsado)="guardarOrigen()"
+        />
+      </div>
+    </app-tarjeta>
+
+    <!-- Las acciones sobre la cuenta. -->
+    <app-tarjeta nivel="h2" [titulo]="t().usuarios.acciones">
+      <div class="flex flex-col gap-4">
+        @if (preguntandoDesactivar()) {
+          <div class="flex flex-col gap-3 rounded-md border border-aviso bg-aviso-suave p-3">
+            <p class="text-sm font-medium text-texto">{{ t().usuarios.desactivarPregunta }}</p>
+            <p class="text-sm text-texto">{{ t().usuarios.desactivarConsecuencia }}</p>
+
+            <div class="flex flex-wrap gap-2">
+              <app-boton
+                forma="peligro"
+                [texto]="t().usuarios.siDesactivar"
+                [deshabilitado]="trabajando()"
+                (pulsado)="desactivar()"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().usuarios.cancelar"
+                [deshabilitado]="trabajando()"
+                (pulsado)="preguntandoDesactivar.set(false)"
+              />
+            </div>
+          </div>
+        }
+
+        <div class="flex flex-wrap gap-2">
+          @if (!esMiCuenta()) {
+            @if (quien.isActive) {
+              <app-boton
+                forma="secundario"
+                [texto]="t().usuarios.desactivar"
+                [deshabilitado]="trabajando() || preguntandoDesactivar()"
+                (pulsado)="preguntandoDesactivar.set(true)"
+              />
+            } @else if (seReactivaSola(quien)) {
+              <!--
+                Una cuenta de Keycloak no se reactiva desde aquí: **entra sola y al entrar se
+                reactiva**. Se cuenta en vez de ofrecer un botón que llevaría a un error
+                (docs/modules/users.md, sección 5, punto 4).
+              -->
+              <app-aviso forma="informacion" [texto]="t().usuarios.reactivaSola" />
+            } @else {
+              <app-boton
+                forma="secundario"
+                [texto]="t().usuarios.reactivar"
+                [deshabilitado]="trabajando()"
+                (pulsado)="reactivar()"
+              />
+            }
+          }
+
+          <!-- Y en la ficha, lo mismo: la contraseña sólo se cambia en las cuentas locales. -->
+          @if (esLocal(quien)) {
+            <app-boton
+              forma="secundario"
+              [texto]="t().usuarios.mandarEnlace"
+              [deshabilitado]="trabajando() || !quien.isActive"
+              (pulsado)="preguntarPorElEnlace()"
+            />
+          }
+        </div>
+      </div>
+    </app-tarjeta>
+  }
+  <!--
+    **Mandar el enlace pregunta antes** (decisión del responsable, 2026-09-28): para una cuenta que ya
+    tiene contraseña es **restablecerla**, y el aviso dice cuál de los dos enlaces es —caducan distinto—.
+  -->
+  <app-dialogo
+    [titulo]="t().usuarios.mandarEnlace"
+    [abierto]="mandandoElEnlace() !== null"
+    (cerrado)="cerrarLaConfirmacion()"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ avisoDelEnlace() }}</p>
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          [texto]="t().usuarios.mandarEnlace"
+          [deshabilitado]="trabajando()"
+          (pulsado)="mandarEnlace()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().usuarios.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarLaConfirmacion()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+</main>

@@ -1,0 +1,114 @@
+<main class="mx-auto flex max-w-3xl flex-col gap-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <!--
+      **Volver va a la izquierda y es sólo un icono** (decisión del responsable, 2026-09-29): una flecha
+      del proyecto, con su nombre accesible, como en la ficha del ticket. El texto ocupaba sitio en una
+      cabecera que ya lleva el título.
+    -->
+    <a
+      routerLink="/tickets"
+      class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-borde-fuerte text-texto hover:bg-superficie-suave"
+      [attr.aria-label]="t().tickets.volver"
+      [attr.title]="t().tickets.volver"
+    >
+      <app-icono nombre="volver" />
+    </a>
+
+    <h1 class="text-xl font-semibold text-texto">{{ t().tickets.nuevoTitulo }}</h1>
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+
+    @if (creado()) {
+      <a
+        [routerLink]="['/tickets', creado()]"
+        class="inline-flex min-h-11 w-fit items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+      >
+        {{ t().tickets.verTicket }} {{ creado() }}
+      </a>
+    }
+  }
+
+  <app-tarjeta>
+    <!--
+      **Los adjuntos van dentro de la descripción** (`docs/interfaz-y-experiencia.md`, sección 6.5): el
+      recuadro de archivos aparte desapareció, porque tener dos sitios donde se hace lo mismo era el
+      ruido que este producto evita. Las tres puertas —pegar, arrastrar y el botón— viven en el editor,
+      que es quien sabe dónde está el cursor, así que **el pegado sólo funciona ahí** y no en el
+      formulario entero (docs/modules/tickets.md, decisión 43).
+    -->
+    <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); crear()">
+      <p class="text-sm text-apagado">{{ t().tickets.nuevoAyuda }}</p>
+
+      <app-campo
+        identificador="ticket-asunto"
+        [etiqueta]="t().tickets.asunto"
+        [valor]="asunto()"
+        (valorChange)="asunto.set($event)"
+      />
+
+      <!--
+        **La categoría es obligatoria** (decisión 65): no hay ticket sin clasificar. El selector lleva
+        delante una opción vacía que no se puede elegir, así que arranca diciendo «Elige una categoría»
+        y no viene una puesta que nadie ha decidido. Sólo se ofrecen las **activas**: una retirada deja
+        de ofrecerse, pero los tickets que la tienen la conservan.
+      -->
+      @if (puedeCrearTicket()) {
+        <app-selector
+          identificador="ticket-categoria"
+          [etiqueta]="t().tickets.categoria"
+          [ayuda]="t().tickets.categoriaAyuda"
+          [opciones]="opcionesDeCategoria()"
+          [valor]="categoriaElegida()"
+          (valorChange)="categoriaElegida.set($event)"
+        />
+      } @else if (!cargandoCategorias()) {
+        <!-- Sin ninguna categoría activa no se puede crear: se dice, en vez de dejar rellenar y fallar. -->
+        <app-aviso forma="atencion" [texto]="t().tickets.sinCategoriasActivas" />
+      }
+
+      <!--
+        **El alta no pide etiquetas** (decisión del responsable, 2026-09-29, decisión 82): etiquetar
+        es cosa de **Soporte y Desarrollo**, y el usuario **no las pone ni las ve** en su ticket. Aquí
+        sólo se elige la **categoría**, que es obligatoria y clasifica el ticket.
+      -->
+
+      <app-editor-con-adjuntos
+        #elDeLaDescripcion
+        identificador="ticket-descripcion"
+        [etiqueta]="t().tickets.campoDescripcion"
+        [ayuda]="t().tickets.camposDescripcionAyuda"
+        [textos]="textosDelEditor()"
+        [deshabilitado]="trabajando()"
+        [valor]="descripcion()"
+        (valorChange)="descripcion.set($event)"
+      />
+
+      <!--
+        Soporte puede crear el ticket en nombre de otra persona: se identifica por su correo, que es
+        lo que tiene a mano cuando alguien llama.
+      -->
+      @if (puedeElegirSolicitante()) {
+        <app-campo
+          identificador="ticket-solicitante"
+          tipo="email"
+          [etiqueta]="t().tickets.paraQuien"
+          [ayuda]="t().tickets.paraQuienAyuda"
+          [valor]="solicitante()"
+          (valorChange)="solicitante.set($event)"
+        />
+      }
+
+      <div>
+        <app-boton
+          tipo="submit"
+          [texto]="t().tickets.crear"
+          [textoTrabajando]="t().tickets.creando"
+          [trabajando]="trabajando()"
+          [deshabilitado]="!puedeCrearTicket() || cargandoCategorias()"
+        />
+      </div>
+    </form>
+  </app-tarjeta>
+</main>

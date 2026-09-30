@@ -1,0 +1,349 @@
+<main class="mx-auto flex max-w-[88rem] flex-col gap-6">
+  <!--
+    **El nombre del módulo, los filtros y «Nuevo ticket», en una sola fila** (decisión del responsable,
+    2026-09-28): eran dos renglones —el título con su botón, y debajo la búsqueda con el resumen—, y
+    juntarlos **deja un renglón más de tabla a la vista**, que es lo que se mira en esta pantalla. En un
+    ancho corto **se reparten solos** (`flex-wrap`): primero el nombre, luego los filtros y el botón a la
+    derecha si cabe, y debajo lo que no quepa.
+  -->
+  <div class="flex flex-wrap items-center gap-3">
+    <h1 class="text-xl font-semibold text-texto">{{ titulo() }}</h1>
+
+    <!--
+    Los filtros, a la vista: el estado, el texto y el tipo de ticket. El chip de tipo lo lleva quien
+    puede tener de los dos —Soporte, Desarrollo y el Administrador—, y no lo lleva quien tiene un
+    único tipo, ni las dos listas del «todo», donde el tipo es la pantalla (sección 3.3).
+  -->
+    <!--
+    **Un solo botón de búsqueda y un resumen** (decisión del responsable, 2026-09-27): los criterios
+    viven en el modal, y aquí queda lo que hace falta para entender la lista —cuántos están puestos y
+    cuáles— con su botón de quitarlos. Antes eran tres filas de filtros, y la de categorías se salía de
+    la pantalla en cuanto el catálogo crecía.
+  -->
+    <app-boton forma="secundario" [texto]="t().tickets.abrirBusqueda" (pulsado)="abrirBusqueda()" />
+
+    @if (cuantosFiltros()) {
+      <span class="text-sm text-apagado">
+        {{ resumenDeFiltros() }}
+      </span>
+
+      <button
+        type="button"
+        class="inline-flex min-h-9 items-center rounded-md border border-borde-fuerte px-2 text-sm text-apagado hover:text-peligro"
+        [attr.aria-label]="t().tickets.quitarLosFiltros"
+        [attr.title]="t().tickets.quitarLosFiltros"
+        (click)="limpiarFiltros()"
+      >
+        <span aria-hidden="true">✕</span>
+      </button>
+    }
+
+    @if (puedeCrear()) {
+      <app-boton class="ml-auto" [texto]="t().tickets.nuevo" (pulsado)="irANuevo()" />
+    }
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  <section class="rounded-lg border border-borde bg-superficie">
+    @if (cargando()) {
+      <p class="px-4 py-6 text-sm text-apagado">{{ t().tickets.cargando }}</p>
+    } @else if (!pagina().tickets.length) {
+      <div class="flex flex-col items-start gap-3 px-4 py-6">
+        <p class="text-sm text-apagado">
+          {{ hayFiltros() ? t().tickets.vacia : t().tickets.vaciaSinFiltros }}
+        </p>
+
+        @if (hayFiltros()) {
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.limpiar"
+            (pulsado)="limpiarFiltros()"
+          />
+        } @else if (puedeCrear()) {
+          <app-boton [texto]="t().tickets.nuevo" (pulsado)="irANuevo()" />
+        }
+      </div>
+    } @else if (esAncha()) {
+      <table class="w-full border-collapse text-sm">
+        <caption class="sr-only">
+          {{
+            titulo()
+          }}
+        </caption>
+
+        <thead>
+          <tr class="border-b border-borde text-left text-xs uppercase text-apagado">
+            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaNumero }}</th>
+            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaAsunto }}</th>
+            <!--
+              Los dos campos que redacta el motor de IA van en medio, entre el asunto y el estado: son
+              lo que se lee para saber de qué va el ticket sin abrirlo (docs/interfaz-y-experiencia.md,
+              sección 3.3).
+            -->
+            <th scope="col" class="hidden px-4 py-2 font-medium lg:table-cell">
+              {{ t().tickets.columnaMotivo }}
+            </th>
+            <th scope="col" class="hidden px-4 py-2 font-medium lg:table-cell">
+              {{ t().tickets.columnaUltimaAccion }}
+            </th>
+            <!--
+              **La clasificación tiene su columna** (decisión 86): la categoría y las etiquetas se leen
+              juntas, que es lo que son —cómo está clasificado el ticket—, y el número se queda solo.
+            -->
+            <th scope="col" class="px-4 py-2 font-medium">
+              {{ t().tickets.columnaClasificacion }}
+            </th>
+            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaEstado }}</th>
+            <th scope="col" class="hidden px-4 py-2 font-medium xl:table-cell">
+              {{ t().tickets.columnaSolicitante }}
+            </th>
+            <th scope="col" class="hidden px-4 py-2 font-medium xl:table-cell">
+              {{ t().tickets.columnaResponsable }}
+            </th>
+            <th scope="col" class="px-4 py-2 font-medium">{{ t().tickets.columnaActualizado }}</th>
+            <th scope="col" class="px-4 py-2 font-medium">
+              <span class="sr-only">{{ t().tickets.verTicket }}</span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (ticket of pagina().tickets; track ticket.number) {
+            <tr class="border-b border-borde align-top last:border-0">
+              <!-- **El número solo** (decisión 86): los chips de la clasificación ya no van aquí. -->
+              <td class="px-4 py-3">
+                <a
+                  [routerLink]="['/tickets', ticket.number]"
+                  class="font-medium text-primario underline"
+                >
+                  {{ ticket.number }}
+                </a>
+              </td>
+
+              <td class="px-4 py-3 text-texto">{{ ticket.subject }}</td>
+
+              <!-- **Recortados a dos líneas**: son un resumen para barrer la lista, y el texto entero
+                   se lee en la ficha. -->
+              <td class="hidden px-4 py-3 text-apagado lg:table-cell">
+                <span class="line-clamp-2 max-w-[18rem]">{{ motivo(ticket) }}</span>
+              </td>
+
+              <td class="hidden px-4 py-3 text-apagado lg:table-cell">
+                <span class="line-clamp-2 max-w-[18rem]">{{ ultimaAccion(ticket) }}</span>
+              </td>
+
+              <!--
+                **La categoría y las etiquetas, juntas** (decisión 86): los mismos chips que antes iban
+                debajo del número, con **un tope de ancho** para que un nombre largo no ensanche la tabla
+                y la saque de la pantalla.
+              -->
+              <td class="px-4 py-3">
+                <div class="flex max-w-56 flex-wrap items-center gap-1">
+                  @if (ticket.category; as categoria) {
+                    <span
+                      class="inline-flex max-w-full items-center truncate rounded border border-borde-fuerte bg-superficie-suave px-1.5 py-0.5 text-xs text-texto"
+                    >
+                      {{ categoria.name }}
+                    </span>
+                  }
+
+                  @for (etiqueta of ticket.tags ?? []; track etiqueta) {
+                    <span
+                      class="inline-flex max-w-full items-center truncate rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                    >
+                      {{ etiqueta }}
+                    </span>
+                  }
+                </div>
+              </td>
+
+              <td class="px-4 py-3">
+                <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
+              </td>
+
+              <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ solicitante(ticket) }}</td>
+
+              <td class="hidden px-4 py-3 text-apagado xl:table-cell">{{ responsable(ticket) }}</td>
+
+              <td class="px-4 py-3 text-apagado">{{ actualizado(ticket) }}</td>
+
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-2">
+                  <a
+                    [routerLink]="['/tickets', ticket.number]"
+                    class="inline-flex min-h-9 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto hover:bg-superficie-suave"
+                  >
+                    {{ t().tickets.verTicket }}
+                  </a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <ul class="flex flex-col divide-y divide-borde">
+        @for (ticket of pagina().tickets; track ticket.number) {
+          <li class="flex flex-col gap-3 px-4 py-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <a
+                [routerLink]="['/tickets', ticket.number]"
+                class="font-medium text-primario underline"
+              >
+                {{ ticket.number }}
+              </a>
+              <app-estado [estado]="ticket.state" [texto]="estado(ticket)" />
+            </div>
+
+            <!-- En las tarjetas del móvil van los mismos chips, debajo del número (sección 3.3). -->
+            <div class="flex flex-wrap items-center gap-1">
+              @if (ticket.category; as categoria) {
+                <span
+                  class="inline-flex items-center rounded border border-borde-fuerte bg-superficie-suave px-1.5 py-0.5 text-xs text-texto"
+                >
+                  {{ categoria.name }}
+                </span>
+              }
+
+              @for (etiqueta of ticket.tags ?? []; track etiqueta) {
+                <span
+                  class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                >
+                  {{ etiqueta }}
+                </span>
+              }
+            </div>
+
+            <p class="text-sm text-texto">{{ ticket.subject }}</p>
+
+            <!-- En móvil es donde más se agradece saber de qué va un ticket sin abrirlo. -->
+            <p class="flex flex-col gap-1 text-sm text-texto">
+              <span>{{ t().tickets.columnaMotivo }}: {{ motivo(ticket) }}</span>
+              <span class="text-apagado">
+                {{ t().tickets.columnaUltimaAccion }}: {{ ultimaAccion(ticket) }}
+              </span>
+            </p>
+
+            <p class="flex flex-col gap-1 text-xs text-apagado">
+              <span>{{ t().tickets.columnaSolicitante }}: {{ solicitante(ticket) }}</span>
+              <span>{{ t().tickets.columnaResponsable }}: {{ responsable(ticket) }}</span>
+              <span>{{ actualizado(ticket) }}</span>
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+              <a
+                [routerLink]="['/tickets', ticket.number]"
+                class="inline-flex min-h-11 items-center rounded-md border border-borde-fuerte px-3 text-sm text-texto"
+              >
+                {{ t().tickets.verTicket }}
+              </a>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (!cargando() && pagina().total > 0) {
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-borde px-4 py-3"
+      >
+        <p class="text-sm text-apagado">
+          {{ pagina().total }} {{ t().tickets.total }} · {{ t().tickets.pagina }}
+          {{ filtros().page }} /
+          {{ paginas() }}
+        </p>
+
+        <div class="flex gap-2">
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.anterior"
+            [deshabilitado]="filtros().page <= 1 || cargando()"
+            (pulsado)="irAPagina(filtros().page - 1)"
+          />
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.siguiente"
+            [deshabilitado]="filtros().page >= paginas() || cargando()"
+            (pulsado)="irAPagina(filtros().page + 1)"
+          />
+        </div>
+      </div>
+    }
+  </section>
+  <!--
+    **El modal de la búsqueda**: todos los criterios en un sitio (decisión del responsable, 2026-09-27).
+    Lo que se escribe aquí **no filtra hasta pulsar «Buscar»**: en un modal, ver la lista cambiar por
+    detrás mientras se rellenan cinco campos es confuso. El texto y la etiqueta **se pueden combinar con
+    todo lo demás**, y lo que salga los cumple todos.
+  -->
+  <app-dialogo
+    [titulo]="t().tickets.buscarTitulo"
+    [abierto]="buscando()"
+    (cerrado)="cerrarBusqueda()"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ t().tickets.buscarAyuda }}</p>
+
+      <app-campo
+        identificador="buscar-ticket"
+        [etiqueta]="t().tickets.buscar"
+        [valor]="borrador().q ?? ''"
+        (valorChange)="escribirEnElBorrador('q', $event)"
+      />
+
+      @if (conChipDeVista()) {
+        <app-conmutador
+          [etiqueta]="t().tickets.vista"
+          [opciones]="opcionesDeVista()"
+          [valor]="borrador().view ?? ''"
+          (valorChange)="escribirEnElBorrador('view', $event)"
+        />
+      }
+
+      @if (conChipDeTipo()) {
+        <app-conmutador
+          [etiqueta]="t().tickets.filtroTipo"
+          [opciones]="opcionesDeTipo()"
+          [valor]="borrador().type"
+          (valorChange)="escribirEnElBorrador('type', $event)"
+        />
+      }
+
+      <app-conmutador
+        [etiqueta]="t().tickets.filtroEstado"
+        [opciones]="opcionesDeEstado()"
+        [valor]="borrador().state"
+        (valorChange)="escribirEnElBorrador('state', $event)"
+      />
+
+      @if (categorias().length) {
+        <app-conmutador
+          [etiqueta]="t().tickets.filtroCategoria"
+          [opciones]="opcionesDeCategoria()"
+          [valor]="borrador().category ?? ''"
+          (valorChange)="escribirEnElBorrador('category', $event)"
+        />
+      }
+
+      <app-campo
+        identificador="buscar-etiqueta"
+        [etiqueta]="t().tickets.filtroEtiqueta"
+        [ayuda]="t().tickets.etiquetasAyuda"
+        [valor]="borrador().tag ?? ''"
+        (valorChange)="escribirEnElBorrador('tag', $event)"
+      />
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton [texto]="t().tickets.abrirBusqueda" (pulsado)="aplicarBusqueda()" />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.quitarLosFiltros"
+          (pulsado)="limpiarFiltros()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+</main>

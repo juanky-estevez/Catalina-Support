@@ -1,29 +1,5 @@
-<header class="cabecera">
-  <h1 class="cabecera__titulo">{{ title() }}</h1>
+@if (sinServidor()) {
+  <app-sin-servidor />
+}
 
-  <p
-    class="estado"
-    [class.estado--ok]="estadoServicio() === 'ok'"
-    [class.estado--error]="estadoServicio() === 'error'"
-  >
-    @switch (estadoServicio()) {
-      @case ('ok') {
-        servicio disponible
-      }
-      @case ('error') {
-        servicio no disponible
-      }
-      @default {
-        comprobando servicio…
-      }
-    }
-  </p>
-</header>
-
-<main class="contenido">
-  <router-outlet />
-</main>
-
-<footer class="pie">
-  Esqueleto inicial: falta el primer módulo, que llegará con su documento aprobado.
-</footer>
+<router-outlet />

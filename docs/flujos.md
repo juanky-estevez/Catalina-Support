@@ -1,12 +1,22 @@
 # Flujos
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-09-22
+> **Estado:** as-built
+> **Última actualización:** 2026-09-26
+>
+> **Enmendado el 2026-09-26**, al repartir las listas de tickets: donde estos recorridos decían «la
+> bandeja de Soporte» o «la bandeja de Desarrollo» ahora hay **dos sitios** —**Mis tickets** (lo mío) y
+> las listas del todo, **Tickets principales** y **Tickets internos**—, y **asignarse un ticket se hace
+> dentro del ticket** y no desde la lista (`docs/modules/tickets.md`, decisiones 50 a 53). **Los
+> recorridos y los correos no cambian**: cambia dónde se ve cada cosa.
+>
+> **Pasa a as-built el 2026-09-25**: los recorridos paso a paso y sus correos **están implementados y
+> verificados** —el recorrido entero de un ticket, con el escalado, la devolución a Soporte y los
+> siete avisos, tiene su caso de interfaz—. Se cambia el estado, no el contenido.
 >
 > Aprobado por el responsable el 2026-09-22, tras repasarlo en forma de preguntas mientras se
 > escribía. El repaso destapó un hueco que no era de este documento sino de los dos anteriores —la
 > **devolución a Soporte** que `propósito-y-alcance.md` prometía y no tenía puerta en
-> `tickets.md`— y de ahí salieron la **regla 8**, el cambio de la **regla 5** y el **séptimo aviso**
+> `modules/tickets.md`— y de ahí salieron la **regla 8**, el cambio de la **regla 5** y el **séptimo aviso**
 > por correo.
 >
 > Con este documento, **la cadena de producto está completa**: `auth`, `users` y `tickets` pueden
@@ -19,10 +29,10 @@ hace cada cosa, qué se ve en la pantalla, qué correo sale y qué queda en el h
 documento que se lee para construir las pantallas y los correos.
 
 Da por escritos los permisos (`docs/usuarios-y-permisos.md`), los estados, las transiciones y los
-endpoints (`docs/tickets.md`) y el producto (`docs/propósito-y-alcance.md`). **No los repite**: si
+endpoints (`docs/modules/tickets.md`) y el producto (`docs/propósito-y-alcance.md`). **No los repite**: si
 algo se contradice, mandan esos tres.
 
-Es una **propuesta**: no habilita escribir código hasta que esté aprobada (Regla 0). La sección 9
+Está **aprobado**, así que habilita escribir código (Regla 0). La sección 9
 recoge lo que he propuesto yo y conviene que confirmes.
 
 ## 2. Cómo leerlo
@@ -47,13 +57,23 @@ el flujo cuenta ya ha pasado (docs/arquitectura.md, sección 9).
 ### 3.1 Lo crea el usuario
 
 1. Entra y pulsa «Nuevo ticket».
-2. Escribe **asunto** y **descripción**, y adjunta lo que tenga (capturas, sobre todo).
+2. Escribe **asunto** y **descripción**, **elige la categoría** —es obligatoria: sin ella no hay ticket
+   (`docs/modules/tickets.md`, decisión 65)—, pone las **etiquetas** que quiera y adjunta lo que tenga
+   (capturas, sobre todo). La categoría la puede corregir Soporte después; las etiquetas, también.
 3. Guarda.
 
-**Se ve**: el ticket aparece en «Mis tickets» con su número (`ACME-2026-0042`), en estado `nuevo`, y
-sin responsable.
+**Se ve**: el ticket aparece en «Mis tickets» del solicitante con su número (`ACME-2026-0042`), en
+estado `nuevo`, y **ya asignado al técnico al que le tocaba el turno** —así que ese técnico lo tiene
+también en **su** «Mis tickets», y los demás lo ven en **Tickets principales**, que es la lista de
+todo lo que hay (2026-09-26).
 
-**Correo**: a Soporte, «Ticket nuevo: ACME-2026-0042», con el asunto y el enlace.
+**Correo**: **al técnico asignado**, «Ticket nuevo: ACME-2026-0042», con el asunto y el enlace. Si no
+hay ningún técnico activo, el ticket se queda sin responsable y **no se avisa a nadie**: aparece en
+**Tickets principales** para que alguien lo coja, y queda en el log.
+
+**El reparto es por turnos** entre los técnicos activos, y vale también para los tickets que crea
+Soporte en nombre de otro (`docs/modules/tickets.md`, sección 3.3). Se puede reasignar a mano
+después.
 
 **Historial**: `creado`, con el usuario como actor.
 
@@ -62,8 +82,9 @@ sin responsable.
 Igual, con dos diferencias: Soporte **elige al solicitante** (la persona a la que está ayudando) y
 el ticket queda con **creador** y **solicitante** distintos.
 
-**Se ve**: el ticket aparece en la bandeja de Soporte y **también en «Mis tickets» del solicitante**,
-porque es su ticket: lo verá y podrá responder cuando entre.
+**Se ve**: el ticket aparece en **Tickets principales** —la lista de todo lo que hay—, en el «Mis
+tickets» del técnico al que le tocó el turno y **también en «Mis tickets» del solicitante**, porque es
+su ticket: lo verá y podrá responder cuando entre.
 
 **Correo**: a Soporte, igual que en 3.1. **Al solicitante no se le avisa de que se ha creado**: no lo
 creó él, y un correo diciendo «has creado un ticket» sería ruido.
@@ -72,8 +93,10 @@ creó él, y un correo diciendo «has creado un ticket» sería ruido.
 
 **Quién**: Soporte.
 
-1. Soporte ve el ticket nuevo en su bandeja y **lo lee**.
-2. **Se lo asigna** (o lo comenta y pregunta al usuario antes de nada).
+1. Soporte ve el ticket nuevo —en **Tickets principales** si no es suyo, o en **Mis tickets** si le
+tocó el turno— y **lo lee**.
+2. **Se lo asigna desde el propio ticket**, con el selector de responsables de su ficha (o lo comenta
+y pregunta al usuario antes de nada).
 3. Pasa el ticket a **`en progreso`** mientras lo trabaja.
 
 De ahí salen tres caminos, y **Soporte elige**:
@@ -117,8 +140,9 @@ cierra sin resolverlo**. No hay estado `cancelado`: el historial dice que se cer
 2. El sistema **crea el ticket interno** (`INT-ACME-2026-0042`) con ese motivo, en estado `nuevo`.
 3. El principal pasa a **`escalado`**.
 
-**Se ve**: el principal sigue en la bandeja de Soporte, ahora en `escalado`; el interno aparece en la
-bandeja de Desarrollo. Al ser la primera escalación, el interno nace.
+**Se ve**: el principal sigue en las listas de Soporte, ahora en `escalado`; el interno aparece en
+**Tickets internos** —y en el «Mis tickets» de Desarrollo cuando tiene responsable—. Al ser la
+primera escalación, el interno nace.
 
 **Correo**: a Desarrollo, «Escalado: INT-ACME-2026-0042», con el motivo.
 
@@ -132,7 +156,8 @@ qué traslada al usuario.
 
 **Quién**: Desarrollo.
 
-1. Ve el interno en su bandeja, **se lo asigna** y lo pasa a **`en progreso`**.
+1. Ve el interno —en **Tickets internos** o en **Mis tickets** si ya es suyo—, **se lo asigna desde el
+   propio ticket** y lo pasa a **`en progreso`**.
 2. Si al mirarlo cree que **no es un cambio de código** —es algo que Soporte puede resolver—, lo
    **cierra sin resolver** con un comentario que lo explique. **El principal vuelve a manos de
    Soporte** (regla 8), y Soporte recibe el mismo aviso de «ha vuelto a tu bandeja».
@@ -210,7 +235,7 @@ Al escribirlo salió un hueco que no era de este documento, sino de los dos ante
 sincronización **no tenían puerta para la «devolución a Soporte»** que `docs/propósito-y-alcance.md`
 promete —el caso en que Desarrollo mira el interno y concluye que no es un cambio de código—, y
 tampoco decían quién explica al usuario qué se hizo. Las dos cosas obligaron a enmendar
-`docs/propósito-y-alcance.md` y `docs/tickets.md`.
+`docs/propósito-y-alcance.md` y `docs/modules/tickets.md`.
 
 | # | Decisión | Quedó así |
 | --- | --- | --- |
@@ -222,6 +247,7 @@ tampoco decían quién explica al usuario qué se hizo. Las dos cosas obligaron 
 | 6 | **El formato de los correos** | Texto plano, con el número, el asunto y el enlace |
 | 7 | **El aviso a Soporte cuando el ticket vuelve** | **Séptimo aviso**: cubre los dos caminos por los que el principal vuelve a Soporte (Desarrollo resolvió el interno, o lo devolvió sin resolver) |
 | 8 | **Asignarse el interno** | Desarrollo puede asignarse los internos, y Soporte puede asignárselos a alguien |
+| 9 | **Dónde se asignan los tickets** | **Dentro del ticket**, en su ficha: en el principal reasigna Soporte a cualquier técnico, y en el interno Soporte y Desarrollo a cualquier desarrollador. **La bandeja no asigna** (decisión del responsable, 2026-09-26) |
 
 ## 10. Lo que NO se automatiza
 

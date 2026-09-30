@@ -1,0 +1,745 @@
+<article class="flex flex-col gap-4">
+  <!--
+    La cabecera del ticket: el número, su estado y el asunto.
+
+    **El número y el estado sólo se pintan aquí en la vista doble** (`conCabecera`): con un solo ticket
+    en pantalla ya los pinta la cabecera de la página —con su botón de copiar y el conmutador—, y
+    pintarlos otra vez los enseñaba **dos veces** (lo encontró el responsable el 2026-09-28). El asunto
+    se queda siempre: es lo único que dice de qué va el ticket.
+  -->
+  <header class="flex flex-col gap-1">
+    <div class="flex flex-wrap items-center gap-2">
+      @if (conCabecera()) {
+        <h2 class="text-base font-semibold text-texto">{{ ticket().number }}</h2>
+        <app-estado [estado]="ticket().state" [texto]="estado(ticket().state)" />
+
+        <!--
+          **El desplegable de estados, en la cabecera de la columna** (decisiones 78 y 80): con los dos
+          tickets a la vista, cada uno tiene su estado y desde un solo control de arriba no se sabría a
+          cuál se le cambia. Es el mismo componente que la fila de arriba de la página.
+        -->
+        <app-acciones-del-ticket class="ml-auto" [ticket]="ticket()" (cambio)="avisarDelCambio()" />
+      }
+
+      @if (ticket().subjectEditedAt) {
+        <span class="text-xs text-apagado">· {{ t().tickets.comentarioEditado }}</span>
+      }
+    </div>
+
+    <!--
+      **El asunto se edita donde se lee** (decisión 74): el lápiz lo convierte en el sitio en un campo
+      con «Guardar» y «Cancelar». Sólo lo ve quien puede editar el ticket —el solicitante en el suyo y
+      Soporte—: la interfaz no ofrece lo que el backend rechazaría.
+    -->
+    @if (editandoAsunto()) {
+      <div class="flex flex-col gap-2">
+        <app-campo
+          [identificador]="'asunto-' + ticket().number"
+          [etiqueta]="t().tickets.asunto"
+          [valor]="asuntoEditado()"
+          (valorChange)="asuntoEditado.set($event)"
+        />
+
+        <div class="flex flex-wrap gap-2">
+          <app-boton
+            [texto]="t().tickets.guardar"
+            [deshabilitado]="trabajando()"
+            (pulsado)="guardarAsunto()"
+          />
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.cancelar"
+            [deshabilitado]="trabajando()"
+            (pulsado)="editandoAsunto.set(false)"
+          />
+        </div>
+      </div>
+    } @else {
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm text-texto">{{ ticket().subject }}</p>
+
+        @if (puedeEditar()) {
+          <app-boton
+            forma="secundario"
+            [soloIcono]="true"
+            nombreDeIcono="editar"
+            [etiqueta]="t().tickets.editarElAsunto"
+            [deshabilitado]="trabajando()"
+            (pulsado)="empezarEdicionDelAsunto()"
+          />
+        }
+      </div>
+    }
+
+    @if (ticket().reason) {
+      <p class="text-sm text-apagado">
+        <strong class="text-texto">{{ t().tickets.motivoDelEscalado }}:</strong>
+        {{ ticket().reason }}
+      </p>
+    }
+  </header>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  <div class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+    <!-- ------------------------------------------------------- la conversación -->
+    <section class="flex flex-col gap-4">
+      <!--
+        La descripción, que es el primer mensaje del ticket. **Con formato y con sus adjuntos dentro**:
+        lo que el texto nombra se ve en su sitio, y lo que no, en su lista al final.
+      -->
+      <div class="flex flex-col gap-2 rounded-lg border border-borde bg-superficie p-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <p class="text-xs font-medium text-apagado">
+            {{ nombreDe(ticket().requester) }} · {{ cuando(ticket().createdAt) }}
+          </p>
+
+          <!--
+            **La descripción se edita donde se lee** (decisión 74): el mismo lápiz del asunto, y al
+            pulsarlo aparece en su sitio el editor con formato y adjuntos. El editor se crea **sólo
+            mientras se edita**: tenerlo siempre montado dejaría dos «Descripción» en la pantalla, una
+            trampa para quien escribe y para quien lee con lector de pantalla.
+          -->
+          @if (puedeEditar() && !editandoDescripcion()) {
+            <div class="ml-auto">
+              <app-boton
+                forma="secundario"
+                [soloIcono]="true"
+                nombreDeIcono="editar"
+                [etiqueta]="t().tickets.editarLaDescripcion"
+                [deshabilitado]="trabajando()"
+                (pulsado)="empezarEdicionDeLaDescripcion()"
+              />
+            </div>
+          }
+        </div>
+
+        @if (editandoDescripcion()) {
+          <app-editor-con-adjuntos
+            #elDeLaDescripcion
+            [identificador]="'descripcion-' + ticket().number"
+            [etiqueta]="t().tickets.campoDescripcion"
+            [textos]="textosDelEditor()"
+            [direcciones]="direccionesPorNombre()"
+            [valor]="descripcionEditada()"
+            (valorChange)="descripcionEditada.set($event)"
+          />
+
+          <div class="flex flex-wrap gap-2">
+            <app-boton
+              [texto]="t().tickets.guardar"
+              [deshabilitado]="trabajando()"
+              (pulsado)="guardarDescripcion()"
+            />
+            <app-boton
+              forma="secundario"
+              [texto]="t().tickets.cancelar"
+              [deshabilitado]="trabajando()"
+              (pulsado)="editandoDescripcion.set(false)"
+            />
+          </div>
+        } @else {
+          @if (ticket().description) {
+            <div
+              class="cuerpo-con-adjuntos whitespace-pre-line text-sm text-texto"
+              [innerHTML]="cuerpoDeLaDescripcion()"
+              (click)="alPulsarElTexto($event)"
+            ></div>
+          }
+
+          @if (adjuntosIniciales().length) {
+            <div class="mt-1 flex flex-col gap-1">
+              @for (adjunto of adjuntosIniciales(); track adjunto.id) {
+                <app-adjunto
+                  [adjunto]="adjunto"
+                  [previsualizable]="sePuedeVer(adjunto)"
+                  [verTexto]="t().tickets.ver"
+                  [descargarTexto]="t().tickets.descargar"
+                  (ver)="traer($event, true)"
+                  (descargar)="traer($event, false)"
+                />
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <!-- La línea de tiempo: los comentarios y lo que hizo el sistema, en orden. -->
+      @for (renglon of linea(); track renglon.clave) {
+        @if (renglon.comentario; as comentario) {
+          <div class="flex flex-col gap-2 rounded-lg border border-borde bg-superficie p-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="text-xs font-medium text-apagado">
+                {{ nombreDe(comentario.author) }} · {{ cuando(comentario.createdAt) }}
+              </p>
+
+              @if (comentario.edited) {
+                <span class="text-xs text-apagado">· {{ t().tickets.comentarioEditado }}</span>
+              }
+
+              @if (puedeTocarComentario(comentario)) {
+                <div class="ml-auto flex gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex min-h-8 items-center rounded-md border border-borde-fuerte px-2 text-xs text-texto hover:bg-superficie-suave"
+                    (click)="empezarEdicion(comentario)"
+                  >
+                    {{ t().tickets.editar }}
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex min-h-8 items-center rounded-md border border-borde-fuerte px-2 text-xs text-apagado hover:text-texto"
+                    (click)="abrir('borrarComentario', comentario.id)"
+                  >
+                    {{ t().tickets.borrar }}
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (comentario.deleted) {
+              <p class="text-sm italic text-apagado">{{ t().tickets.comentarioBorrado }}</p>
+            } @else if (editando() === comentario.id) {
+              <!--
+                Editar un comentario es escribir otra vez en el mismo editor: **con formato y con sus
+                adjuntos dentro**, y con la vista previa de la imagen a la vista, que es lo que hace
+                que se vea lo mismo al escribir que al leer.
+              -->
+              <app-editor-con-adjuntos
+                #elDeLaEdicion
+                [identificador]="'editar-comentario-' + comentario.id"
+                [etiqueta]="t().tickets.editar"
+                [textos]="textosDelEditor()"
+                [direcciones]="direccionesPorNombre()"
+                [personas]="personasParaEtiquetar()"
+                [puedeEtiquetar]="puedeEtiquetar()"
+                [valor]="textoEditado()"
+                (valorChange)="textoEditado.set($event)"
+              />
+
+              <div class="flex flex-wrap gap-2">
+                <app-boton
+                  [texto]="t().tickets.guardar"
+                  [deshabilitado]="trabajando()"
+                  (pulsado)="guardarEdicion(comentario)"
+                />
+                <app-boton
+                  forma="secundario"
+                  [texto]="t().tickets.cancelar"
+                  [deshabilitado]="trabajando()"
+                  (pulsado)="editando.set(null)"
+                />
+              </div>
+            } @else {
+              <!--
+                **Un comentario puede no tener texto**: es un comentario que sólo lleva sus archivos, y
+                entonces no se pinta el hueco vacío, que parecería un fallo de la pantalla
+                (docs/modules/tickets.md, decisión 41).
+              -->
+              @if (comentario.body) {
+                <div
+                  class="cuerpo-con-adjuntos whitespace-pre-line text-sm text-texto"
+                  [innerHTML]="cuerpoDe(comentario)"
+                  (click)="alPulsarElTexto($event)"
+                ></div>
+              }
+
+              @if (adjuntosDe(comentario).length) {
+                <div class="flex flex-col gap-1">
+                  @for (adjunto of adjuntosDe(comentario); track adjunto.id) {
+                    <app-adjunto
+                      [adjunto]="adjunto"
+                      [previsualizable]="sePuedeVer(adjunto)"
+                      [verTexto]="t().tickets.ver"
+                      [descargarTexto]="t().tickets.descargar"
+                      (ver)="traer($event, true)"
+                      (descargar)="traer($event, false)"
+                    />
+                  }
+                </div>
+              }
+            }
+          </div>
+        } @else if (renglon.historial; as entrada) {
+          <!-- Lo que hizo el sistema va con el mismo peso visual que un aviso, no como un mensaje. -->
+          <p class="px-1 text-xs text-apagado">
+            {{ frase(entrada) }} · {{ cuando(entrada.createdAt) }}
+          </p>
+        }
+      }
+
+      <!--
+        La caja de comentario, siempre a la vista: escribir es la acción más frecuente del sistema. En
+        un ticket cerrado no se comenta, y en su lugar aparece el botón de reabrir, explicando por qué.
+      -->
+      @if (puedeComentar()) {
+        <div class="flex flex-col gap-3 rounded-lg border border-borde bg-superficie p-4">
+          <!--
+            **El cuadro de escribir es un editor con formato y con los adjuntos dentro**
+            (docs/interfaz-y-experiencia.md, sección 6.5): las tres puertas para adjuntar —pegar,
+            arrastrar y el botón— están dentro del propio editor, que es quien sabe dónde está el
+            cursor, y pegar en cualquier otra parte de la pantalla no añade nada (decisión 43).
+          -->
+          <app-editor-con-adjuntos
+            #elDelComentario
+            [identificador]="'comentario-' + ticket().number"
+            [etiqueta]="t().tickets.escribirComentario"
+            [ayuda]="t().tickets.comentarioAyuda"
+            [textos]="textosDelEditor()"
+            [direcciones]="direccionesPorNombre()"
+            [personas]="personasParaEtiquetar()"
+            [puedeEtiquetar]="puedeEtiquetar()"
+            [deshabilitado]="trabajando()"
+            [valor]="comentario()"
+            (valorChange)="comentario.set($event)"
+          />
+
+          <!--
+            **El comentario ya está publicado y un archivo no ha subido**: se avisa de cuál falta y se
+            puede reintentar sin volver a escribir nada. No se borra el comentario —está escrito y lo ha
+            visto quien lo escriba— y la caja se ha vaciado, que es lo que evita el comentario
+            duplicado (docs/modules/tickets.md, decisión 44). Su hueco se ve además **en el texto**,
+            marcado, porque el texto nombra el archivo que no llegó.
+          -->
+          @if (adjuntosQueFaltan().length) {
+            <div class="flex flex-col items-start gap-3">
+              <app-aviso
+                forma="error"
+                [texto]="t().tickets.adjuntosQueFaltan + ' ' + nombresQueFaltan()"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().tickets.reintentarAdjuntos"
+                [textoTrabajando]="t().tickets.enviando"
+                [trabajando]="trabajando()"
+                (pulsado)="reintentarAdjuntos()"
+              />
+            </div>
+          }
+
+          <div>
+            <app-boton
+              [texto]="t().tickets.enviar"
+              [textoTrabajando]="t().tickets.enviando"
+              [trabajando]="trabajando()"
+              (pulsado)="comentar()"
+            />
+          </div>
+        </div>
+      } @else if (cerrado()) {
+        <div
+          class="flex flex-col items-start gap-3 rounded-lg border border-borde bg-superficie p-4"
+        >
+          <!--
+            Aquí vivía el botón de reabrir. **Se fue al desplegable de acciones** (decisión 78), que es
+            el único control que mueve el ticket; la explicación se queda, que es la que dice por qué
+            hay que reabrirlo.
+          -->
+          <p class="text-sm text-apagado">{{ t().tickets.reabrirAyuda }}</p>
+        </div>
+      }
+    </section>
+
+    <!--
+      La ficha va a la derecha en PC y debajo en móvil. **No es un `<aside>`**: el único
+      «complementary» de la aplicación es el menú lateral del armazón, y añadir más rompe lo que
+      cualquiera espera encontrar ahí —lo encontró Playwright, que buscaba el menú y encontró tres—.
+    -->
+    @if (!soloLaConversacion()) {
+      <div class="flex flex-col gap-4">
+        <app-tarjeta nivel="h2" [titulo]="t().tickets.ficha">
+          <dl class="flex flex-col gap-2 text-sm">
+            <div class="flex flex-wrap gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.solicitante }}:</dt>
+              <dd class="text-texto">{{ nombreDe(ticket().requester) }}</dd>
+            </div>
+
+            @if (ticket().createdBy && ticket().createdBy?.id !== ticket().requester?.id) {
+              <div class="flex flex-wrap gap-x-2">
+                <dt class="font-medium text-texto">{{ t().tickets.creadoPor }}:</dt>
+                <dd class="text-apagado">{{ nombreDe(ticket().createdBy) }}</dd>
+              </div>
+            }
+
+            <!--
+              **El responsable se reasigna con un botón junto a su nombre** (quinta enmienda del
+              2026-09-29, punto 2): el campo «Asignar a» suelto del final de la tarjeta de acciones
+              desaparece, y el lápiz de aquí abre el modal donde se elige a otra persona. Quien puede
+              reasignar no cambia: `puedeAsignar()`.
+            -->
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <dt class="font-medium text-texto">{{ t().tickets.responsable }}:</dt>
+              <dd class="flex flex-wrap items-center gap-2 text-texto">
+                {{ ticket().assignee ? nombreDe(ticket().assignee) : t().tickets.sinResponsable }}
+
+                @if (puedeAsignar()) {
+                  <app-boton
+                    forma="secundario"
+                    [soloIcono]="true"
+                    nombreDeIcono="editar"
+                    [etiqueta]="t().tickets.asignarA"
+                    [deshabilitado]="trabajando()"
+                    (pulsado)="abrirAsignacion()"
+                  />
+                }
+              </dd>
+            </div>
+
+            <!--
+            **La categoría se cambia en su propia línea** (decisión 74): un desplegable con el catálogo
+            que **guarda al elegir**. Quien no puede editar el ticket la sigue viendo como texto.
+          -->
+            <div class="flex flex-wrap items-center gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.categoria }}:</dt>
+              <dd class="text-texto">
+                @if (puedeEditar()) {
+                  <app-selector
+                    [identificador]="'categoria-' + ticket().number"
+                    [etiqueta]="t().tickets.categoria"
+                    [etiquetaVisible]="false"
+                    [opciones]="opcionesDeCategoriaDeLaFicha()"
+                    [valor]="categoriaElegida()"
+                    (valorChange)="cambiarCategoria($event)"
+                  />
+                } @else {
+                  {{ ticket().category?.name ?? '—' }}
+                }
+              </dd>
+            </div>
+
+            <!--
+              **Las etiquetas no se le enseñan al usuario** (decisión del responsable, 2026-09-29,
+              decisión 82): etiquetar es cosa de Soporte y Desarrollo —clasificar y filtrar—, y el usuario
+              no las pone ni las lee. La **categoría** sí: es la que eligió al abrir el ticket.
+
+              Las que el ticket lleva se ven de un vistazo, como fichas de sólo lectura. El botón que abre
+              el modal con el catálogo entero, el buscador y las casillas lo tiene **cada equipo en el
+              ticket en el que trabaja** (decisión 85): Soporte en el principal y Desarrollo en el interno.
+              Las etiquetas son **las del principal** y el interno las hereda (decisión 67), así que las
+              que se ven y las que se guardan son las mismas: el `PATCH` va al número que se está viendo y
+              el backend lo aplica al principal. Donde no se puede —un cerrado, el usuario o el
+              Administrador— sólo se leen.
+            -->
+            @if (!esUsuario()) {
+              <div class="flex flex-col gap-1">
+                <dt class="font-medium text-texto">{{ t().tickets.etiquetas }}:</dt>
+                <dd class="flex flex-col gap-2 text-texto">
+                  @if (etiquetas().length) {
+                    <div class="flex flex-wrap items-center gap-1">
+                      @for (etiqueta of etiquetas(); track etiqueta) {
+                        <span
+                          class="inline-flex max-w-full items-center truncate rounded border border-borde px-1.5 py-0.5 text-xs text-apagado"
+                        >
+                          {{ etiqueta }}
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="text-apagado">{{ t().tickets.sinEtiquetasFicha }}</span>
+                  }
+
+                  @if (puedeAbrirEtiquetas()) {
+                    <div>
+                      <app-boton
+                        forma="secundario"
+                        [texto]="t().tickets.editarEtiquetas"
+                        [deshabilitado]="trabajando()"
+                        (pulsado)="abrirEtiquetas()"
+                      />
+                    </div>
+
+                    <app-modal-etiquetas
+                      [abierto]="mostrandoEtiquetas()"
+                      [numero]="ticket().number"
+                      [etiquetas]="etiquetas()"
+                      [trabajando]="trabajando()"
+                      (cerrado)="mostrandoEtiquetas.set(false)"
+                      (guardar)="guardarEtiquetas($event)"
+                    />
+                  }
+                </dd>
+              </div>
+            }
+
+            <!--
+            **Los observadores**: los que siguen el ticket sin atenderlo. Van después del responsable a
+            propósito, para que no se confundan con él (decisión 60).
+
+            **Se añaden desde su lista, con el buscador de personas** (decisión 74): además del aspa para
+            quitarlos, está el «Añadir». Se guarda al momento, y quien entra así **queda igual** que quien
+            llegó por una mención: la lista no distingue de dónde vino cada uno.
+          -->
+            <div class="flex flex-col gap-1">
+              <dt class="font-medium text-texto">{{ t().tickets.observadores }}:</dt>
+              <dd class="flex flex-col gap-2 text-texto">
+                @if (!observadores().length) {
+                  <span class="text-apagado">{{ t().tickets.sinObservadores }}</span>
+                } @else {
+                  @for (observador of observadores(); track observador.id) {
+                    <span class="flex flex-wrap items-center gap-2">
+                      {{ nombreDe(observador.account) }}
+
+                      @if (puedeEtiquetar()) {
+                        <button
+                          type="button"
+                          class="inline-flex min-h-7 items-center rounded-md border border-borde-fuerte px-1.5 text-xs text-apagado hover:text-peligro focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                          [attr.aria-label]="
+                            t().tickets.quitarObservador + ': ' + nombreDe(observador.account)
+                          "
+                          [attr.title]="t().tickets.quitarObservador"
+                          (click)="quitarObservador(observador)"
+                        >
+                          <span aria-hidden="true">✕</span>
+                        </button>
+                      }
+                    </span>
+                  }
+                }
+
+                @if (puedeEtiquetar()) {
+                  <div>
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.anadirObservador"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="alternarBuscadorDeObservadores()"
+                    />
+                  </div>
+
+                  @if (eligiendoObservador()) {
+                    <div
+                      class="flex flex-col gap-2 rounded-md border border-borde bg-superficie-suave p-2"
+                    >
+                      <app-campo
+                        [identificador]="'buscar-observador-' + ticket().number"
+                        [etiqueta]="t().tickets.anadirObservador"
+                        [valor]="buscandoObservador()"
+                        (valorChange)="buscandoObservador.set($event)"
+                      />
+
+                      @if (personasQueEncuadran().length) {
+                        <div class="flex flex-wrap gap-1">
+                          @for (persona of personasQueEncuadran(); track persona.id) {
+                            <button
+                              type="button"
+                              class="inline-flex min-h-9 items-center rounded-md border border-borde-fuerte bg-superficie px-2 text-sm text-texto hover:bg-superficie-suave focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                              (click)="anadirObservador(persona)"
+                            >
+                              {{ nombreDe(persona) }}
+                            </button>
+                          }
+                        </div>
+                      } @else {
+                        <p class="text-sm text-apagado">
+                          {{ t().tickets.sinPersonasParaObservar }}
+                        </p>
+                      }
+
+                      <button
+                        type="button"
+                        class="inline-flex min-h-9 w-fit items-center rounded-md border border-borde-fuerte px-2 text-sm text-apagado hover:text-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                        (click)="alternarBuscadorDeObservadores()"
+                      >
+                        {{ t().tickets.cancelar }}
+                      </button>
+                    </div>
+                  }
+                }
+              </dd>
+            </div>
+
+            <div class="flex flex-wrap gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.abiertoEl }}:</dt>
+              <dd class="text-apagado">{{ cuando(ticket().createdAt) }}</dd>
+            </div>
+
+            <div class="flex flex-wrap gap-x-2">
+              <dt class="font-medium text-texto">{{ t().tickets.actualizadoEl }}:</dt>
+              <dd class="text-apagado">{{ cuando(ticket().updatedAt) }}</dd>
+            </div>
+
+            @if (ticket().resolvedAt) {
+              <div class="flex flex-wrap gap-x-2">
+                <dt class="font-medium text-texto">{{ t().tickets.resueltoEl }}:</dt>
+                <dd class="text-apagado">{{ cuando(ticket().resolvedAt ?? '') }}</dd>
+              </div>
+            }
+
+            @if (ticket().closedAt) {
+              <div class="flex flex-wrap gap-x-2">
+                <dt class="font-medium text-texto">{{ t().tickets.cerradoEl }}:</dt>
+                <dd class="text-apagado">{{ cuando(ticket().closedAt ?? '') }}</dd>
+              </div>
+            }
+          </dl>
+        </app-tarjeta>
+
+        <!--
+        **Los dos campos que redacta el motor de IA** (`docs/modules/ai.md`): de qué va el ticket y qué
+        fue lo último que pasó. Van en la ficha, con el texto entero —en la lista van recortados—, y el
+        botón de volver a pedirlos lo tienen Soporte y Desarrollo, que son los que trabajan el ticket.
+      -->
+        <app-tarjeta nivel="h2" [titulo]="t().tickets.resumenes">
+          <div class="flex flex-col gap-4 text-sm">
+            <div class="flex flex-col gap-1">
+              <span class="font-medium text-texto">{{ t().tickets.columnaMotivo }}</span>
+              <p class="text-texto">{{ motivo() }}</p>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="font-medium text-texto">{{ t().tickets.columnaUltimaAccion }}</span>
+              <p class="text-apagado">{{ ultimaAccion() }}</p>
+            </div>
+
+            @if (puedeRegenerar()) {
+              <div>
+                <app-boton
+                  forma="secundario"
+                  [texto]="trabajando() ? t().tickets.regenerando : t().tickets.regenerar"
+                  [deshabilitado]="trabajando()"
+                  (pulsado)="regenerar()"
+                />
+              </div>
+            }
+          </div>
+        </app-tarjeta>
+
+        <!--
+        **La tarjeta de acciones ya no lleva controles**: el «Asignar a» suelto se fue al modal del
+        responsable (quinta enmienda del 2026-09-29, punto 2) y los cambios de estado viven en el
+        desplegable de arriba (decisión 78). Lo único que queda aquí es el aviso de que no hay nada
+        que hacer, así que la tarjeta **sólo se pinta cuando ese aviso aplica**: una tarjeta vacía
+        parecería un control que no carga.
+      -->
+        @if (!hayAcciones()) {
+          <app-tarjeta nivel="h2">
+            <p class="text-sm text-apagado">{{ t().tickets.sinAcciones }}</p>
+          </app-tarjeta>
+        }
+      </div>
+    }
+  </div>
+
+  <!--
+    **El modal de reasignación** (quinta enmienda del 2026-09-29, punto 2): el mismo patrón del modal de
+    etiquetas —`app-dialogo` con su título y su foco atrapado— y, dentro, el selector de personas que ya
+    usa la asignación, con «Asignar» y «Cancelar». Sólo existe para quien puede reasignar.
+  -->
+  @if (puedeAsignar()) {
+    <app-dialogo
+      [titulo]="t().tickets.asignarA"
+      [abierto]="mostrandoAsignacion()"
+      (cerrado)="cerrarAsignacion()"
+    >
+      <div class="flex flex-col gap-4">
+        <app-selector
+          [identificador]="'asignar-' + ticket().number"
+          [etiqueta]="t().tickets.asignarA"
+          [opciones]="listaDeResponsables()"
+          [valor]="elegido()"
+          (valorChange)="elegido.set($event)"
+        />
+
+        <div class="flex flex-wrap gap-2">
+          <app-boton
+            [texto]="t().tickets.asignar"
+            [deshabilitado]="!elegido() || trabajando()"
+            [trabajando]="trabajando()"
+            (pulsado)="asignar()"
+          />
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.cancelar"
+            [deshabilitado]="trabajando()"
+            (pulsado)="cerrarAsignacion()"
+          />
+        </div>
+      </div>
+    </app-dialogo>
+  }
+
+  <!--
+    La ventana que queda en la conversación: **borrar un comentario**. Los cambios de estado llevan la
+    suya dentro de `app-acciones-del-ticket` (decisiones 78 y 80).
+  -->
+  <app-dialogo
+    [titulo]="textoDeLaAccionSegun().titulo"
+    [abierto]="pendiente() !== null"
+    (cerrado)="cerrarDialogo()"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ textoDeLaAccionSegun().ayuda }}</p>
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          [texto]="textoDeLaAccionSegun().boton"
+          [deshabilitado]="trabajando()"
+          (pulsado)="confirmar()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarDialogo()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+
+  <!--
+    El visor: **más grande, y con sus dos botones** (docs/modules/tickets.md, decisión 48). Es también
+    la forma de ver una imagen a tamaño completo, porque dentro del texto va con el ancho de la
+    conversación.
+  -->
+  <app-dialogo
+    tamano="grande"
+    [titulo]="vistaPrevia()?.nombre ?? t().tickets.vistaPrevia"
+    [etiquetaCerrar]="t().tickets.cerrarVistaPrevia"
+    [abierto]="vistaPrevia() !== null"
+    (cerrado)="cerrarVistaPrevia()"
+  >
+    @if (vistaPrevia(); as vista) {
+      <div class="flex flex-col gap-3">
+        @if (vista.pdf) {
+          <iframe
+            [src]="vista.marco"
+            [title]="vista.nombre"
+            class="h-[75vh] w-full rounded-md border border-borde"
+          ></iframe>
+        } @else if (vista.video) {
+          <!--
+            Un vídeo que el navegador no sabe reproducir no arranca en su reproductor: el visor es la
+            salida, con los dos botones que sirven —descargarlo o abrirlo aparte— (decisión 47).
+          -->
+          <video
+            [src]="vista.url"
+            [title]="vista.nombre"
+            controls
+            class="max-h-[75vh] w-full rounded-md border border-borde"
+          ></video>
+        } @else {
+          <img
+            [src]="vista.imagen"
+            [alt]="vista.nombre"
+            class="max-h-[75vh] w-full rounded-md border border-borde object-contain"
+          />
+        }
+
+        <div class="flex flex-wrap gap-2">
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.descargar"
+            (pulsado)="descargarDelVisor()"
+          />
+          <app-boton
+            forma="secundario"
+            [texto]="t().tickets.abrirEnPestana"
+            (pulsado)="abrirEnPestana()"
+          />
+        </div>
+      </div>
+    }
+  </app-dialogo>
+</article>

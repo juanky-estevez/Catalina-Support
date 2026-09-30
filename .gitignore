@@ -3,6 +3,10 @@ node_modules/
 dist/
 .angular/
 
+# Playwright: informes, capturas y vídeos de las pruebas de interfaz
+tests/e2e/informe/
+tests/e2e/test-results/
+
 # Artefactos de Go
 backend/server
 backend/tmp/
