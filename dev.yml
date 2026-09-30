@@ -27,7 +27,7 @@ services:
     # ella, el servidor de Angular rechaza con 403 el Host del dominio de desarrollo.
     command: ["npm", "start", "--", "--host", "0.0.0.0", "--port", "11001"]
     ports:
-      - 127.0.0.1:11001:11001
+      - 11001:11001
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -44,7 +44,7 @@ services:
       database:
         condition: service_healthy
     ports:
-      - 127.0.0.1:11002:11002
+      - 11002:11002
     volumes:
       - ./backend:/app
       - ./_logs:/logs
@@ -66,7 +66,7 @@ services:
     container_name: catalina_support_dev_mail
     restart: always
     ports:
-      - 127.0.0.1:11004:8025
+      - 11004:8025
     environment:
       MP_MAX_MESSAGES: 200
       MP_SMTP_AUTH_ACCEPT_ANY: 1
@@ -105,7 +105,7 @@ services:
     volumes:
       - ./config/ldap:/ldifs:ro
     ports:
-      - "127.0.0.1:11005:389"
+      - 11005:389
 
   # ---------------------------------------------------------------------------
   # Keycloak, para el camino de OIDC. Va detrás del mismo perfil que el directorio: son los dos
@@ -143,7 +143,7 @@ services:
     volumes:
       - ./config/keycloak:/opt/keycloak/data/import:ro
     ports:
-      - "127.0.0.1:11006:8080"
+      - 11006:8080
 
   e2e:
     image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -180,7 +180,7 @@ services:
     env_file:
       - ./config/env/dev.env
     ports:
-      - 127.0.0.1:11003:11003
+      - 11003:11003
     volumes:
       - database:/var/lib/postgresql
     healthcheck:
