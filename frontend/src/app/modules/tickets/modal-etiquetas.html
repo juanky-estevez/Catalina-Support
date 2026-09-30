@@ -1,0 +1,66 @@
+<app-dialogo [titulo]="t().tickets.etiquetas" [abierto]="abierto()" (cerrado)="cerrar()">
+  <div class="flex flex-col gap-4">
+    @if (cargando()) {
+      <p class="text-sm text-apagado">{{ t().comun.cargando }}</p>
+    } @else if (error()) {
+      <app-aviso forma="error" [texto]="error()" />
+    } @else {
+      <!--
+        El buscador filtra **por nombre** mientras se escribe, sin ir al servidor: el catálogo ya está
+        entero en la ventana.
+      -->
+      <app-campo
+        [identificador]="'buscar-etiqueta-' + numero()"
+        [etiqueta]="t().tickets.buscarPorEtiqueta"
+        [valor]="buscando()"
+        (valorChange)="buscando.set($event)"
+      />
+
+      @if (filtradas().length) {
+        <ul class="flex max-h-72 flex-col gap-0.5 overflow-y-auto">
+          @for (etiqueta of filtradas(); track etiqueta.tag) {
+            <li>
+              <label
+                class="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-superficie-suave"
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-borde-fuerte accent-primario"
+                  [checked]="marcadas().has(etiqueta.tag)"
+                  [attr.aria-label]="etiqueta.tag"
+                  (change)="alternar(etiqueta.tag, $any($event.target).checked)"
+                />
+                <span class="flex-1 text-sm text-texto">{{ etiqueta.tag }}</span>
+                <span class="text-xs text-apagado">
+                  @if (etiqueta.tickets) {
+                    {{ etiqueta.tickets }} {{ t().tickets.total }}
+                  } @else {
+                    {{ t().tickets.etiquetaSinTickets }}
+                  }
+                </span>
+              </label>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-sm text-apagado">{{ t().tickets.sinEtiquetasQueCoincidan }}</p>
+      }
+    }
+
+    <div class="flex flex-wrap gap-2">
+      <app-boton
+        [texto]="t().tickets.guardar"
+        [textoTrabajando]="t().tickets.guardandoEtiquetas"
+        [trabajando]="trabajando()"
+        [deshabilitado]="cargando() || !!error()"
+        (pulsado)="guardarLasMarcadas()"
+      />
+      <app-boton
+        forma="secundario"
+        [texto]="t().tickets.cancelar"
+        [deshabilitado]="trabajando()"
+        (pulsado)="cerrar()"
+      />
+    </div>
+  </div>
+</app-dialogo>

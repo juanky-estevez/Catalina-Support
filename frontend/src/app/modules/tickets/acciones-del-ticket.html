@@ -1,0 +1,93 @@
+<!--
+  **El desplegable de estados** (corrección del responsable del 2026-09-29, decisión 80): no es una
+  lista de acciones, es para cambiar de estado el ticket. Enseña **el estado actual como primera
+  opción**, marcado y sin poder elegirlo —está deshabilitado—, y detrás **sólo los estados a los que
+  puede pasar ahora**.
+
+  Sólo se enseña si hay a dónde pasar: si no, el Administrador o un usuario sin nada pendiente no ven
+  un control vacío, y el aviso «No hay nada que hacer aquí» sigue saliendo donde salía —en la tarjeta
+  de acciones de la ficha—. La etiqueta va **oculta pero de verdad** (`etiquetaVisible` en falso): es
+  el nombre accesible del control, y sin ella un lector de pantalla anunciaría un desplegable sin
+  decir de qué (`docs/interfaz-y-experiencia.md`, sección 8).
+-->
+@if (estados().length) {
+  <div class="flex flex-col gap-2">
+    <!--
+      **El valor es siempre la opción del estado actual**: al elegir un estado se abre su ventana y el
+      control vuelve a su sitio, así que nunca se queda enseñando el último elegido. Su valor cambia
+      con cada elección (`valorDelEstadoActual`) porque Angular sólo reescribe la opción marcada cuando
+      la expresión cambia.
+    -->
+    <app-selector
+      [identificador]="'acciones-' + ticket().number"
+      [etiqueta]="etiquetaDelControl()"
+      [etiquetaVisible]="false"
+      [opciones]="opciones()"
+      [valor]="valorDelEstadoActual()"
+      [deshabilitado]="trabajando()"
+      (valorChange)="elegir($event)"
+    />
+
+    <!--
+      **El aviso del resultado, junto a su control**. Mientras la ventana está abierta no se pinta
+      aquí, porque los avisos de la ventana salen dentro de ella.
+    -->
+    @if (pendiente() === null) {
+      @if (mensaje(); as aviso) {
+        <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+      }
+    }
+  </div>
+
+  <!--
+    **La ventana del cambio de estado**: una sola, la misma para todos (decisión 80). Dice a cuál se
+    pasa —el título se interpola con el nombre del estado—, explica lo que va a pasar con las ayudas
+    que ya existían, y **si esa transición necesita un texto, lo pide aquí mismo**: el motivo al
+    escalar, qué se ha hecho al resolver, la pregunta o lo que se necesita de Soporte al ponerse en
+    espera, y el comentario al cerrar, que es obligatorio (decisión 81).
+  -->
+  <app-dialogo
+    [titulo]="ventana().titulo"
+    [abierto]="pendiente() !== null"
+    (cerrado)="cerrarDialogo()"
+  >
+    <div class="flex flex-col gap-4">
+      @if (ventana().explicacion) {
+        <p class="text-sm text-apagado">{{ ventana().explicacion }}</p>
+      }
+
+      <!-- Lo que el cambio arrastra además del estado: hoy, la devolución del interno a Soporte. -->
+      @if (ventana().consecuencia) {
+        <p class="text-sm text-apagado">{{ ventana().consecuencia }}</p>
+      }
+
+      @if (ventana().campo) {
+        <app-area
+          [identificador]="'accion-' + ticket().number"
+          [etiqueta]="ventana().campo"
+          [valor]="texto()"
+          (valorChange)="texto.set($event)"
+        />
+      }
+
+      <!-- El aviso de que falta el texto obligatorio sale aquí, junto al campo que lo pide. -->
+      @if (errorDeLaVentana(); as error) {
+        <app-aviso forma="error" [texto]="error" />
+      }
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          [texto]="t().tickets.confirmar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="confirmar()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarDialogo()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+}

@@ -1,15 +1,24 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
+import { routes } from './app.routes';
 import { App } from './app';
+import { AvailabilityService } from './core/services/availability.service';
 
 describe('App', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(routes)],
     }).compileComponents();
+  });
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+    localStorage.clear();
   });
 
   it('se crea', () => {
@@ -17,20 +26,21 @@ describe('App', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('muestra el título y el estado del servicio', async () => {
+  it('no enseña el aviso de servidor caído cuando el servidor responde', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    // El armazón comprueba la salud del backend al arrancar: hay que responder a esa
-    // petición para que la prueba no quede esperando.
-    TestBed.inject(HttpTestingController)
-      .expectOne('/api/health')
-      .flush({ status: 'ok', database: 'ok' });
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-sin-servidor')).toBeNull();
+  });
 
-    await fixture.whenStable();
+  it('enseña el aviso de servidor caído en cuanto se sabe que no hay servidor', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
 
-    const compilado = fixture.nativeElement as HTMLElement;
-    expect(compilado.querySelector('h1')?.textContent).toContain('Catalina Support');
-    expect(compilado.textContent).toContain('servicio disponible');
+    TestBed.inject(AvailabilityService).noDisponible();
+    fixture.detectChanges();
+
+    // El aviso se pone encima de lo que hubiera: puede pasar en cualquier pantalla.
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-sin-servidor')).not.toBeNull();
   });
 });

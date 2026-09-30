@@ -1,7 +1,23 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-22
+> **Última actualización:** 2026-09-26
+>
+> **Actualizado el 2026-09-27**: nace `modules/ai.md`, el sexto módulo, con los dos campos que
+> redacta el motor de IA en la lista de tickets.
+>
+> **Actualizado el 2026-09-26 (tercera vez)**: los adjuntos de texto y código —un `.sql` no se podía
+> mandar— y **la imagen y el vídeo con tope de 480 × 360** que se abren en el visor al pulsarlos
+> (`docs/modules/tickets.md`, decisiones 54 y 55).
+>
+> **Actualizado el 2026-09-26 (segunda vez)**: las listas de tickets pasan a ser **Mis tickets** (lo
+> mío), **Tickets principales** y **Tickets internos**, y se quitan del menú «Nuevo ticket» y de la
+> bandeja «Asignármelo» (decisiones del responsable; `docs/modules/tickets.md`, decisiones 50 a 53).
+>
+> **Actualizado el 2026-09-26**: se fija **cómo se cuenta una enmienda** (sección «El registro de
+> enmiendas y cómo se cuenta») y se ponen los números de la tabla con esa regla, porque hasta hoy
+> unos cuadraban y otros no; y `modules/mail.md` y `modules/users.md` pasan a **as-built**, que era
+> lo que les tocaba desde que su código existe.
 
 Índice de la documentación del proyecto. La **Regla 0** de `AGENTS.md` es obligatoria: no se
 escribe código sin un documento aprobado antes.
@@ -12,20 +28,28 @@ escribe código sin un documento aprobado antes.
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
 | `arquitectura.md` | **as-built** | Stack, versiones, forma del repositorio, contenedores y regla de modularidad (frontend ↔ backend). Su sección 13 dice qué está construido, qué está sin verificar y qué falta |
-| `propósito-y-alcance.md` | **aprobado** (enmendado) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas |
-| `usuarios-y-permisos.md` | **aprobado** (2 enmiendas) | La matriz papel × acción, los tres caminos de entrada (correo, AD, Keycloak), las reglas de convivencia, la sesión, el ciclo de vida de las cuentas y la cuenta de administrador de fábrica |
-| `flujos.md` | **aprobado** | Los seis recorridos paso a paso (alta, triaje, escalado, trabajo de Desarrollo, cierre y reapertura), con los siete avisos por correo |
-| `usuarios.md` | **propuesta** | El módulo `users`: la tabla de cuentas, los endpoints, las reglas del alta, el cambio de papel, la desactivación y el perfil propio. Tiene 5 decisiones por confirmar en su sección 11 |
-| `interfaz-y-experiencia.md` | **aprobado** | Principios, forma de la aplicación, los cuatro enfoques por papel, la vista doble, el lenguaje visual (Tailwind v4 y 19 componentes propios), los ocho temas, multi-dispositivo y accesibilidad |
-| `ambientes.md` | **aprobado** | El runbook de despliegue, las migraciones, las copias de seguridad y las tres capas de pruebas |
-| `tickets.md` | **aprobado** | Modelo de datos, numeración, transiciones de los dos ciclos de vida, adjuntos y la lista cerrada de módulos y endpoints. Aprobado tras dos repasos, con los seis huecos técnicos ya aplicados |
+| `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
+| `usuarios-y-permisos.md` | **as-built** (5 enmiendas) | La matriz papel × acción, los tres caminos de entrada (correo, AD, Keycloak), las reglas de convivencia, la sesión, el ciclo de vida de las cuentas y la cuenta de administrador de fábrica. Enmendado el 2026-09-25 con **la instalación entrando por un método a la vez** (sección 5) y con que **la cuenta de fábrica entra siempre** (sección 8) |
+| `flujos.md` | **as-built** (1 enmienda) | Los seis recorridos paso a paso (alta, triaje, escalado, trabajo de Desarrollo, cierre y reapertura), con los siete avisos por correo |
+| `modules/settings.md` | **as-built** (4 enmiendas) | El módulo `settings`: qué es configurable —**el nombre de la instalación**, **el método de entrada, el directorio y Keycloak**, idioma, color institucional, **la marca**, prefijo de numeración y reparto—, dónde vive (cuatro tablas de una fila), cómo lo leen los demás módulos y **el logo**: dos huecos opcionales, formatos, validación, endpoint público y vuelta al de fábrica. Enmendado el 2026-09-25 con **el nombre de la instalación**, con **cómo se entra** (sección 5.8) —los dos caminos de directorio salen del entorno y se configuran desde la pantalla, **con sus secretos guardados y sin salir por la API**— con **la versión del sistema** (sección 5.9), que viaja en la marca pública, y con **los dos logos de fábrica, uno por tema**, más el favicon propio (2026-09-26) |
+| `modules/mail.md` | **as-built** (3 enmiendas) | El módulo `mail`: la tabla de plantillas, los marcadores, **los veinte textos por defecto** (diez correos en dos idiomas), el envío en HTML con versión de texto, **las claves de error con su código y lo que devuelve cada endpoint** (sección 8) y el editor. **Está entero**: backend y el editor del frontend |
+| `modules/auth.md` | **as-built** (6 enmiendas) | El módulo `auth`: la tabla de tokens de enlace, el token de sesión, las contraseñas, los tres caminos de entrada, los correos de cuenta, los endpoints, las seis pantallas del armazón y los contenedores de pruebas. Enmendado tres veces el 2026-09-23 al implementarlo (las claves del token de sesión y del 403, que no tenían ninguna; el campo de entrada, la respuesta, la ruta del enlace y dónde viaja su token; y el paso 1 de la sección 13), dos veces el 2026-09-25 al terminar **el camino de AD** —con la **corrección del responsable**: quien está en el directorio entra directamente, sin alta manual— y y **el de Keycloak**: las cuatro claves de error nuevas, cómo llega el navegador a Keycloak en desarrollo (por el mismo dominio, para que el emisor sea uno solo) y cómo vuelve el token en el fragmento. **Está entero**: los tres caminos de entrada, hechos y verificados. La sexta enmienda, el 2026-09-25, es **un método de entrada a la vez** (sección 5.0): el directorio y el reino se leen de la base en cada intento, los otros dos caminos quedan apagados, y **la cuenta de fábrica entra siempre** por su puerta |
+| `modules/users.md` | **as-built** (5 enmiendas) | El módulo `users`: la tabla de cuentas, los endpoints, las reglas del alta, el cambio de papel, la desactivación y el perfil propio. Enmendado el 2026-09-23 (los códigos de cada clave, las claves que faltaban y el reenvío a cuentas desactivadas) y dos veces el 2026-09-24 (nadie se desactiva a sí mismo y la cuenta de fábrica no tiene perfil; y **las cinco decisiones de sus pantallas**), y dos veces el 2026-09-25: al implementar **las tres acciones que dependían del directorio** —reactivar pregunta al directorio en AD y no se hace a mano en Keycloak, y el alta y el cambio de origen hacia el directorio no se hacen a mano—. **Está entero**: backend, las tres pantallas y esas tres acciones. La última, también del 2026-09-25: la pregunta al directorio **la contesta `auth`**, que es quien tiene la configuración guardada |
+| `interfaz-y-experiencia.md` | **as-built** (14 enmiendas) | Principios, forma de la aplicación, los cuatro enfoques por papel, la vista doble, el lenguaje visual (Tailwind v4 y 20 componentes propios), los ocho temas, multi-dispositivo y accesibilidad. Su registro tiene doce entradas: dos del **2026-09-23** (el idioma de arranque, que sale del navegador, y cómo se implementa el tema), cinco del **2026-09-24** (el armazón y su menú, la marca, **las tres pantallas de usuarios** de la sección 3.6, las **de tickets** de la 3.7 con el nivel de los títulos y el chip de tipo, y el editor de los correos), cuatro del **2026-09-25** (**reactivar sólo donde puede funcionar**, la marca con el nombre de la instalación, **la tarjeta de cómo se entra** y **la versión del sistema** en el pie de la entrada) y una del **2026-09-26**, con **el editor y los adjuntos dentro del texto** (sección 6.5) |
+| `ambientes.md` | **as-built** (3 enmiendas) | El runbook de despliegue, las migraciones —`v1.0.0.sql` para los dos entornos y `v1.0.0_dev.sql` con los datos de ejemplo, sólo en desarrollo—, **las copias de seguridad** (`scripts/backup-db.sh`, con catorce días de retención y **las dos bases en el `cron`**) y las tres capas de pruebas. Sus tres enmiendas: el 2026-09-25, **el directorio y Keycloak salen del entorno** y los datos de ejemplo dejan los dos caminos configurados, y ese mismo día, al hacer **el primer despliegue de producción**, el guion `scripts/prod-build.sh`, los contenedores verificados por dentro y **el dominio todavía en 503**; y el 2026-09-26, el dominio de las direcciones de ejemplo pasa a `@demo.com` y se corrige **la condición de la puesta al día de la migración** (sección 5) |
+| `modules/ai.md` | **aprobado** (0 enmiendas) | El módulo `ai`: los dos resúmenes del ticket —**«Motivo»** y **«Última acción»**— que redacta un motor de inteligencia artificial **en un contenedor aparte**, en español y en inglés. El motor y su modelo, qué texto se le manda, la tabla `ai_insights`, el contrato entre módulos, los reintentos y los estados, y lo que **no** hace. **Escrito el 2026-09-27** |
+| `modules/tickets.md` | **as-built** (6 enmiendas) | Modelo de datos, numeración, transiciones de los dos ciclos de vida, adjuntos y la lista cerrada de endpoints. Aprobado tras tres repasos, y **enmendado el 2026-09-24** al empezar a implementarlo: dos erratas, entre quién se reparte un interno, quién reabre el interno, el chip de tipo de la bandeja y las cuatro decisiones que el modelo no tenía resueltas; y otra vez ese día, al construir las pantallas. **Está entero**: backend y las pantallas. El 2026-09-25 llegó **el guion de copias** y el 2026-09-26 **los adjuntos dentro del texto** (sección 2.3): el cuerpo con formato, la lista blanca de etiquetas, las cuatro extensiones de vídeo y las decisiones 45 a 49 |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe
-justo antes de implementarlo:
+justo antes de implementarlo, en este orden:
 
-1. `autenticación.md` — el módulo `auth`: sesión, los tres caminos de entrada, contraseñas y enlaces.
-2. `usuarios.md` — el módulo `users` (ya escrito, en propuesta).
+1. `modules/mail.md` — **entero**: backend y el editor.
+2. `modules/settings.md` — **la pantalla de Configuración está hecha entera**: la marca, el color, el
+   prefijo, el reparto y el idioma de la instalación.
+3. `modules/auth.md` — **entero**: los tres caminos de entrada, hechos y verificados.
+4. `modules/users.md` — **entero**: backend, las tres pantallas y las tres acciones del directorio.
+5. `modules/tickets.md` — **entero**: backend y pantallas, con los adjuntos de los comentarios.
 
 ## Convenciones
 
@@ -44,9 +68,35 @@ Todo documento de `docs/` empieza así:
 - `aprobado`: aprobado por el responsable del proyecto. Habilita implementar.
 - `as-built`: el código existe y el documento describe lo que hace hoy.
 
-### Nombres
+### El registro de enmiendas y cómo se cuenta
 
-En español, en minúsculas, sin acentos ni espacios (guiones): `usuarios-y-permisos.md`.
+Debajo de la cabecera, cada documento lleva **su registro de enmiendas**, de la más reciente a la más
+antigua: **una entrada por cambio**, con su fecha y qué cambió y por qué.
+
+**Una enmienda es una entrada del registro que empieza por `Enmendado el …`.** Eso es lo que dice el
+número que aparece en la tabla de arriba y en `AGENTS.md`, y se puede comprobar contando esas
+entradas en la cabecera del documento. **`Pasa a as-built el …` no cuenta**: no cambia nada del
+documento, cambia su estado.
+
+Dos cosas se escriben aparte, y no son enmiendas:
+
+- **La corrección del responsable**, cuando cambió lo propuesto, se anota **dentro de la entrada**
+  («es una corrección del responsable», «yo proponía… y decidió…»).
+- **Lo que se descubrió al implementar** también va dentro de su entrada, diciendo qué se encontró.
+
+El registro es memoria de **por qué** un documento está como está. No se tachan ni se borran
+entradas: si algo se corrige, se añade la entrada nueva y se dice qué queda corregido.
+
+### Nombres y carpetas
+
+- **Los documentos de producto** viven en `docs/`, y se llaman en español, en minúsculas, sin acentos
+  ni espacios: `usuarios-y-permisos.md`.
+- **Los documentos de módulo** viven en `docs/modules/` y se llaman **como el módulo**:
+  `modules/auth.md`, `modules/users.md`. El nombre del módulo manda ahí, aunque sea en inglés, porque
+  es el nombre que tiene su carpeta en el código.
+- Un documento de módulo cuenta **cómo se construye** ese módulo. Lo que es decisión de producto —qué
+  puede cada papel, cómo se comportan los tickets— vive en los documentos de `docs/`, y el de módulo
+  no lo repite: lo da por escrito y apunta a él.
 
 ### Correspondencia con el código
 

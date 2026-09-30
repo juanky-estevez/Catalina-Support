@@ -1,0 +1,7 @@
+Registros del día de la incidencia
+==================================
+
+08:05  La aplicación abre con normalidad.
+09:12  Al guardar un adjunto de más de 10 MB no termina.
+09:40  Se reproduce en otros dos equipos.
+10:02  Se avisa a Soporte con este archivo.

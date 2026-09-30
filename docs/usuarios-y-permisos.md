@@ -1,14 +1,63 @@
 # Usuarios y permisos
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-09-22
+> **Estado:** as-built
+> **Última actualización:** 2026-09-27
+>
+> **Enmendado el 2026-09-29 (segunda vez)**: **la contraseña sólo se cambia en las cuentas locales**
+> (decisión del responsable). El botón de mandar el enlace pasa a llamarse **«Cambiar contraseña»** —es lo
+> que hace— y **sólo se le enseña a las cuentas con origen `local`**: con Active Directory o Keycloak la
+> contraseña **la comprueba el directorio**, así que ofrecerlo sería una promesa falsa. **Y lo garantiza el
+> servidor**, no sólo la pantalla: pedir el enlace de una cuenta de directorio responde **422** con
+> `users.password.notLocal`. Encaja con una regla que ya estaba en la base: **una cuenta de directorio no
+> puede tener contraseña** (`users_directory_has_no_password`).
+>
+> **Enmendado el 2026-09-29**: **el catálogo lo mantiene sólo el Administrador** —crear, renombrar y
+> retirar, categorías y etiquetas— (decisión 83 de `docs/modules/tickets.md`, decisión del responsable).
+> **Soporte y Desarrollo lo usan** —clasifican tickets y filtran— pero **no lo cambian**. Se corrigen así
+> las dos filas de la matriz y **la decisión 73**, que era propuesta mía y queda decidida al revés.
+>
+> **Enmendado el 2026-09-27 (tercera vez)**: las **etiquetas también se mantienen** —crear y renombrar,
+> Soporte y Administrador; **retirar, sólo el Administrador**—, con las dos filas nuevas de la matriz
+> (decisión 73 de `docs/modules/tickets.md`: **propuesta mía, implementada el 2026-09-28 y pendiente de
+> que el responsable la corrija** si no es lo que quiere; el responsable pidió poder crearlas y
+> corregirlas, y no dijo quién).
+>
+> **Enmendado el 2026-09-27 (segunda vez)**, al entrar **las categorías y las etiquetas**: la matriz
+> estrena tres filas —elegirlas, mantener el catálogo y **retirar una categoría, que es sólo del
+> Administrador**—. **Todo ticket nace con categoría**: es obligatoria y la elige quien lo abre.
+>
+> **Enmendado el 2026-09-27**, al entrar **las menciones y los observadores**: la matriz estrena las dos
+> filas de **etiquetar** y **quitar a un observador** (Soporte y Desarrollo), y la regla 3 nueva dice lo
+> que más se puede confundir: **ser observador no es ser responsable**. **El asignado sigue siendo
+> opcional**, como estaba.
+>
+> **Enmendado el 2026-09-26**, al repartir las listas de tickets: la fila «ver sus propios tickets»
+> dice ya **qué es lo suyo** —lo asignado, lo abierto por uno y donde ha comentado (regla 2)—, y
+> Soporte y Desarrollo estrenan **dos listas donde ven todo** (Tickets principales y Tickets internos)
+> además de su bandeja. **No cambia ningún permiso**: lo que cambia es dónde se ve lo que cada papel
+> ya podía ver (`docs/modules/tickets.md`, decisiones 51 y 52).
+>
+> **Enmendado el 2026-09-25**, al bajar el responsable **la longitud mínima de las
+> contraseñas de 12 a 8 caracteres** (sección 7), que es la única regla de la política.
+>
+> **Enmendado el 2026-09-25**, al pedir el responsable que **la instalación entre por un método a la
+> vez** (sección 5): los tres caminos de la sección 4 **ya no conviven**. El que está puesto es el
+> único que se atiende, y con el método en `ad` o en `keycloak` **las cuentas locales —Soporte y
+> Desarrollo incluidas— no pueden entrar**; la cuenta de fábrica sí, siempre, porque es la única
+> puerta que no se puede cerrar (sección 8). La enmienda está contada entera en
+> `docs/modules/settings.md`, sección 5.8, y en `docs/modules/auth.md`, secciones 5.0 y 5.5.
+>
+> **Enmendado el 2026-09-24**, al empezar a implementar `tickets`: la matriz estrena la fila de
+> **reabrir el ticket interno** (Soporte), que es la mitad que faltaba de «cerrar el interno»: la
+> transición existe en `docs/modules/tickets.md`, sección 3.2 —`cerrado` → `en progreso`, y equivale a
+> volver a escalar— y aquí no se veía.
 >
 > Aprobado por el responsable el 2026-09-22, con las siete decisiones de la antigua sección 10
-> confirmadas tal como estaban propuestas. Desbloquea `tickets.md` y `flujos.md`, y con ellos los
+> confirmadas tal como estaban propuestas. Desbloquea `modules/tickets.md` y `flujos.md`, y con ellos los
 > módulos `auth` y `users`, que son los primeros que se pueden implementar. **No habilita escribir
 > código por sí solo** (Regla 0 de `AGENTS.md`).
 >
-> **Enmendado el 2026-09-22** en dos cosas, al escribir `docs/tickets.md`:
+> **Enmendado el 2026-09-22** en dos cosas, al escribir `docs/modules/tickets.md`:
 >
 > 1. Se añadió a la matriz la acción de **cerrar el ticket interno** (Desarrollo y Soporte): se
 >    decidió que su cierre es manual, no consecuencia del cierre del principal.
@@ -18,7 +67,7 @@
 > 3. Se añadió la **sección 8**, la cuenta de administrador de fábrica, que entra escribiendo
 >    `admin` y cuya contraseña viene de `ADMIN_PASSWORD` y se aplica en cada arranque. La sección 4
 >    recoge que es la única cuenta que no se identifica por su correo.
-> 8. Al empezar `docs/autenticación.md`: **la sesión deja de ir en cookie** y pasa a un token en
+> 8. Al empezar `docs/modules/auth.md`: **la sesión deja de ir en cookie** y pasa a un token en
 >    `localStorage` enviado en la cabecera `Authorization`. Se elige así para que el navegador no
 >    mande nada por su cuenta, a cambio de que un XSS pueda leer el token; las compensaciones y la
 >    regla de no añadir scripts de terceros quedan escritas en la sección 6.
@@ -27,11 +76,11 @@
 > 6. Al documentar el módulo de usuarios: se añadió a la matriz el **cambio de papel** (Administrador),
 >    se quitó la **baja** del ciclo de vida —sólo se desactiva—, y la cuenta de fábrica dejó de ser una
 >    fila: **vive en la configuración**.
-> 5. Al empezar `docs/autenticación.md` se cambió la **duración de la sesión a 10 horas** y se
+> 5. Al empezar `docs/modules/auth.md` se cambió la **duración de la sesión a 10 horas** y se
 >    escribió lo que implica un token sin estado: **la sesión no se puede revocar en el servidor**, así
 >    que cerrar sesión borra el token del navegador pero no lo invalida. La cuenta sí se lee en cada
 >    petición, así que desactivar a alguien **bloquea al instante**.
-> 4. Al repasar `docs/tickets.md` se añadió a la matriz el **reseteo de la contraseña**, que pueden
+> 4. Al repasar `docs/modules/tickets.md` se añadió a la matriz el **reseteo de la contraseña**, que pueden
 >    lanzar **Soporte y los administradores**, y la sección 7 recoge las tres formas de tocar una
 >    contraseña: el alta, el cambio propio y el reseteo (que envía correo y nunca asigna una
 >    contraseña a mano).
@@ -40,9 +89,9 @@
 
 Fija **quién puede qué**, **cómo se entra**, **cómo se gestionan las cuentas** y las **reglas de
 convivencia** entre los tres métodos de acceso. No define el modelo de datos del ticket
-(`tickets.md`) ni los flujos paso a paso (`flujos.md`).
+(`modules/tickets.md`) ni los flujos paso a paso (`flujos.md`).
 
-Es una **propuesta**: no habilita escribir código hasta que esté aprobada (Regla 0 de `AGENTS.md`).
+Está **aprobado**, así que habilita escribir código (Regla 0 de `AGENTS.md`).
 La sección 11 lista las decisiones que propuse yo, todas confirmadas.
 
 ## 2. Los cuatro papeles
@@ -62,7 +111,7 @@ El papel es **uno por cuenta** y no se cambia desde la pantalla: se decide al da
 
 | Acción | Usuario | Soporte | Desarrollo | Administrador |
 | --- | :---: | :---: | :---: | :---: |
-| Ver sus propios tickets | ✅ | ✅ | ✅ | — |
+| Ver sus propios tickets —para un técnico, los suyos, que son los que tiene asignados, los que abrió y donde ha comentado— | ✅ | ✅ | ✅ | — |
 | Ver **todos** los tickets principales | — | ✅ | ✅ (sólo lectura, regla 2) | ✅ (sólo lectura) |
 | Ver los tickets **internos** | — | ✅ | ✅ | ✅ (sólo lectura) |
 | Crear un ticket propio | ✅ | ✅ | ✅ | — |
@@ -74,29 +123,48 @@ El papel es **uno por cuenta** y no se cambia desde la pantalla: se decide al da
 | **Escalar** a Desarrollo | — | ✅ | — | — |
 | **Resolver** el ticket interno | — | — | ✅ | — |
 | **Cerrar** el ticket interno | — | ✅ | ✅ | — |
+| **Reabrir** el ticket interno *(es volver a escalar)* | — | ✅ | — | — |
 | Marcar el principal como `resuelto` **sin escalar** | — | ✅ | — | — |
 | **Cerrar y reabrir** el principal | ✅ (el suyo) | ✅ | — | — |
+| **Elegir la categoría** del ticket | ✅ (el suyo) | ✅ | — | — |
+| **Poner, cambiar y quitar las etiquetas** del ticket | — | ✅ (desde el principal) | ✅ (desde el interno) | — |
+| **Mantener el catálogo de categorías** (crear, renombrar y retirar) | — | — | — | ✅ |
+| **Mantener las etiquetas** (crear, renombrar y retirar, en todos los tickets) | — | — | — | ✅ |
+| **Retirar una etiqueta** del catálogo y de los tickets | — | — | — | ✅ |
+| **Retirar** una categoría del catálogo | — | — | — | ✅ |
+| **Etiquetar** a otro técnico o desarrollador (y con eso hacerlo observador) | — | ✅ | ✅ | — |
+| **Quitar** a un observador | — | ✅ | ✅ | — |
 | Ver la lista de usuarios (nombre y correo) | — | ✅ | — | ✅ |
 | Dar de alta un usuario | — | ✅ (sólo rol `usuario`) | — | ✅ (cualquier rol) |
 | Desactivar o reactivar una cuenta | — | ✅ | — | ✅ |
 | Cambiar el **origen** de una cuenta | — | — | — | ✅ |
 | Cambiar el **papel** de una cuenta | — | — | — | ✅ |
-| Configurar el **prefijo** de la numeración de tickets | — | — | — | ✅ |
+| Configurar la **instalación** (numeración, reparto, avisos, apariencia y textos de los correos) | — | — | — | ✅ |
 | **Resetear la contraseña** de un usuario | — | ✅ | — | ✅ |
 
-Tres reglas que la matriz no puede expresar y que van aparte:
+Cinco reglas que la matriz no puede expresar y que van aparte:
 
 1. **El usuario sólo ve lo suyo.** Ni tickets de otros, ni la lista de usuarios, ni el ticket interno
    de su propia incidencia: ve su principal y nada más.
-2. **Desarrollo no escribe en el ticket principal.** Lo lee para tener contexto, pero todo lo que
+2. **«Lo mío» vale para los tres papeles, y significa lo mismo** (decisión del responsable,
+   2026-09-26): lo que tengo asignado, lo que abrí yo y aquello donde he comentado. Con eso, Soporte
+   y Desarrollo tienen **su** bandeja —**Mis tickets**— además de las listas donde lo ven todo
+   —**Tickets principales** y **Tickets internos**—, que es dónde está el trabajo que no es suyo. El
+   Administrador no tiene tickets propios: su bandeja es la de siempre, con los dos tipos y de sólo
+   lectura (`docs/modules/tickets.md`, decisión 52).
+3. **Ser observador no es ser responsable.** Un ticket tiene **como mucho un asignado** —el que
+   atiende— y **muchos observadores** —los que lo siguen, porque alguien los etiquetó—. **Observar no
+   da permisos**: ni escribe quien no escribía, ni mueve estados quien no los movía; sólo hace que el
+   ticket esté en su bandeja (`docs/modules/tickets.md`, decisión 60).
+4. **Desarrollo no escribe en el ticket principal.** Lo lee para tener contexto, pero todo lo que
    tenga que decir va en el interno, y es Soporte quien decide qué traslada al usuario.
-3. **Soporte crea usuarios, pero sólo con rol `usuario`.** Si Soporte pudiera crear un
+5. **Soporte crea usuarios, pero sólo con rol `usuario`.** Si Soporte pudiera crear un
    `administrador`, el papel más alto dejaría de estar protegido. Repartir `soporte`, `desarrollo` y
    `administrador` es cosa de un Administrador.
 
 El cierre del ticket interno es manual a propósito: lo dan por terminado Desarrollo o Soporte, y
 **cerrarlo no cambia el estado del principal**. Re-escalar el principal lo devuelve a `en progreso`.
-El detalle está en `docs/tickets.md`, sección 3.2.
+El detalle está en `docs/modules/tickets.md`, sección 3.2.
 
 ## 4. Los tres caminos de entrada
 
@@ -118,13 +186,30 @@ Notas:
   **`sub`**. Son los que mandan una vez vinculada la cuenta (regla 3 de la sección 5).
 - AD se consulta con **LDAP** usando las credenciales que escribe el usuario: no hay otra forma de
   saber quién es sin preguntarle al dominio. Keycloak, por OIDC.
+- **Los tres caminos no están abiertos a la vez** (enmienda del 2026-09-25): la instalación entra por
+  **uno solo**, el que esté puesto, y se cambia desde Configuración sin reiniciar nada
+  (`docs/modules/settings.md`, sección 5.8). Dónde se configuran los dos caminos de directorio —en la
+  pantalla, no en el entorno— está también ahí.
 
 ## 5. Reglas de convivencia
 
 Son las que evitan que la misma persona acabe con dos cuentas, o sin ninguna.
 
-1. **El directorio manda.** Si la persona existe y está activa en AD o Keycloak, entra. La
-   configuración institucional tiene más peso que el estado local de la cuenta.
+0. **La instalación entra por un método a la vez** (enmienda del 2026-09-25). Un administrador elige
+   `local`, `ad` o `keycloak` desde Configuración, y **los otros dos quedan apagados**: no es que no
+   funcionen, es que la instalación no los ofrece. Cambiarlo vale en la entrada siguiente, sin
+   reiniciar nada.
+   - **Con el método en `ad` o en `keycloak`, las cuentas locales no entran** —Soporte y Desarrollo
+     incluidas—, porque su contraseña es de aquí y el camino de la instalación es otro. **Nadie pierde
+     su cuenta**: lo que se apaga es la puerta, y al volver a `local` todo el mundo entra otra vez.
+   - **La cuenta de fábrica entra siempre**, sea cual sea el método (sección 8): es la que puede
+     devolver el método a donde estaba sin tocar la base a mano.
+   - **No se puede elegir un método que no esté configurado**: la instalación no se queda sin puerta
+     por un descuido, porque el backend lo rechaza antes de guardarlo.
+1. **El directorio manda**, **cuando el directorio es el camino de la instalación**. Si la persona
+   existe y está activa en AD o Keycloak, entra. La configuración institucional tiene más peso que el
+   estado local de la cuenta. Y al revés: con el método en `local`, una cuenta de directorio no entra,
+   porque aquí no hay contraseña suya que comparar.
 2. **Se vincula por correo, nunca se duplica.** Si al entrar por primera vez por AD o Keycloak ya
    existe una cuenta con ese correo, el acceso se vincula a ella: conserva sus roles, sus tickets y
    su historial.
@@ -174,14 +259,20 @@ Son las que evitan que la misma persona acabe con dos cuentas, o sin ninguna.
   la comprobación de `Origin` que se había previsto.
 - El secreto de firma es una **variable de entorno** (`TOKEN_SECRET`), nunca un valor en el código ni
   en git. **El único ajuste que se cambia desde la aplicación es el prefijo de la numeración de los
-  tickets**, y lo cambia un Administrador (está en la matriz y en `docs/tickets.md`, sección 2.2).
+  tickets**, y lo cambia un Administrador (está en la matriz y en `docs/modules/tickets.md`, sección 2.2).
 
 ## 7. Contraseñas, cambios de contraseña y correos de cuenta
 
-- **Longitud mínima 12, sin caducidad forzada y sin preguntas de seguridad.** La caducidad empuja a
+- **Longitud mínima 8, sin caducidad forzada y sin preguntas de seguridad.** La caducidad empuja a
   la gente a inventarse variantes de la misma contraseña, y las preguntas de seguridad son un camino
-  de recuperación más débil que el correo. La **credencial de fábrica** (sección 8) es la única
-  excepción, y por una razón práctica: si le aplicara, el backend no arrancaría en desarrollo.
+  de recuperación más débil que el correo. **El mínimo eran 12 y el responsable lo bajó a 8 el
+  2026-09-25**: en una mesa de ayuda interna la contraseña no es lo que protege el sistema —lo que lo
+  protege es quién tiene cuenta, y una cuenta se desactiva en un clic—, y un mínimo alto sólo consigue
+  que la gente escriba la misma frase con un número detrás. **La credencial de fábrica** (sección 8)
+  sigue siendo la única excepción, y por una razón práctica: si le aplicara, el backend no arrancaría
+  en desarrollo.
+- **Es la única regla**: ni mayúsculas, ni números, ni símbolos obligatorios. Una regla de composición
+  no añade entropía de verdad y sí añade contraseñas apuntadas en un papel.
 - Se guardan **con hash** (`bcrypt`), nunca en claro y nunca cifradas de forma reversible.
 - **Alta**: se envía un correo con un **enlace de un solo uso** para que el usuario establezca su
   contraseña. **Caduca a las 24 horas.** Sin ese paso la cuenta no sirve para entrar, así que el alta
@@ -195,8 +286,9 @@ Son las que evitan que la misma persona acabe con dos cuentas, o sin ninguna.
   lanzarlo. El usuario recibe el mismo correo: **nadie le asigna una contraseña ni se la dice por
   teléfono**, que es como se filtran.
 - Si el origen es AD o Keycloak, **no se envía nada**: la contraseña es del dominio (regla 5).
-- Los correos de cuenta (alta, cambio y recuperación) son **cosa distinta de los avisos de ticket**:
-  esos son **siete** y están listados en `docs/propósito-y-alcance.md`. Aquí no se cuenta ninguno.
+- Los correos de cuenta —**el alta, la recuperación y el aviso de que la contraseña ha cambiado**—
+  son **cosa distinta de los avisos de ticket**: esos son **siete** y están listados en
+  `docs/propósito-y-alcance.md`. El detalle de los tres está en `docs/modules/auth.md`, sección 7.
 - Ni contraseñas, ni tokens, ni enlaces de recuperación se escriben en los logs.
 
 ## 8. La cuenta de administrador de fábrica
@@ -224,7 +316,7 @@ Detalles que importan:
   sólo en `config/env/prod.env`, que no se versiona. **La contraseña de producción no se escribe en
   esta documentación**, que va al repositorio.
 - **No le aplica la política de contraseñas** de la sección 7: es una credencial de fábrica, y
-  exigirle doce caracteres impediría arrancar en desarrollo.
+  exigirle un mínimo impediría arrancar en desarrollo.
 - **La contraseña sólo se cambia en la configuración.** No se puede cambiar desde la aplicación
   —no hay dónde guardarla— ni recuperar por correo —no tiene—. Cambiarla es editar la variable y
   reiniciar, y así **nunca se pierde el acceso a la instalación**. Nada de «he olvidado la
@@ -236,6 +328,11 @@ Detalles que importan:
 - **Ve todo en sólo lectura**, tickets incluidos: puede comprobar qué está pasando, pero no comentar,
   ni mover estados, ni asignar. El papel `administrador` es el más alto en **configuración**
   (usuarios, numeración y apariencia) y **sólo lectura** en todo lo demás.
+- **Entra siempre, sea cual sea el método de entrada** (enmienda del 2026-09-25), y por eso va lo
+  primero que se comprueba al entrar. Es lo que hace que elegir mal el método no deje la instalación
+  sin salida: con el método en `keycloak` la pantalla de entrada no tiene formulario, así que **su
+  puerta es un enlace discreto** («Entrar como administrador») que lo saca
+  (`docs/modules/auth.md`, secciones 5.0 y 9).
 
 ## 9. Ciclo de vida de una cuenta
 
@@ -266,9 +363,9 @@ Por eso la tabla de cuentas **no lleva `deleted_at`**: sería una columna que na
 Este documento, ya aprobado, fija los permisos, el acceso y el ciclo de vida de las cuentas, y
 desbloquea:
 
-1. `tickets.md` — modelo de datos, transiciones y lista cerrada de módulos, que ya puede decir quién
+1. `modules/tickets.md` — modelo de datos, transiciones y lista cerrada de módulos, que ya puede decir quién
    ve y quién mueve cada cosa.
 2. `flujos.md` — los flujos paso a paso, con los avisos por correo.
 
-Con `tickets.md` y `flujos.md` aprobados, **`auth` y `users` son los primeros módulos que se pueden
+Con `modules/tickets.md` y `flujos.md` aprobados, **`auth` y `users` son los primeros módulos que se pueden
 implementar**, porque no dependen de ninguna decisión pendiente del producto.

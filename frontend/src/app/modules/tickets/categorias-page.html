@@ -1,0 +1,310 @@
+<main class="mx-auto flex max-w-6xl flex-col gap-6">
+  <h1 class="text-xl font-semibold text-texto">{{ t().tickets.categoriasTitulo }}</h1>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  <!--
+    **Las dos mitades, con el mismo peso** (decisión 72): categorías y etiquetas, cada una con su
+    tarjeta, su descripción, su cuenta de tickets y sus botones. En PC van al lado, para que se vea que
+    ninguna manda sobre la otra; en móvil se apilan.
+  -->
+  <div class="grid gap-6 lg:grid-cols-2">
+    <!--
+      El catálogo: el nombre y **cuántos tickets tiene cada categoría**, que es lo que hace falta para
+      retirarla con criterio. El renombrado se hace en la fila, donde está la categoría.
+    -->
+    <app-tarjeta
+      nivel="h2"
+      [titulo]="t().tickets.categoriasLista"
+      [descripcion]="t().tickets.categoriasDescripcion"
+    >
+      <div class="mb-3 flex justify-end">
+        @if (esAdministrador()) {
+          <app-boton [texto]="t().tickets.nuevaCategoria" (pulsado)="abrirAlta()" />
+        }
+      </div>
+
+      @if (cargando()) {
+        <p class="text-sm text-apagado">{{ t().comun.cargando }}</p>
+      } @else if (!categorias().length) {
+        <p class="text-sm text-apagado">{{ t().tickets.sinCategorias }}</p>
+      } @else {
+        <ul class="flex flex-col divide-y divide-borde">
+          @for (categoria of categorias(); track categoria.id) {
+            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+              @if (renombrando() === categoria.id) {
+                <div class="flex min-w-56 flex-1 flex-wrap items-end gap-2">
+                  <app-campo
+                    [identificador]="'categoria-' + categoria.id"
+                    [etiqueta]="t().tickets.nombreDeCategoria"
+                    [valor]="nombreEditado()"
+                    (valorChange)="nombreEditado.set($event)"
+                  />
+
+                  <app-boton
+                    [texto]="t().tickets.guardar"
+                    [deshabilitado]="trabajando()"
+                    (pulsado)="guardarNombre(categoria)"
+                  />
+
+                  <app-boton
+                    forma="secundario"
+                    [texto]="t().tickets.cancelar"
+                    [deshabilitado]="trabajando()"
+                    (pulsado)="cancelarRenombrado()"
+                  />
+                </div>
+              } @else {
+                <div class="flex flex-col gap-1">
+                  <span class="font-medium text-texto">{{ categoria.name }}</span>
+
+                  <span class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-apagado">
+                      {{ categoria.tickets }} {{ t().tickets.total }}
+                    </span>
+
+                    <!-- Una retirada se sigue enseñando: clasifica tickets, y hay que poder verlo. -->
+                    @if (categoria.active) {
+                      <span
+                        class="inline-flex items-center rounded border border-exito px-1.5 py-0.5 text-exito"
+                      >
+                        {{ t().tickets.categoriaActiva }}
+                      </span>
+                    } @else {
+                      <span
+                        class="inline-flex items-center rounded border border-borde px-1.5 py-0.5 text-apagado"
+                      >
+                        {{ t().tickets.categoriaRetirada }}
+                      </span>
+                    }
+                  </span>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  @if (esAdministrador()) {
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.renombrarCategoria"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="empezarRenombrado(categoria)"
+                    />
+                  }
+
+                  <!--
+                    **El catálogo lo mantiene sólo el Administrador** (decisión 83, que corrige la 64 y la
+                    73): crear, renombrar y retirar. A Soporte no se le enseñan —sí ve el catálogo, para
+                    usarlo—: la interfaz no ofrece lo que el backend rechazaría.
+                  -->
+                  @if (esAdministrador()) {
+                    @if (categoria.active) {
+                      <app-boton
+                        forma="secundario"
+                        [texto]="t().tickets.retirarCategoria"
+                        [deshabilitado]="trabajando()"
+                        (pulsado)="retirar(categoria)"
+                      />
+                    } @else {
+                      <app-boton
+                        forma="secundario"
+                        [texto]="t().tickets.reactivarCategoria"
+                        [deshabilitado]="trabajando()"
+                        (pulsado)="reactivar(categoria)"
+                      />
+                    }
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </app-tarjeta>
+
+    <!--
+      **Las etiquetas**, con su lista, su cuenta y sus botones, igual que las categorías. Se mantienen
+      aquí (decisión 72): crear, renombrar —lo que vale para todos los tickets que la llevan— y retirar
+      —sólo el Administrador, y preguntando antes—. Sin `tickets`, la etiqueta existe en el catálogo
+      pero no la lleva nadie.
+    -->
+    <app-tarjeta
+      nivel="h2"
+      [titulo]="t().tickets.etiquetas"
+      [descripcion]="t().tickets.etiquetasDescripcion"
+    >
+      <div class="mb-3 flex justify-end">
+        @if (esAdministrador()) {
+          <app-boton [texto]="t().tickets.nuevaEtiqueta" (pulsado)="abrirAltaDeEtiqueta()" />
+        }
+      </div>
+
+      @if (cargando()) {
+        <p class="text-sm text-apagado">{{ t().comun.cargando }}</p>
+      } @else if (!etiquetas().length) {
+        <p class="text-sm text-apagado">{{ t().tickets.sinEtiquetasEnUso }}</p>
+      } @else {
+        <ul class="flex flex-col divide-y divide-borde">
+          @for (etiqueta of etiquetas(); track etiqueta.tag) {
+            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+              @if (renombrandoEtiqueta() === etiqueta.tag) {
+                <div class="flex min-w-56 flex-1 flex-wrap items-end gap-2">
+                  <app-campo
+                    [identificador]="'etiqueta-' + etiqueta.tag"
+                    [etiqueta]="t().tickets.nombreDeEtiqueta"
+                    [valor]="nombreEditadoDeEtiqueta()"
+                    (valorChange)="nombreEditadoDeEtiqueta.set($event)"
+                    [maximo]="topeDeEtiqueta"
+                  />
+
+                  <app-boton
+                    [texto]="t().tickets.guardar"
+                    [deshabilitado]="trabajando()"
+                    (pulsado)="guardarNombreDeEtiqueta(etiqueta)"
+                  />
+
+                  <app-boton
+                    forma="secundario"
+                    [texto]="t().tickets.cancelar"
+                    [deshabilitado]="trabajando()"
+                    (pulsado)="cancelarRenombradoDeEtiqueta()"
+                  />
+                </div>
+              } @else {
+                <div class="flex flex-col gap-1">
+                  <span class="font-medium text-texto">{{ etiqueta.tag }}</span>
+
+                  <span class="flex flex-wrap items-center gap-2 text-xs">
+                    @if (etiqueta.tickets) {
+                      <span class="text-apagado">
+                        {{ etiqueta.tickets }} {{ t().tickets.total }}
+                      </span>
+                    } @else {
+                      <span class="text-apagado">{{ t().tickets.etiquetaSinTickets }}</span>
+                    }
+                  </span>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  @if (esAdministrador()) {
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.renombrarEtiqueta"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="empezarRenombradoDeEtiqueta(etiqueta)"
+                    />
+                  }
+
+                  <!--
+                    **Retirar una etiqueta es sólo del Administrador** (decisión 83): la quita de todos
+                    los tickets que la llevan, y a Soporte no se le enseña el botón.
+                  -->
+                  @if (esAdministrador()) {
+                    <app-boton
+                      forma="secundario"
+                      [texto]="t().tickets.retirarEtiqueta"
+                      [deshabilitado]="trabajando()"
+                      (pulsado)="abrirRetiradaDeEtiqueta(etiqueta)"
+                    />
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </app-tarjeta>
+  </div>
+
+  <!-- El alta de una categoría: un nombre y un botón, como el alta de una cuenta. -->
+  <app-dialogo
+    [titulo]="t().tickets.nuevaCategoria"
+    [abierto]="mostrandoAlta()"
+    (cerrado)="cerrarAlta()"
+  >
+    <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); crear()">
+      <app-campo
+        identificador="nueva-categoria"
+        [etiqueta]="t().tickets.nombreDeCategoria"
+        [valor]="nombreNueva()"
+        (valorChange)="nombreNueva.set($event)"
+      />
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          tipo="submit"
+          [texto]="t().tickets.crearCategoria"
+          [textoTrabajando]="t().tickets.creandoCategoria"
+          [trabajando]="trabajando()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarAlta()"
+        />
+      </div>
+    </form>
+  </app-dialogo>
+
+  <!-- El alta de una etiqueta: el mismo diálogo, con un solo campo, su nombre. -->
+  <app-dialogo
+    [titulo]="t().tickets.nuevaEtiqueta"
+    [abierto]="mostrandoAltaDeEtiqueta()"
+    (cerrado)="cerrarAltaDeEtiqueta()"
+  >
+    <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); crearLaEtiqueta()">
+      <app-campo
+        identificador="nueva-etiqueta"
+        [etiqueta]="t().tickets.nombreDeEtiqueta"
+        [valor]="etiquetaNueva()"
+        (valorChange)="alEscribirEtiqueta($event)"
+        [maximo]="topeDeEtiqueta"
+      />
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          tipo="submit"
+          [texto]="t().tickets.crearEtiqueta"
+          [textoTrabajando]="t().tickets.creandoEtiqueta"
+          [trabajando]="trabajando()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarAltaDeEtiqueta()"
+        />
+      </div>
+    </form>
+  </app-dialogo>
+
+  <!--
+    **Retirar una etiqueta pregunta antes** (decisión 72): la quita de todos los tickets que la llevan,
+    y el aviso dice a cuántos afecta. Se usa el diálogo de siempre, no un `confirm()` del navegador.
+  -->
+  <app-dialogo
+    [titulo]="t().tickets.retirarEtiqueta"
+    [abierto]="retirandoEtiqueta() !== null"
+    (cerrado)="cerrarRetiradaDeEtiqueta()"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ avisoDeRetiradaDeEtiqueta() }}</p>
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          forma="peligro"
+          [texto]="t().tickets.retirarEtiqueta"
+          [deshabilitado]="trabajando()"
+          (pulsado)="retirarLaEtiqueta()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().tickets.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="cerrarRetiradaDeEtiqueta()"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+</main>

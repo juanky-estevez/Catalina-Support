@@ -1,0 +1,152 @@
+<main class="mx-auto flex max-w-7xl flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-texto">{{ t().correos.titulo }}</h1>
+      <p class="text-sm text-apagado">{{ t().correos.descripcion }}</p>
+    </div>
+
+    <!--
+      **La vuelta a Configuración es el botón de atrás** (decisión del responsable, 2026-09-29): una
+      flecha a la izquierda del título, como en las listas de tickets, en vez de un botón con el nombre de
+      la pantalla a la que vuelve. Su nombre accesible dice que vuelve.
+    -->
+    <a
+      routerLink="/settings"
+      class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-borde-fuerte text-texto hover:bg-superficie-suave"
+      [attr.aria-label]="t().comun.volver"
+      [attr.title]="t().comun.volver"
+    >
+      <app-icono nombre="volver" />
+    </a>
+  </div>
+
+  @if (mensaje(); as aviso) {
+    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+  }
+
+  @if (cargando()) {
+    <p class="text-sm text-apagado">{{ t().correos.cargando }}</p>
+  } @else {
+    <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
+      <!-- Los diez correos. Se elige uno, y con él sus dos idiomas. -->
+      <nav [attr.aria-label]="t().correos.queCorreo" class="flex flex-col gap-3">
+        <div class="rounded-lg border border-borde bg-superficie p-2">
+          <ul class="flex flex-col">
+            @for (correo of correos(); track correo.key) {
+              <li>
+                <button
+                  type="button"
+                  class="w-full rounded-md px-3 py-2 text-left text-sm transition"
+                  [class]="
+                    correo.key === elegida()
+                      ? 'bg-superficie-suave font-medium text-texto'
+                      : 'text-apagado hover:bg-superficie-suave hover:text-texto'
+                  "
+                  [attr.aria-current]="correo.key === elegida() ? 'true' : null"
+                  (click)="elegir(correo.key)"
+                >
+                  {{ nombre(correo.key) }}
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+
+        @if (editada()) {
+          <app-aviso forma="informacion" [texto]="t().correos.editado" />
+        } @else {
+          <app-aviso forma="informacion" [texto]="t().correos.deFabrica" />
+        }
+      </nav>
+
+      <!--
+        Los dos idiomas: al lado en PC y apilados en móvil, que en un teléfono no caben dos columnas.
+        Es la misma carta contada dos veces, y verlas juntas es lo que deja comprobar que dicen lo
+        mismo.
+      -->
+      <div class="grid gap-6 xl:grid-cols-2">
+        @for (idioma of idiomas; track idioma) {
+          <section
+            class="flex flex-col gap-4 rounded-lg border border-borde bg-superficie p-4"
+            [attr.aria-label]="marcador(idioma)"
+          >
+            <h2 class="text-base font-semibold text-texto">{{ marcador(idioma) }}</h2>
+
+            @if (falta(idioma); as marcadoresQueFaltan) {
+              <app-aviso
+                forma="atencion"
+                [texto]="t().correos.faltaMarcador.replace('{marcadores}', marcadoresQueFaltan)"
+              />
+            }
+
+            <app-campo
+              [identificador]="'asunto-' + idioma"
+              [etiqueta]="t().correos.asunto"
+              [valor]="asuntoDe(idioma)"
+              (valorChange)="escribir(idioma, 'subject', $event)"
+            />
+
+            <app-editor
+              [identificador]="'cuerpo-' + idioma"
+              [etiqueta]="t().correos.cuerpo"
+              [ayuda]="t().correos.cuerpoAyuda"
+              [textos]="textosDelEditor()"
+              [inserciones]="marcadores()"
+              [etiquetaInserciones]="t().correos.marcadoresDisponibles"
+              [sinVistaPrevia]="t().correos.sinVistaPrevia"
+              [vistaPrevia]="vistaDe(idioma)?.body ?? ''"
+              [valor]="cuerpoDe(idioma)"
+              (valorChange)="escribir(idioma, 'body', $event)"
+            />
+
+            <div class="flex flex-wrap gap-2">
+              <app-boton
+                [texto]="t().correos.guardar"
+                [textoTrabajando]="t().correos.guardando"
+                [trabajando]="trabajando()"
+                (pulsado)="guardar(idioma)"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().correos.prueba"
+                [deshabilitado]="trabajando()"
+                (pulsado)="enviarPrueba(idioma)"
+              />
+              <app-boton
+                forma="secundario"
+                [texto]="t().correos.restaurar"
+                [deshabilitado]="trabajando()"
+                (pulsado)="restaurando.set(idioma)"
+              />
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Volver al texto de fábrica se pregunta antes: el que hay ahora se pierde. -->
+  <app-dialogo
+    [titulo]="t().correos.restaurarPregunta"
+    [abierto]="restaurando() !== ''"
+    (cerrado)="restaurando.set('')"
+  >
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-apagado">{{ t().correos.restaurarConsecuencia }}</p>
+
+      <div class="flex flex-wrap gap-2">
+        <app-boton
+          [texto]="t().correos.siRestaurar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="restaurar()"
+        />
+        <app-boton
+          forma="secundario"
+          [texto]="t().correos.cancelar"
+          [deshabilitado]="trabajando()"
+          (pulsado)="restaurando.set('')"
+        />
+      </div>
+    </div>
+  </app-dialogo>
+</main>

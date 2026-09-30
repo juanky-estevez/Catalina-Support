@@ -1,0 +1,41 @@
+# Las personas del directorio de pruebas.
+#
+# **No es Active Directory**, es OpenLDAP: se habla con él de la misma manera —buscar, conectar,
+# validar—, así que el camino de AD se prueba de verdad, pero lo específico de AD (referencias entre
+# dominios, atributos particulares, reglas de contraseña) no queda cubierto. Cuando haya un AD real,
+# se prueba contra él (docs/modules/auth.md, sección 11).
+
+dn: ou=personas,dc=ejemplo,dc=com
+objectClass: organizationalUnit
+ou: personas
+
+# Una persona que no tiene cuenta en la aplicación: es el alta automática del primer acceso.
+dn: uid=ana.directorio,ou=personas,dc=ejemplo,dc=com
+objectClass: inetOrgPerson
+cn: Ana Pérez
+givenName: Ana
+sn: Pérez
+uid: ana.directorio
+mail: ana.directorio@demo.com
+userPassword: una-contraseña-larga
+
+# Otra, para probar que dos personas del directorio no se pisan.
+dn: uid=luis.directorio,ou=personas,dc=ejemplo,dc=com
+objectClass: inetOrgPerson
+cn: Luis Gómez
+givenName: Luis
+sn: Gómez
+uid: luis.directorio
+mail: luis.directorio@demo.com
+userPassword: otra-contraseña-larga
+
+# Y una tercera, cuyo correo coincide con una cuenta **local** de la aplicación: es el vínculo
+# (docs/modules/auth.md, sección 5.4).
+dn: uid=marta.directorio,ou=personas,dc=ejemplo,dc=com
+objectClass: inetOrgPerson
+cn: Marta Ruiz
+givenName: Marta
+sn: Ruiz
+uid: marta.directorio
+mail: marta.directorio@demo.com
+userPassword: la-de-marta-larga

@@ -1,19 +1,30 @@
 # Propósito y alcance
 
-> **Estado:** aprobado
-> **Última actualización:** 2026-09-22
+> **Estado:** as-built
+> **Última actualización:** 2026-09-25
 >
-> Aprobado por el responsable el 2026-09-22 y **enmendado tres veces el mismo día**: al detallar el
-> acceso (el cuarto papel `administrador`, el alta de usuarios desde la aplicación, los tickets
-> creados en nombre de otro y las tres formas de entrar) y al repasarlo después (el **sexto aviso**
+> **Pasa a as-built el 2026-09-25**: lo que este documento define —los dos equipos, el modelo de
+> tickets, la numeración y los estados— **está implementado** en el módulo `tickets`, backend y
+> pantallas, y verificado de extremo a extremo. Se cambia el estado, no el contenido: lo que dice
+> sigue siendo lo que el código hace.
+>
+> **Enmendado el 2026-09-22**, al escribir `docs/flujos.md`: la **regla 5** cambia
+> —cuando Desarrollo resuelve el interno, el principal **vuelve a Soporte** en lugar de quedar
+> resuelto— y se añade la **regla 8**, la devolución a Soporte, y el **séptimo aviso** (el ticket
+> vuelve a la bandeja de Soporte), que evita que un caso resuelto por Desarrollo se quede sin
+> explicar al usuario.
+>
+> **Enmendado el 2026-09-22**, al repasarlo después de escribirlo: el **sexto aviso**
 > por correo, el aviso repetido al re-escalar, el límite de **25 MB**, las marcas de editado y
-> eliminado, y la cuenta `admin` con la que nace una instalación). La tercera llegó al escribir
-> `docs/flujos.md`: la **regla 5** cambia —cuando Desarrollo resuelve el interno, el principal
-> **vuelve a Soporte** en lugar de quedar resuelto— y se añade la **regla 8**, la devolución a
-> Soporte, y el **séptimo aviso** (el ticket vuelve a la bandeja de Soporte), que evita que un caso
-> resuelto por Desarrollo se quede sin explicar al usuario.
+> eliminado, y la cuenta `admin` con la que nace una instalación.
 >
-> Es el primer documento de la cadena y **desbloquea** `usuarios-y-permisos.md`, `tickets.md` y
+> **Enmendado el 2026-09-22**, al detallar el acceso: el cuarto papel `administrador`, el alta de
+> usuarios desde la aplicación, los tickets creados en nombre de otro y las tres formas de entrar.
+>
+> Aprobado por el responsable el 2026-09-22, **enmendado tres veces ese mismo día** —las tres
+> entradas de arriba— tras repasarlo en forma de preguntas.
+>
+> Es el primer documento de la cadena y **desbloquea** `usuarios-y-permisos.md`, `modules/tickets.md` y
 > `flujos.md`. **No habilita escribir código**: cada área necesita su documento aprobado antes
 > (Regla 0 de `AGENTS.md`).
 
@@ -69,7 +80,7 @@ De ahí salen dos reglas que se aplicarán en los documentos de tickets y de flu
 ## 4. El modelo de tickets
 
 Esta es la parte que más consecuencias tiene, y por eso queda escrita aquí aunque su detalle
-(tabla de transiciones, endpoints y pantallas) pertenezca a `tickets.md` y a `flujos.md`.
+(tabla de transiciones, endpoints y pantallas) pertenezca a `modules/tickets.md` y a `flujos.md`.
 
 ### Dos tipos de ticket, un solo número
 
@@ -145,6 +156,11 @@ avisos que Soporte decida escribirle.
 - **Escalado** de principal a interno con motivo, reapertura del interno y devolución a Soporte.
 - **Los dos ciclos de vida** de la sección 4, con sus reglas de sincronización.
 - **Avisos por correo** de los siete eventos de la tabla de abajo, y de ninguno más.
+- **Los textos de los diez correos se editan desde la aplicación** (los siete avisos de ticket y los
+  tres de cuenta), con vista previa y una prueba al correo de quien los edita: los correos son la voz
+  de la institución y su texto lo cambia quien manda.
+- **Reparto automático de los tickets nuevos** entre los técnicos de Soporte, **por turnos**, y poder
+  reasignarlos después.
 - **Búsqueda y filtros básicos**: por estado, por texto en asunto o descripción y por número.
 - **Tres formas de entrar**: correo y contraseña (con el alta que hacen Administrador o Soporte),
   **Active Directory** (alta en el primer acceso) y **Keycloak** (igual que AD). El **correo** es el
@@ -163,7 +179,7 @@ Los avisos por correo son estos, y ninguno más:
 
 | Evento | A quién |
 | --- | --- |
-| Se crea el ticket | A Soporte Técnico |
+| Se crea el ticket | **Al técnico que le toca por turno** |
 | Soporte escala a Desarrollo | A Desarrollo |
 | Soporte pide información al usuario (el principal pasa a `en espera`) | Al usuario |
 | **Desarrollo necesita algo de Soporte** (el interno pasa a `en espera`) | **A Soporte Técnico** |
@@ -224,7 +240,7 @@ Este documento, ya aprobado, fija **qué problema se resuelve, para quién, cóm
 mueven los tickets y qué queda fuera**, y desbloquea los tres que dependen de él:
 
 1. `usuarios-y-permisos.md` — los cuatro papeles, los dos equipos y qué puede cada uno.
-2. `tickets.md` — modelo de datos, tabla de transiciones de los dos ciclos de vida y la lista
+2. `modules/tickets.md` — modelo de datos, tabla de transiciones de los dos ciclos de vida y la lista
    cerrada de módulos.
 3. `flujos.md` — alta, triaje, escalado, resolución, cierre y reapertura, con los avisos por correo.
 

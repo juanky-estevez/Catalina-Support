@@ -1,7 +1,7 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-22
+> **Última actualización:** 2026-09-23
 >
 > Aprobado por el responsable del proyecto el 2026-09-22 y **puesto en pie el mismo día**:
 > existen el esqueleto de contenedores y los dos proyectos vacíos arrancando. Lo que todavía no
@@ -71,7 +71,7 @@ tablas y pantallas. La regla es explícita y verificable:
 
 > **Un módulo del frontend consume únicamente los endpoints de su módulo homónimo del backend.**
 
-De ahí salen cuatro reglas concretas:
+De ahí salen cinco reglas concretas:
 
 1. **Un nombre, tres sitios.** Un módulo se llama igual en los tres sitios: carpeta del backend,
    carpeta del frontend y prefijo de la API. Ejemplo: `users` →
@@ -84,6 +84,14 @@ De ahí salen cuatro reglas concretas:
 4. **`shared` no depende de `modules`.** Lo transversal (configuración, conexión a base de
    datos, middlewares, utilidades) vive en `shared` y no conoce ningún módulo concreto. Un
    módulo sí puede usar `shared`.
+5. **`core` es la excepción del frontend.** El armazón —`frontend/src/app/core`— puede llamar a los
+   endpoints de la **sesión** y a los de **configuración de la instalación** (el prefijo de
+   numeración y las plantillas de correo), y a nada más. Es una sola regla con su motivo: la sesión y
+   la configuración de la instalación no son de ningún módulo, y repartirlas en tres excepciones
+   sueltas es lo que hace que una regla se olvide.
+   **El permiso no obliga a usarlo**: la pantalla que edita las plantillas de correo es del módulo
+   `mail` del frontend, no de `core` (decidido el 2026-09-23, `docs/modules/mail.md`, decisión 15),
+   porque sus datos son suyos y así la excepción no se convierte en la norma.
 
 Correspondencia visual:
 
@@ -120,8 +128,11 @@ backend
 │       ├── repositories     # acceso a datos
 │       └── dtos             # lo que entra y sale por la API
 └── shared
+    ├── auth                 # el token de sesión (firma y validación) y quién es quien llama
+    ├── authz                # permisos: si el papel llega para lo que se pide
     ├── config               # variables de entorno
     ├── database             # conexión y configuración de GORM
+    ├── httpx                # la forma única de las respuestas y de los errores
     └── middleware           # autenticación, permisos, recuperación, logs
 ```
 
@@ -179,16 +190,26 @@ Consecuencias que hay que asumir:
 frontend
 ├── angular.json
 ├── package.json
+├── .postcssrc.json          # Tailwind v4 (el plugin de PostCSS)
 ├── src
 │   ├── main.ts
 │   ├── index.html
+│   ├── styles.css           # Tailwind y las variables de los temas
 │   └── app
-│       ├── app.config.ts     # providers globales (router, http, ...)
-│       ├── app.routes.ts     # rutas raíz; cada módulo aporta las suyas
-│       ├── core              # armazón: layout, sesión, interceptores, guardas
-│       ├── shared            # UI y utilidades reutilizables, sin lógica de negocio
+│       ├── app.config.ts    # providers globales (router, http, interceptor)
+│       ├── app.routes.ts    # rutas del armazón; cada módulo aporta las suyas
+│       ├── core             # armazón: sesión, i18n, interceptores, guardas, pantallas de la sesión
+│       │   ├── components   # piezas del armazón (menú lateral, logo, controles, aviso de servidor caído)
+│       │   ├── guards       # sin sesión no se entra
+│       │   ├── i18n         # los dos diccionarios de textos y el servicio que los sirve
+│       │   ├── interceptors # la cabecera de la sesión, el 401 y el «servidor caído»
+│       │   ├── navigation.ts # las entradas del menú, por papel
+│       │   ├── pages        # las seis pantallas de la sesión y la de Configuración
+│       │   └── services     # sesión, salud del backend, disponibilidad
+│       ├── shared           # UI y utilidades reutilizables, sin lógica de negocio
+│       │   └── components   # los componentes propios (botón, campo, aviso, tarjeta…)
 │       └── modules
-│           └── <módulo>      # pages, components, services, models, <módulo>.routes.ts
+│           └── <módulo>     # pages, components, services, models, <módulo>.routes.ts
 ```
 
 ### Convenciones (heredadas del Angular moderno, no del Angular antiguo)
@@ -206,16 +227,39 @@ frontend
   servicio apunta a un módulo ajeno (sección 4).
 - Nombres de archivo y de carpeta en **inglés** (es lo que genera el CLI: `user-list.ts`); los
   textos de interfaz y la documentación, en español.
+- **Los textos no se escriben dentro de los componentes**: viven en `core/i18n/es.ts` y
+  `core/i18n/en.ts`, con el mismo tipo compartido, así que **una clave que falte en un idioma no
+  compila**. Los textos de error del backend van en el mismo diccionario
+  (`docs/modules/auth.md`, decisión 26).
+- **Los colores salen de las variables del tema** de `src/styles.css`, expuestas a Tailwind con
+  `@theme inline`: un componente nunca lleva un color escrito a mano, y cambiar el tema no toca
+  ningún componente (`docs/interfaz-y-experiencia.md`, sección 6.2). Las paletas se escriben **una
+  sola vez** con `light-dark()`, y el tema se elige con un atributo en `html` (`data-theme`), o
+  ninguno para seguir al sistema. **El tema lo aplica `main.ts`, no un script incrustado en el
+  `index.html`**: la CSP de producción es `script-src 'self'`.
+- **Las rutas también en inglés** (`/login`, `/set-password`), en minúsculas y con guiones: decidido
+  por el responsable el 2026-09-23 (`docs/modules/auth.md`, decisión 21), porque una dirección se
+  copia, se pega y se comparte, y en el código no conviene mezclar idiomas.
 
-Pendiente y por decidir en su documento, no aquí: librería de estilos, gestión de sesión y
-permisos en el cliente, y si se usa SSR (Angular lo trae, pero una mesa de ayuda interna no lo
-necesita).
+Lo que en su día quedó por decidir aquí **ya está decidido en otros documentos**: los estilos y los
+componentes propios, en `docs/interfaz-y-experiencia.md` (Tailwind v4, inventario cerrado de veinte
+piezas); la gestión de sesión y permisos en el cliente, en `docs/modules/auth.md`, sección 9 (la
+sesión vive en `core`: servicio, interceptor, guarda y seis pantallas); y **SSR no se usa**, que es
+una decisión y no una ausencia.
 
-Hoy el repositorio tiene el armazón (`app.ts`, `app.html`, `app.css`, `app.config.ts`,
-`app.routes.ts`), `core/services/health.service.ts` y las carpetas `core`, `shared` y `modules`
-vacías. El armazón muestra el título y el estado del servicio, y el pie avisa de que es
-provisional: esa pantalla desaparece cuando exista el primer módulo. `app.routes.ts` está vacío
-porque las rutas las aporta cada módulo.
+Hoy el repositorio tiene **el armazón entero**: el servicio de sesión, el interceptor que pone la
+cabecera y atiende el 401, la guarda de rutas, los dos diccionarios de textos, los **componentes
+propios** (botón, campo, aviso, tarjeta, conmutador, selector y logo), las **seis pantallas de la
+sesión** (`/login`, `/forgot-password`, `/set-password`, `/change-password`, `/forbidden` y el aviso
+de servidor caído, que no tiene ruta) y **el menú lateral con sus tres zonas**.
+
+Las rutas están en **dos grupos**: las pantallas de la sesión van a pantalla completa —todavía no hay
+nadie dentro— y todo lo demás va dentro del armazón, con su menú. **El menú enseña sólo lo que
+existe**: hoy el inicio provisional y, para un Administrador, Configuración.
+
+**Lo que falta del frontend**: las pantallas de producto y las entradas del menú que las acompañan
+(Mis tickets, Bandeja, Usuarios…), y el perfil propio. El inicio es todavía provisional: dice quién ha
+entrado y lleva a cambiar la contraseña.
 
 ## 7. Base de datos (PostgreSQL 18)
 
@@ -227,7 +271,9 @@ porque las rutas las aporta cada módulo.
   base de datos. Nada de `ALTER` sueltos ni pasos manuales al desplegar.
 - Mientras el proyecto no tenga datos reales, se actualiza ese mismo archivo en vez de añadir
   migraciones nuevas. **A partir de la 1.0.0 se pasa a un archivo por versión**
-  (`v1.1.0.sql`, `v1.2.0.sql`…), aplicados en orden: la política completa está en
+  (`v1.1.0.sql`, `v1.2.0.sql`…) **más un archivo de datos de ejemplo por versión con el sufijo
+  `_dev`** (`v1.0.0_dev.sql`), que **nunca se aplica en producción**, aplicados en orden: la política
+  completa está en
   `docs/ambientes.md`, sección 5.
 - Nombres de tabla en plural y en inglés, coherentes con el nombre del módulo (`users`,
   `tickets`); claves primarias `id`; marcas de tiempo `created_at`, `updated_at`.
@@ -282,13 +328,18 @@ registran; **nunca** se registran contraseñas, tokens ni datos personales.
 
 ## 9. El correo
 
-Todo el correo de la aplicación sale por un único sitio: **`backend/shared/mail`**, con la
-**biblioteca estándar** (`net/smtp`), igual que Calibyou. No se añade ninguna dependencia para esto.
+Todo el correo de la aplicación sale por el **módulo `mail`**, con la **biblioteca estándar**
+(`net/smtp`), igual que Calibyou. `auth` y `tickets` **no escriben ni envían correos**: le piden a
+`mail` que envíe, con los datos dentro, y `mail` pone el texto.
 
-| Quién manda | Qué manda |
+| Quién pide | Qué pide |
 | --- | --- |
 | Módulo `tickets` | Los **siete avisos** de ticket (`docs/propósito-y-alcance.md`) |
-| Módulo `auth` | Alta con el enlace de contraseña, cambio y recuperación (`docs/usuarios-y-permisos.md`) |
+| Módulo `auth` | Los **tres correos de cuenta**: alta, recuperación y aviso de cambio (`docs/modules/auth.md`) |
+
+**Los textos no están en el código**: son **plantillas editables** que viven en la base de datos, y
+un administrador las cambia desde la pantalla de Configuración, con vista previa y una prueba a su
+propio correo. El detalle está en `docs/modules/mail.md`.
 
 **Variables de entorno** (por entorno, nunca fijas en el código):
 
@@ -300,7 +351,11 @@ Todo el correo de la aplicación sale por un único sitio: **`backend/shared/mai
 | `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | Quién firma el correo |
 
 Se llaman `SMTP_*` y no `SYSTEM_SMTP_*` como en Calibyou: allí el prefijo distingue el correo del
-sistema del de cada laboratorio, y aquí sólo hay uno. Si faltan, el envío falla con un error claro y
+sistema del de cada laboratorio, y aquí sólo hay uno.
+
+**En desarrollo apuntan al buzón de pruebas** de `dev.yml` (`SMTP_HOST=mail`, `SMTP_PORT=1025`): todo
+lo que sale se lee en `http://127.0.0.1:11004` y **nada sale a internet** (sección 10). Sin él, el
+alta de una cuenta local no se podría completar en desarrollo. Si faltan, el envío falla con un error claro y
 **no se intenta por otra vía**: no hay correo «de reserva».
 
 **Un fallo de correo no tumba la acción que lo provocó.** Si el ticket se crea y el aviso no sale,
@@ -315,6 +370,10 @@ log y no por la pantalla, y es un precio razonable para un aviso.
 **Los correos llevan lo justo**: número y asunto del ticket, y el enlace cuando toca. Nunca
 contraseñas, ni tokens, ni datos personales de más.
 
+**Los enlaces se construyen con `PUBLIC_APP_URL`**, variable de entorno obligatoria en producción: un
+host escrito a mano en una plantilla no puede servir en desarrollo y en producción a la vez.
+**Obligatoria en producción**: el backend no arranca sin ella.
+
 ## 10. Contenedores y ejecución
 
 Todo corre en contenedores, con la misma forma que Calibyou: **un contenedor para el frontend,
@@ -325,22 +384,30 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 
 ```text
 .
-├── dev.yml                          # compose de desarrollo (los tres servicios)
+├── dev.yml                          # compose de desarrollo (los servicios, con el directorio de
+│                                    # pruebas y las de interfaz detrás de un perfil)
 ├── prod.yml                         # compose de producción (imágenes construidas)
 ├── config
 │   ├── dockerfiles                  # una imagen por servicio y por entorno
+│   ├── seed                         # los archivos de los adjuntos del seeder de desarrollo
 │   ├── env
 │   │   ├── dev.env
 │   │   ├── prod.env.example         # plantilla; prod.env NO se versiona
 │   │   └── (prod.env)               # NO se versiona
+│   ├── keycloak
+│   │   └── realm-catalina-support.json  # el reino de pruebas, con su cliente y tres personas
+│   ├── ldap
+│   │   └── 01-personas.ldif         # las tres personas del directorio de pruebas
 │   └── nginx
 │       ├── catalina-support-dev.conf    # vhost de desarrollo
 │       ├── catalina-support-prod.conf   # vhost de producción
 │       └── frontend.prod.conf           # nginx del contenedor de frontend
 ├── backend
 ├── frontend
+├── scripts                          # lo que se ejecuta en el servidor: las copias de la base
 ├── _logs                            # logs de go-logs (la carpeta se versiona, los .log no)
-├── _files                           # adjuntos de los tickets (la carpeta se versiona, los archivos no)
+├── _files                           # adjuntos, por año y número de ticket (se versiona la carpeta,
+│                                    # no los archivos)
 └── docs
 ```
 
@@ -351,6 +418,16 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 | `frontend` | `node:24-alpine` | `npm start -- --host 0.0.0.0 --port 11001` | `11001` |
 | `backend` | `golang:1.27-alpine` + air | `air -c .air.toml` | `11002` |
 | `database` | `postgres:18-alpine` | `postgres` (`PGPORT=11003`) | `11003` |
+| `mail` | `axllent/mailpit:latest` | `mailpit` | `11004` (su web; el SMTP es el `1025` interno) |
+| `ldap` | `osixia/openldap:1.5.0` | El directorio, con las personas de `config/ldap/01-personas.ldif` sembradas al arrancar | `11005` (LDAP en claro: **es de desarrollo**). **No se levanta con `up -d`** (`profiles: ["auth"]`) |
+| `keycloak` | `quay.io/keycloak/keycloak:26.0` | `start-dev --import-realm`, con el reino de `config/keycloak/realm-catalina-support.json` | `11006` (HTTP: **es de desarrollo**). **No se levanta con `up -d`** (`profiles: ["auth"]`) |
+| `ai` (**en `ai.yml`**, no en `dev.yml`) | llama.cpp con servidor HTTP | Sirve el modelo **Qwen2.5-1.5B-Instruct Q4_K_M**, que se descarga una vez al volumen la primera vez | **Ninguno**: el motor no se publica en la máquina, sólo se habla por la red `catalina-support-ai`. Lo comparten **desarrollo y producción** (`docs/modules/ai.md`, decisión 1) |
+| `e2e` | `mcr.microsoft.com/playwright:v1.63.0-noble` | `npx playwright test` | Ninguno: abre un navegador contra la dirección de desarrollo. **No se levanta con `up -d`** (`profiles: ["e2e"]`) |
+
+**El motor de IA no está en la tabla de arriba a propósito**: vive en `ai.yml`, **compartido por los dos
+entornos** —no caben dos modelos en esta máquina— y los dos backends entran en su red
+(`catalina-support-ai`). Su porqué, sus argumentos y su memoria están en `docs/modules/ai.md`, sección
+2, y cómo se levanta en `docs/ambientes.md`, sección 3.4.
 
 Detalles que importan:
 
@@ -361,15 +438,37 @@ Detalles que importan:
   de Go): ni se pierden al recrear el contenedor ni se mezclan con archivos de la máquina.
 - **`_logs` montado** en el backend (`./_logs:/logs`) para que los archivos de `go-logs` queden a
   la vista en la máquina.
-- **`_files` montado** en el backend (`./_files:/files`, variable `FILES_PATH`) para los adjuntos de
+- **`_files` montado** en el backend (`./_files:/files`, variable `FILES_PATH`), con **una carpeta
+  por ticket** (`_files/2026/CS-2026-0042/`) y la de la marca aparte (`_files/brand/`), para los adjuntos de
   los tickets: son archivos, no filas, así que sobreviven a los reinicios y se copian desde la
   máquina como cualquier carpeta.
 - **El backend espera a la base de datos**: `depends_on` con `condition: service_healthy` y un
   `healthcheck` de `pg_isready`, para que no arranque contra una base que aún no acepta
   conexiones.
-- **Puertos propios**: se usan `11001`-`11003`, distintos de los de Calibyou (`10001`-`10004`)
+- **Puertos propios**: se usan `11001`-`11006`, distintos de los de Calibyou (`10001`-`10004`)
   para que los dos proyectos puedan estar levantados a la vez. Se publican **sólo en
   `127.0.0.1`**: nada de la base de datos ni del backend queda expuesto a la red.
+- **`ldap` es el directorio de pruebas**: OpenLDAP con **tres personas** en un LDIF del repositorio
+  (`config/ldap/01-personas.ldif`), una por cada caso del camino de AD. **No guarda nada en un
+  volumen**: se siembra del repositorio al arrancar, así que siempre está como dice el repositorio, y
+  **no se para y se arranca** —sus scripts de arranque no son idempotentes y muere—: se levanta otra
+  vez recreándolo (`docs/modules/auth.md`, sección 11). Y **no es Active Directory**: se habla con él
+  igual, así que el código se prueba de verdad, pero lo específico de AD no queda cubierto.
+- **`keycloak` es el Keycloak de pruebas**: el reino vive **en el repositorio**
+  (`config/keycloak/realm-catalina-support.json`), con su cliente confidencial y tres personas, y se
+  importa al arrancar: recrear el contenedor lo deja como está escrito. **El navegador llega a él por
+  el mismo dominio que a la aplicación y por un camino** (`/sso/`, un `location` del vhost de
+  desarrollo): así el emisor de OIDC es uno solo para el navegador y para el backend, y no hay dos
+  direcciones que puedan discrepar (`docs/modules/auth.md`, sección 11).
+- **`mail` es el buzón de pruebas** (Mailpit), decidido por el responsable el 2026-09-23: **sin él no
+  se puede completar el alta de una cuenta local en desarrollo**, porque la contraseña se establece
+  desde el enlace del correo. Es **un solo buzón para todo**: acepta cualquier destinatario y de
+  cualquier dominio, no tiene cuentas ni autenticación que configurar, y **no reenvía nada a
+  internet**, así que en desarrollo ningún correo sale de la máquina. Los correos se leen en
+  `http://127.0.0.1:11004`, con su HTML y su versión de texto, y se filtran por destinatario
+  (`to:`), por asunto (`subject:`) o por texto, que es lo que hace de «bandeja por cuenta». Guarda los
+  últimos 200 mensajes. En `dev.env`, `SMTP_HOST=mail` y `SMTP_PORT=1025`; en producción no cambia
+  nada, se usa el servidor de correo de verdad.
 - **Variables en `config/env/dev.env`**, compartido por los servicios, con los nombres de
   `POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` para que la imagen oficial de PostgreSQL
   los tome sola. `config/env/prod.env` **no se versiona** (sólo un `prod.env.example`).
@@ -401,7 +500,7 @@ sudo nginx -t && sudo systemctl reload nginx
   **antes** de la redirección a HTTPS, así que la renovación no necesita tocar nada.
 - **`client_max_body_size 30m;`** en los dos vhosts. Sin esta línea nginx usa **1 MB** por defecto y
   cualquier adjunto de más de un mega se rechaza con un 413 **antes de llegar al backend**: el
-  límite de 25 MB de los adjuntos (`docs/tickets.md`) no se podría cumplir. Los 30 dejan margen.
+  límite de 25 MB de los adjuntos (`docs/modules/tickets.md`) no se podría cumplir. Los 30 dejan margen.
 - **Zona `limit_req` para el login**, como en Calibyou: es el único endpoint público que recibe
   credenciales, y sin límite se le puede probar contraseñas a gusto. Sólo esa ruta, porque el resto
   del tráfico no lo necesita.
@@ -447,7 +546,7 @@ Todos los comandos se ejecutan **en la máquina**, contra los contenedores: no h
 instalados. Están también en `AGENTS.md`.
 
 ```bash
-docker compose -f dev.yml up -d                 # levantar los tres servicios
+docker compose -f dev.yml up -d                 # levantar los servicios de desarrollo
 docker compose -f dev.yml ps                    # ver el estado
 docker compose -f dev.yml logs -f backend        # seguir los logs (salida de go-logs)
 docker compose -f dev.yml down                   # parar (los volúmenes se conservan)
@@ -502,43 +601,109 @@ máquina tenga instalado.
   responsable el 2026-09-22). Durante el desarrollo sólo se trabaja contra el entorno de
   desarrollo.
 
-**Pendiente de decidir** (no se asume nada hasta su documento):
+**Lo que estaba aquí y ya se decidió** (cada uno en su documento, que es donde vive la decisión):
 
-- Estilos del frontend, librería de componentes y diseño de pantallas.
-- Autenticación, sesión, roles y permisos (documento de usuarios y permisos).
-- Modelo de datos y estados del ticket (documento de tickets).
-- Lista cerrada de módulos y qué endpoints expone cada uno.
-- Notificaciones y correo.
-- Runbook de despliegue a producción (documento de ambientes): cómo se construyen y publican los
-  artefactos y cómo se levanta `prod.yml`. Los dominios, el TLS y los vhosts ya están hechos.
-- Logs del frontend: no hay paquete decidido y el hermano no sirve en navegador.
-- Pruebas: qué se prueba, con qué herramientas y en qué contenedor se ejecutan.
-- Cómo se hace cumplir la regla de modularidad de la sección 4 (revisión manual o una prueba
-  automática que falle si un módulo del frontend llama a un prefijo ajeno).
+| Qué | Dónde se decidió |
+| --- | --- |
+| Estilos, librería de componentes y pantallas | `docs/interfaz-y-experiencia.md` (Tailwind v4 y veinte componentes propios) |
+| Autenticación, sesión, roles y permisos | `docs/usuarios-y-permisos.md` y `docs/modules/auth.md` |
+| Modelo de datos y estados del ticket | `docs/modules/tickets.md` |
+| Lista cerrada de módulos y sus endpoints | `docs/modules/tickets.md`: seis módulos, en el orden `mail` → `auth` → `users` → `tickets`, y `settings` |
+| Notificaciones y correo | `docs/modules/mail.md` y, para qué se manda en cada momento, `docs/flujos.md` |
+| Runbook de despliegue, migraciones y copias | `docs/ambientes.md` |
+| Qué se prueba y con qué | `docs/ambientes.md`, sección 9: tres capas (`go test`, `npm test` y Playwright) |
+**Pendiente de decidir** (queda poco, y ninguna de las dos bloquea la 1.0.0):
+
+- **Logs del frontend**: no hay paquete decidido y el hermano es de NestJS, no sirve en navegador.
+  Hoy el frontend no registra nada, y hasta que se decida, así se queda.
+- **Una prueba que falle si un módulo del frontend llama a un prefijo ajeno**: la regla de la
+  sección 4 se sostiene hoy en la revisión, y **ningún documento ha decidido todavía cómo se
+  automatiza**. No es un olvido de esta sección: es que no está decidido en ningún sitio.
 
 **Fuera de alcance de esta versión**: microservicios, colas, caché distribuida, SSR,
 multi-tenant y aplicación móvil.
 
 ## 13. Estado de implementación
 
-Lo que existe hoy en el repositorio y lo que se ha comprobado de verdad el 2026-09-22.
+Lo que existe hoy en el repositorio y lo que se ha comprobado de verdad el 2026-09-25 (la
+configuración de la entrada desde la pantalla: el método, el directorio y Keycloak).
 
 ### Existe y está verificado
 
 | Elemento | Comprobación |
 | --- | --- |
-| `dev.yml` con los tres servicios | Los tres contenedores levantan y quedan sanos (`database` con `healthy`) |
+| `dev.yml` con sus servicios | Los contenedores levantan y quedan sanos (`database` con `healthy`), y el del directorio de pruebas también (`docker compose -f dev.yml --profile auth up -d`) |
 | Backend Go en contenedor con `air` | Compila, arranca, conecta con PostgreSQL y escucha en 11002 |
 | Recarga en caliente de `air` | Al cambiar un archivo reconstruye y reinicia, con cierre ordenado del proceso anterior |
 | `GET /api/health` | `200 {"database":"ok","status":"ok"}`, y 503 si la base no responde |
 | `go-logs` | Escribe `_logs/catalina-support_dev_20260922.log` con `TIMEZONE` aplicado (`UTC-5`) |
 | `go mod tidy` | Genera `go.sum`; el `go.mod` sólo lleva las dependencias reales |
 | Frontend Angular 22 | El servidor de desarrollo sirve `index.html` y el bundle en 11001 |
-| Pruebas del frontend | `npm test` → 2 pruebas en verde (armazón + estado del servicio) |
+| El armazón de la sesión en el navegador | Las seis rutas se sirven por nginx (200) y el CSS de Tailwind llega compilado. Y **probado en un navegador de verdad** con Playwright, en PC y en móvil: se entra con la cuenta de fábrica, se la reconoce, se cambia de pantalla y se sale |
+| Pruebas de interfaz con Playwright | `docker compose -f dev.yml --profile auth run --rm e2e` → **174 casos, 159 en verde** (y 15 que se saltan: las herramientas de diagnóstico, lo que es de un dispositivo concreto y **siete de los caminos de directorio que se prueban una sola vez**, porque no dependen del ancho): la aplicación abre, el CSS se aplica, los campos tienen nombre accesible, el idioma, los ocho temas con su contraste medido, entrar y salir, el enlace del correo leído del buzón, el armazón con su menú, los permisos del menú, la pantalla de Configuración —**con el método de entrada y las dos pruebas de conexión**—, **las tres pantallas de usuarios** —la lista con sus filtros, el alta con su correo, desactivar y reactivar, la edición en línea de Soporte, el perfil propio y que nadie se desactive a sí mismo—, **las de tickets** —el recorrido entero de un ticket con su adjunto, Soporte preguntando y escalando, Desarrollo devolviendo, el aspecto medido y el Administrador leyendo sin botones—, **el camino de AD** —una persona del directorio **entra sin que nadie le dé de alta nada** y su cuenta aparece con origen `ad`, quien ya es del directorio vuelve a entrar, la contraseña equivocada la rechaza el directorio, y una cuenta local **se vincula** al entrar por su camino y su contraseña local deja de servir— y **el de Keycloak**: el botón está en la pantalla de entrada y lleva a Keycloak, una persona entra por el reino **sin que nadie le dé de alta nada**, quien ya es de Keycloak vuelve a entrar, una cuenta local **se vincula** al entrar por allí, y **el fragmento con el token se borra de la dirección** en cuanto se usa. Y **las tres acciones del directorio en `users`**: la ficha de una cuenta de AD desactivada ofrece reactivarla y la reactivación pregunta al directorio, y la de una cuenta de Keycloak no ofrece el botón y cuenta que vuelve sola al entrar. Y **las listas de tickets** (2026-09-26): que «Mis tickets» sea **lo mío** —el que no lo tiene asignado no lo ve, y el que lo tiene sí—, que las dos listas del «todo» enseñen lo que hay, que **la reasignación se haga dentro del ticket** y mueva el ticket de una bandeja a la otra (un técnico se lo pasa a otro, que es el ejemplo del responsable), que el chip de tipo lleve a los internos, que desde las listas del «todo» no se cree un ticket, y que **el desplegable del idioma mida lo mismo que el del tema** (medido). Y **los adjuntos con tope y con visor** (2026-09-26): que una captura de **900 × 700** se pinte **dentro de 480 × 360 sin deformarse** —se mide, y con la captura de las otras pruebas, que mide justo 480 × 300, la comprobación pasaría sin que hubiera tope—, que al pulsarla se abra el visor con la imagen entera, que **el vídeo se vea como miniatura sin controles** y que al pulsarlo se abra el visor **con su reproductor y Descargar**, y que **un `.sql` se adjunte, se guarde y se descargue** mientras el `.svg` **se sigue rechazando** |
+| Pruebas del frontend | `npm test` → **112 pruebas en verde**: el idioma de arranque (incluidas las variantes como `es-MX` y el caso de un idioma que no es ninguno de los dos), el servicio de sesión, el interceptor (cabecera, 401 con y sin sesión, servidor caído), **el tema** (los ocho, el sistema en vivo, lo elegido manda), el armazón, las entradas del menú por papel, **el módulo `users`** —su servicio y sus etiquetas— y **el módulo `tickets`**: su servicio (cada acción a su ruta, la lista de responsables pedida a su propia API) y sus etiquetas (los estados del usuario sin jerga, lo que se previsualiza, las frases del historial). Y **los caminos de entrada**: que la sesión pregunte cuáles hay, que sin respuesta se quede con el local —y no ofrezca un botón que no puede comprobar— y que adopte el token que trae la vuelta de Keycloak. Y de las pantallas de usuarios, **cuáles se reactivan solas**: una cuenta de Keycloak desactivada no ofrece el botón y las demás sí. Y **la marca**: que el nombre de la instalación sea el configurado, que sin backend quede el de fábrica —y la pestaña no se quede sin nombre—, que **la versión del sistema se enseñe con su `v`** y que **sin versión no se enseñe ningún número** —inventarse uno sería peor que no decir ninguno—, y que el título de la pestaña cambie al guardarlo. Y **las listas de tickets**, desde el 2026-09-26: que cada papel tenga **sus entradas del menú** —Mis tickets para el usuario, y las dos del «todo» sólo para Soporte y Desarrollo—, que **crear un ticket no esté en el menú para nadie** y que «lo mío» viaje como `mine=1` y sólo cuando se pide. Y **el editor con adjuntos** (`shared/components/editor-con-adjuntos.spec.ts`, **24 pruebas**): los cinco botones de formato sobre lo seleccionado, **la lista cerrada de lo que se puede guardar** —el saneador del editor quita `src`, `class`, `style` y `on…`, y no deja etiquetas vacías— y **qué extensiones se admiten**: el texto y el código que entraron el 2026-09-26 —`sql`, `json`, `xml`, `yml`, `sh`, `py`, `htaccess`, `tar`…—, y que lo que no se admite sigue sin admitirse (`svg`, `exe`, `html`) |
+| Tailwind v4 y los temas | Instalado y compilando: el CSS servido lleva **las utilidades generadas** y las variables del tema, y **ningún componente escribe un color a mano**. Las fuentes se declaran a mano en `styles.css` (`@source './app'`), y hay un caso de Playwright que **falla si la hoja llega sin utilidades** |
+| El tema | **Ocho temas** (dos de fábrica con `light-dark()` y el color institucional, y seis fijos con su paleta y su acento), elegidos con un atributo en `html` y el tema elegido con un atributo en `html`. **De fábrica sigue al sistema** —que es no haber elegido, y por eso **«automático» no se muestra ni se elige**—, el sistema manda en vivo mientras nadie haya elegido, la elección se recuerda en el navegador y se aplica **antes de arrancar** desde `main.ts` (no con un script incrustado: la CSP de producción no lo admite). Probado en un navegador **midiendo el color de fondo**, en claro, en oscuro y con la elección ganando al sistema |
 | Build de producción del frontend | `npm run build` → `dist/catalina-support/browser`, que es la ruta que espera `prod.yml` |
 | Vhost de desarrollo | `https://dev-catalina-support.calibyou.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
 | TLS de los dos dominios | Certificados de Let's Encrypt emitidos el 2026-09-22 (caducan el 2026-12-21), con renovación automática configurada por `webroot` |
 | Cabeceras de seguridad y CSP | Presentes en la respuesta de desarrollo (`nosniff`, `SAMEORIGIN`, `Referrer-Policy` y CSP de desarrollo) |
+| Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea `mail_templates` (con sus 20 plantillas sembradas), `users`, `password_tokens`, las **cuatro tablas de configuración de una fila** —`installation_settings` (con el nombre y el método de entrada), `directory_settings`, `keycloak_settings` y `ticket_settings`— y las siete de los tickets, con sus índices y sus restricciones. Lleva además su **puesta al día** (`ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT`), que es lo que permite aplicarla sobre una base que ya existía, y **la conversión del texto plano a HTML** de los tickets y los comentarios que ya existían: **aplicada dos veces seguidas, las dos conversiones dan `UPDATE 0`** y un cuerpo con un adjunto dentro —lo que escribe el editor— **no se toca** (la condición se corrigió el 2026-09-26, porque con la anterior el segundo pase estropeaba lo que el editor escribe; `docs/ambientes.md`, sección 5) |
+| Los datos de ejemplo, con su guion | `./scripts/dev-seed.sh` aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia: **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
+| `shared/auth` | Firma y valida el token de sesión (HS256, 10 horas, `sub`), saca el `Bearer` de la cabecera y compara secretos en tiempo constante. **15 pruebas en verde**, incluidas la caducidad, otro secreto, el algoritmo `none` y los dos secretos vacíos |
+| `shared/authz` | Comprueba el papel y responde 403 con `auth.forbidden`. **5 pruebas en verde**, incluido el caso de una ruta montada sin autenticación |
+| Middleware de autenticación | Lee la cuenta **en cada petición**, deja la identidad en el contexto y responde 401 (`auth.session.invalid`/`auth.session.expired`) o 503 si la base no responde. **8 pruebas en verde** |
+| `go test ./...` | Todo en verde y **contadas una a una**: **131 pruebas** (**20 en `shared/auth`** —cinco del `state` de OIDC—, 5 en `shared/authz`, 8 en `shared/middleware`, 12 en `mail/services`, 6 en `mail/controllers`, **35 en `auth/services`** —doce del camino de AD, once del de Keycloak y cuatro del método que está puesto, con un directorio, un reino y un módulo de cuentas de mentira—, **13 en `users/services`**, 15 en `settings/services`, **2 en `settings/dtos`** —la versión que sale en la marca pública— y **15 en `tickets/services`** —cuatro del saneador del cuerpo: lo que se admite tal cual, el texto plano que sale del HTML, el texto convertido a HTML y las extensiones de vídeo—), con `gofmt` limpio y `go vet` sin quejas |
+| Los cuatro endpoints de `mail` | Probados de extremo a extremo contra desarrollo, con un token de fábrica firmado a mano (todavía no hay endpoint de entrada): sin cabecera, con un token con basura y con un token de otro secreto → **401 `auth.session.invalid`**; con token válido → **200** y las 20 plantillas; marcador inventado → **422 `mail.marker.unknown`**; asunto vacío → **422 `mail.subject.required`**; guardar sin el enlace → **200** con `missing: ["enlace"]`; restaurar → vuelve el texto de fábrica y `edited` pasa a `false`; prueba desde la cuenta de fábrica → **422 `mail.test.noEmail`**; clave o idioma que no existen → **404** |
+| La cuenta se lee en cada petición | El middleware la resuelve con el cargador de `main.go`: la cuenta de fábrica tiene su identidad propia y cualquier otra se lee **de la tabla de cuentas en cada petición**, así que desactivar o cambiar un papel valen al instante |
+| El log tras las pruebas | Ni una coincidencia de `Bearer`, `eyJ` ni la palabra `token`: los tokens no se registran |
+| El camino local de `auth`, de extremo a extremo | Entrar con la cuenta de fábrica y con una cuenta local, `me`, `salir`, olvidar la contraseña, establecerla desde el enlace del correo y cambiarla desde dentro. **Probado con curl contra desarrollo**, con el enlace leído del buzón de pruebas |
+| El camino de AD, de extremo a extremo | **Los cinco casos de la sección 5.4 de `docs/modules/auth.md`, comprobados uno a uno por curl** contra el OpenLDAP de `dev.yml` y con la fila que queda en la base: el **alta automática** (una persona del directorio sin cuenta entra y su cuenta nace con papel `usuario`, origen `ad`, su identificador externo y **sin contraseña**); el **vínculo** (una cuenta local con el correo de alguien del directorio entra con la contraseña de allí, pasa a `ad` **conservando su papel** y su contraseña local deja de servir); la **actualización** (los apellidos del directorio sustituyen a los de aquí); **el correo que cambia en el directorio** (cambié el `mail` de una persona con `ldapmodify` y entró **en la misma cuenta**, porque manda el identificador externo); la **reactivación** (desactivada aquí, el directorio la devuelve al entrar, con el aviso `users.directoryMayReturn` ya ejercitado de verdad); y el **directorio caído** (una cuenta de AD → 503 `auth.directory.unavailable`; un correo desconocido o una cuenta local → 401 `auth.invalidCredentials`, y una cuenta local con su contraseña buena entra igual) |
+| Los enlaces de contraseña | Un enlace, un uso: el mismo token dos veces → 401 `auth.token.used`; un token inventado → 401; el de alta caduca en 24 horas y el de recuperación en 1, y lo dicen en el correo |
+| El camino de Keycloak, por curl y en el navegador | **Por curl**, contra el Keycloak de desarrollo: `GET /api/auth/keycloak/start` → **302** a su pantalla de entrada con `client_id`, `redirect_uri`, `response_type`, `scope` y `state`; una vuelta con un `state` inventado → **302 a `/login#error=auth.oidc.state`**; y una vuelta con un `state` bueno y un código que no vale → **302 a `/login#error=auth.oidc.rejected`**, que es la prueba de que el canje se hace de verdad contra Keycloak. **En un navegador de verdad** (Playwright): el botón, la pantalla de Keycloak, la vuelta, la sesión y **el fragmento borrado**. Y **sin Keycloak configurado**: `methods` dice `keycloak: false` y su ruta responde **404**, así que esa instalación no ofrece el botón ni tiene el camino |
+| Los adjuntos en los comentarios | **Tres puertas y una sola regla**: pegar, arrastrar y elegir con el botón, con la misma lista cerrada de extensiones y el mismo aviso. Comprobado en el navegador con **un evento de pegado de verdad**: el archivo aparece en la lista, se publica el comentario con sus archivos, y **un comentario sin texto** —cuerpo vacío en la base— se lee por sus adjuntos **sin dejar un párrafo vacío**. Y **el camino del fallo**, cortando la subida en el navegador: el aviso dice qué archivo falta, el comentario queda publicado **una sola vez** y el botón de reintentar lo sube al mismo comentario |
+| Los adjuntos dentro del texto | El editor con formato: **pegar, arrastrar y el botón meten el archivo donde está el cursor**, la imagen **se ve mientras se escribe** y **después de guardar** con su tamaño, un PDF sale como **enlace que abre el visor** (más grande, con **Descargar** y **Abrir en una pestaña**) y un Word **descarga**. Comprobado además: **lo que se guarda es el texto con sus referencias y nada más** (ni `class`, ni `src`, ni `blob:`), **un adjunto sin nombrar sigue al final**, **la búsqueda no encuentra por una etiqueta**, y **editar** un comentario con una imagen **enseña la vista previa en el editor**. En el backend, `go test` cubre el saneador: seis formas de HTML prohibido dan **422 `tickets.body.notAllowed`** sin dejar fila |
+| Los dos logos de fábrica | Que la aplicación enseñe **el que toca al tema que se está viendo**: con un tema claro carga `logo-catalina-support-light.png` y con uno oscuro el `dark`, comprobando que **la imagen carga de verdad** (`naturalWidth`) y que son dos archivos distintos. Los dos salen del repositorio (`frontend/public/`), con fondo transparente, y el caso quita primero cualquier logo propio y deja la instalación como estaba |
+| La política de contraseñas y el enlace | **Mínimo 8 caracteres** (bajado de 12 el 2026-09-25), comprobado en el navegador: una contraseña corta se rechaza con su clave **y no gasta el enlace** —se vuelve a intentar en la misma pantalla y entra—, y ocho caracteres valen. El caso destapó que el enlace se gastaba antes de comprobar la contraseña, y está corregido |
+| El despliegue a producción | **`scripts/prod-build.sh`** construye y publica los dos artefactos en `/root/prod/catalina-support` (rota el anterior **por copia**, verifica que el artefacto existe y corta si no, y escribe `BUILD_INFO` con el commit, la rama, si el árbol estaba sucio y la fecha) y levanta los contenedores con `prod.yml` reiniciando **sólo el backend**. Los tres contenedores de producción están levantados y sanos, y el `admin` entra con la contraseña de `config/env/prod.env`. **El dominio sigue respondiendo 503**: la 1.0.0 no está cerrada. El correo saliente está pendiente, y con él el alta de cuentas |
+| La versión del sistema | Publicada en la marca pública (`GET /api/settings/brand` → `"version": "1.0.0"`) y leída en los dos sitios: **en la fila de salir del menú lateral, alineada a la derecha**, y **en el pie de la pantalla de entrada**. Comprobado en el navegador en PC y en móvil, contra lo que dice la API —no contra un número escrito en la prueba—, que es texto y no un enlace, que se lee sobre el fondo del menú, y que **plegado no se enseña**. Y que sin marca no se enseña ningún número: la pestaña no se queda sin nombre y el pie sin versión, en vez de inventarse uno |
+| El nombre de la instalación, por curl y en el navegador | Cambiado por la API y **leído antes de entrar** (`GET /api/settings/brand`): un nombre de 61 caracteres → **422 `settings.name.tooLong`**, y uno en blanco → vuelve `Catalina Support`. Y en el navegador: el menú lateral, la pestaña y la pantalla de entrada lo enseñan, y al vaciar el campo vuelve el de fábrica |
+| Las copias de la base | `scripts/backup-db.sh dev`, ejecutado de verdad: deja el volcado en `/root/backups/catalina-support/`, **comprueba que se puede leer** (`pg_restore --list`) y **se restauró en una base nueva**: 11 tablas y los mismos registros que la de verdad (tickets, cuentas, plantillas y adjuntos, contados uno a uno). Y la retención, probada con una copia de hace veinte días: se borra, y no se toca la de tres días ni la de hoy |
+| Los adjuntos, en su carpeta, por curl | Un ticket creado de verdad y **su adjunto subido por la API**: el archivo aparece en `_files/2026/CS-2026-0001/<nombre generado>.png` y en la base queda esa **ruta relativa**; el adjunto que se sube **al interno** va a la suya, `_files/2026/INT-CS-2026-0001/`; y **los dos se descargan idénticos** al que se subió, comparados byte a byte (`cmp`) |
+| Las tres acciones del directorio, por curl | Contra el directorio y el reino de verdad: dar de alta una cuenta `ad` a mano y cambiar el origen de una cuenta local a `ad` y a `keycloak` → **422 `users.origin.byDirectory`** (y el cambio a `local` sigue funcionando, **200**); reactivar una cuenta de **AD** desactivada → **200 y activa**, porque el directorio la encuentra; reactivar una cuenta **cuyo correo el directorio ya no conoce** → **422 `users.directory.notFound`**; y reactivar a mano una cuenta de **Keycloak** → **422 `users.directory.activatesItself`** |
+| Las cuentas y sus permisos | Alta de cuenta local → 201 y correo; correo repetido → 409; correo mal escrito → 422; origen inventado → 422; alta con origen `ad` o `keycloak` → 422 `users.directory.notFound`; Soporte creando `soporte` → 403 `users.role.notAllowed`; un usuario cualquiera dando de alta → 403 `auth.forbidden` |
+| Desactivar bloquea al instante | Con la cuenta desactivada en la base, **el token que ya tenía deja de valer** (401 `auth.session.invalid`) y al entrar se le dice que está desactivada (`auth.accountInactive`) |
+| El buzón de pruebas | Todo el correo de desarrollo llega a él, venga la dirección de donde venga, y se filtra por destinatario o asunto. **Ni un correo sale a internet** |
+| El log | Registra entradas correctas, intentos fallidos con su clave y su IP, y cada correo con su destinatario. **Ni una contraseña, ni un token**: comprobado buscando en los archivos de `_logs` |
+| La marca de la instalación | El logo se sube, se sirve y se quita: un JPEG de 1254×1254 de verdad (203 KB) subido por la API, servido **idéntico** al original, con su sello de versión; un SVG servido con `Content-Security-Policy: sandbox`; un archivo que no es imagen → 422; uno de 1,6 MB → 413; y al quitarlo, la instalación vuelve al logo de fábrica |
+| El nombre de la instalación | Configurado desde la pantalla de Configuración y **leído en los tres sitios**: el menú lateral, la pestaña del navegador y la pantalla de entrada —que se pinta **antes de entrar**, y por eso el nombre viaja en la marca pública—. Con sus límites: pasado de 60 caracteres → **422 `settings.name.tooLong`**, y **vacío devuelve el de fábrica**. Comprobado en un navegador de verdad |
+| El color institucional | Probado con un color que no se lee (amarillo): el backend deriva el del tema claro oscurecido y deja el del oscuro, y el texto del botón sigue contrastando. Probado en el navegador |
+| El logo en la pantalla de entrada | Playwright comprueba que **la imagen carga de verdad** (`naturalWidth`), que va en el recuadro con su borde, que mide entre 120 y 160 px de alto, que un logo propio sustituye al de fábrica y que al quitarlo se vuelve |
+| El armazón con el menú lateral | Probado en PC y en móvil: las tres zonas con el logo arriba y los controles abajo, el plegado **que se recuerda** al recargar, el cajón del móvil que se abre y se cierra, y que **las pantallas de la sesión no llevan menú** |
+| El menú por papel | Un usuario **no ve Configuración** en el menú, ve su propio papel, y si escribe la dirección a mano la guarda lo lleva a «sin permiso». Probado creando la cuenta de verdad y entrando con ella |
+| La pantalla de Configuración | Se sube un logo **por el formulario**, se ve en la vista previa y en el menú sin recargar, y se vuelve al de fábrica. El color institucional tiene **vista previa pedida al backend** —un amarillo puro se enseña oscurecido para los temas claros— y se puede descartar |
+| Método de autenticación, desde la pantalla | El **método de entrada** se cambia en Configuración y **vale sin reiniciar nada** (el camino de entrada lee la base en cada intento): con `ad` la pantalla de entrada enseña el aviso de que la contraseña es la de la organización y quita el enlace de recuperarla, y con `keycloak` no hay formulario y sólo queda el botón, más la **puerta de la cuenta de fábrica**. Comprobado en el navegador, y **la suite deja el método donde estaba**. **Los secretos no salen nunca**: `GET /api/settings` devuelve `passwordSet` y `secretSet` y ningún valor, y guardar con el campo vacío **conserva** el que había |
+| Las dos pruebas de conexión | El botón «Probar la conexión» de las dos tarjetas, contra el directorio y el reino de verdad: contesta que sí cuando el servicio está y **con su clave cuando no** —probado apuntando el servidor a uno que no existe—. **No guarda nada**: al recargar, la configuración sigue como estaba. Se salta sola si el perfil `auth` no está levantado, y la suite entera corre sin él |
+| Los endpoints de `users` | Probados de extremo a extremo: la lista con filtros y búsqueda, la ficha, los cambios, el perfil propio, desactivar y reactivar. Y los límites: Soporte no cambia el papel ni el correo de otro (**403**) ni ve la ficha de nadie, nadie se desactiva a sí mismo (**403 `users.selfDeactivation`**), el estado no se cambia por el `PATCH` (**422**), el origen inventado (**422**) y pasar a directorio se rechaza mientras no exista su consulta (**422**) |
+| El editor de los correos | La pantalla del módulo `mail`: los diez correos a la izquierda, **los dos idiomas al lado** —apilados en móvil, medido por la prueba—, el cuerpo con sus botones de formato **envolviendo lo seleccionado**, los marcadores que **se insertan al pulsarlos**, la **vista previa que renderiza el backend** con los datos de ejemplo de la prueba, y los botones de guardar, volver al de fábrica y **enviarme una prueba**, que se lee en el buzón. Probado de extremo a extremo |
+| El idioma de la instalación | Se configura en Configuración y **es el que se le pone a una cuenta nueva cuando quien la da de alta no elige otro**: probado con la instalación en inglés y un alta sin idioma |
+| Las pantallas de tickets | La **bandeja** —una sola con tres nombres, tabla en PC y tarjetas en móvil, con chips de estado, búsqueda, paginación y el chip de tipo del Administrador—, el **alta** con arrastrar y soltar, y el **detalle**: una línea de tiempo con los comentarios y lo que hizo el sistema, la ficha con las acciones —a la derecha en PC y debajo en móvil, medido por la prueba—, **la vista doble** cuando hay interno y los adjuntos **con vista previa**. Probado en PC y en móvil, incluido que **el usuario no ve el interno**, que **Desarrollo no escribe en el principal** y que **al Administrador no se le ofrece ningún botón** |
+| El reparto y el prefijo, desde Configuración | La pantalla de Configuración tiene ya el **prefijo** —con el aviso de que no cambia los números ya emitidos— y el **reparto y el aviso** de cada tipo de ticket, con la opción «al asignado» desactivada cuando no se reparte |
+| Las tres pantallas de usuarios | La **lista** (tabla en PC y tarjetas en móvil, con los chips de papel, origen y estado, la búsqueda y la paginación), **la ficha** y **el perfil propio**, probados en PC y en móvil. Soporte **edita en línea** desde la lista y no tiene ficha de nadie; no se le ofrece desactivarse a sí mismo; la cuenta de fábrica no tiene perfil ni enlace a él, y su nombre en el menú no es un enlace |
+| El menú llega hasta abajo | El cajón **mide la zona visible y se desplaza por dentro**: en un móvil con barra del navegador (839 px visibles de 890) el botón de salir quedaba fuera de la pantalla y no se podía pulsar. Lo encontró Playwright, y con él se corrigió además que en PC la barra se estirara a todo el contenido |
+| Un solo `h1` por pantalla | Las tarjetas de las pantallas de producto titulan con `h2`: la de usuarios tenía tres `h1` y el perfil otros tantos. Lo dijo la prueba al encontrar dos encabezados con el mismo nombre donde esperaba uno |
+
+| Las diez tablas de `tickets` | Creadas en `v1.0.0.sql` y aplicadas **dos veces seguidas** sin error: los dos tipos de ticket, la conversación, los adjuntos, el historial y el contador de la numeración, con sus restricciones (el interno no puede estar `escalado`, exactamente un destino en lo que cuelga de un ticket, el motivo del escalado no puede estar vacío) |
+| Las extensiones del texto y el código | Comprobado de punta a punta por la pantalla: un `.sql` **se coge** —sin el aviso de rechazo—, **se guarda** su referencia en el comentario, **queda entre los adjuntos del ticket** y **al pulsarlo se descarga** con su nombre; y un `.svg` **se sigue rechazando** antes de subirlo. Las **cuarenta y dos** extensiones nuevas son las mismas en los dos sitios —el editor y el backend—, y el editor lo comprueba por su lado con sus pruebas de unidad |
+| El módulo `ai`, con el motor de verdad | **Comprobado de punta a punta contra el contenedor**: al crear un ticket, `Pedir` vuelve en milisegundos y los dos campos quedan **`pendiente`**; entre 20 y 40 segundos después están **`listo`**, en español y en inglés, y con contenido razonable (`El usuario está experimentando problemas al intentar iniciar sesión…` / `The user is experiencing issues trying to log in…`). En la pantalla: la lista enseña el motivo y la última acción, la ficha los enseña enteros con su botón, y **el interno no pide motivo** —el suyo es el del escalado—. Y **sin motor configurado** los campos quedan `sin_motor` y la aplicación funciona entera, que es la condición de la decisión 2 |
+| El motor de IA, medido | El contenedor `catalina_support_ai` (llama.cpp `server-b11206` + Qwen2.5-1.5B-Instruct Q4_K_M) gasta **~950 MB en reposo y 1,09 GB** con una entrada de 2 034 piezas, dentro de su techo de 1500m y 2 CPU, **sin publicar ningún puerto**. **Tarda entre 12 y 24 segundos por campo** y unos 95 s en un ticket de 6 000 caracteres; la segunda llamada del mismo ticket es ~7 veces más rápida (caché de prefijo). Su comprobación de salud contesta en 325 ms mientras está generando |
+| El JSON del modelo, sin creérselo | **Con `response_format` y la exigencia escrita al final del mensaje, 4 de 4 respuestas válidas** con un ticket de 6 000 caracteres; con sólo una de las dos vías, el modelo envuelve la respuesta en un bloque de código, se inventa las claves o contesta en un solo idioma. El módulo rescata el primer objeto JSON y reintenta; cuando no vale, el log dice **la forma** de lo que llegó (claves y longitudes) y nunca su contenido |
+| Las categorías y las etiquetas | **Comprobado por las tres capas**: la migración crea «General» y se la pone a todo lo que existe —simulando una base vieja, el ticket sin categoría acaba en «General» y la columna queda `NOT NULL`—; el alta **sin categoría se rechaza** (`tickets.category.required`) y **un usuario no puede crear ni retirar** categorías; las etiquetas sucias se guardan normalizadas (`["Red Wifi","  Licencias  ","red-wifi","Ñoño_Ütil"]` → `['red-wifi','licencias','nonoutil']`); un ticket con 40 caracteres de etiqueta se rechaza; retirar la última activa se rechaza; `?category=` y `?tag=` filtran; y **buscar «red» encuentra la categoría «Red» y la etiqueta `red`**. En la pantalla: el alta pide la categoría, las fichas se normalizan al escribirlas, los chips salen en el renglón, hay filtros de las dos y el catálogo lo mantiene quien toca |
+| Las menciones y los observadores | **Comprobado por las tres capas**: el saneador admite `<span data-mencion="12">` y rechaza lo que no es un identificador; al comentar con una mención se crea el observador, el ticket **entra en el «Observo» de esa persona y no en sus «Asignados»**, quitar al observador deja su entrada en el historial y **no vuelve** al reenviar el mismo comentario, un usuario que lo intenta recibe `tickets.mention.notAllowed`, y el aviso `ticket.mentioned` llega al buzón de pruebas. En la pantalla: el buscador de personas, el nombre resaltado dentro del comentario, la línea «Observadores» de la ficha con su aspa y el chip de vista |
+| El botón de copiar el número | De sólo icono, y al pulsarlo un visto verde dos segundos. La prueba **mide el color pintado** y lo compara con el `--exito` del tema, no con el nombre de la clase —y ahí salió que el botón tiene transición, así que la primera lectura coge el color a medio camino— |
+| El filtro «lo mío» | `GET /api/tickets?mine=1` devuelve **exactamente lo que dice la consulta**: comprobado contra la base con `support1` (**16 tickets**: 9 principales asignados, abiertos o comentados por él y 7 internos escalados o comentados), con `dev1` (**3 internos**) y con `user1` (**5**, todos suyos: el usuario sigue viendo sólo lo suyo con o sin `mine`) |
+| El backend de `tickets`, de extremo a extremo | **78 comprobaciones contra desarrollo**, leyendo los correos del buzón de pruebas: el alta con su **número** (`CS-2026-0001`, y el 9999 que crece a cinco dígitos), el **reparto por turnos** que alterna entre los técnicos activos, el triaje, el **escalado** con su motivo obligatorio, las reglas de sincronización (el interno en espera y el interno resuelto devuelven el principal a `en progreso`), la **devolución** al cerrar el interno sin resolverlo, el **re-escalado** con el mismo interno, el cierre, la reapertura con las fechas limpias, los comentarios (editar y borrar vaciando el texto), los adjuntos (subir, descargar, la extensión fuera de la lista, el `svg` y los 25 MB) y **los permisos de los cuatro papeles**, incluido que el usuario no alcanza un ticket interno ni por su número ni por la ruta de un adjunto |
+| Los siete avisos de `tickets` | Salen cuando la transición que los provoca lo dice, y se han leído en el buzón: al asignado, al usuario (en espera, resuelto, cerrado), a Desarrollo (escalado, también al re-escalar) y a Soporte (Desarrollo necesita algo, y el ticket ha vuelto a su bandeja) |
 | Los sitios que ya existían | `calibyou.com`, `dev.calibyou.com` y `dev-ramona-fit.calibyou.com` siguen respondiendo 200 después de instalar los vhosts |
 
 ### Existe pero NO está verificado
@@ -553,12 +718,22 @@ Lo que existe hoy en el repositorio y lo que se ha comprobado de verdad el 2026-
 
 ### Todavía no existe
 
-- **Ningún módulo**, ni en el backend ni en el frontend: `backend/modules` no se ha creado y
-  `frontend/src/app/modules` está vacío. Cada módulo necesita su documento aprobado antes de
-  escribirse (Regla 0).
-- **Ninguna migración**: `backend/migrations/v1.0.0.sql` se creará con el primer modelo de datos,
-  cuando el documento de tickets lo defina. Hasta entonces no hay ninguna tabla.
-- **Autenticación, sesión y permisos**: no hay nada, ni en el backend ni en el frontend.
+- **Los caminos de AD y de Keycloak ya no están aquí**: los dos existen y están verificados, cada uno
+  con su servicio de pruebas detrás del perfil `auth` de `dev.yml` (OpenLDAP y Keycloak), con sus
+  personas en el repositorio (`config/ldap/`, `config/keycloak/`) y con pruebas de interfaz.
+  **`docs/modules/auth.md` no tiene nada pendiente.**
+- **`scripts/prod-build.sh`**: se escribe con el despliegue. **El script de copias ya está**
+  (`scripts/backup-db.sh`, en el `cron` de esta máquina), y lo que no está probado es su rama de
+  producción, porque no hay producción (`docs/ambientes.md`, sección 6).
+- **El despliegue a producción**, aplazado hasta cerrar la versión 1.0.0.
+- **Un Active Directory y un Keycloak de verdad**: lo que se prueba es OpenLDAP —que se habla igual—
+  y un Keycloak de desarrollo, así que el código se prueba de verdad, pero lo específico de un AD
+  —sus referencias entre dominios, sus atributos particulares, sus reglas de contraseña— no queda
+  cubierto, ni las particularidades del Keycloak de una organización (`docs/modules/auth.md`,
+  sección 11).
+- **PKCE en el camino de Keycloak**, propuesto y no hecho: el cliente es confidencial y el secreto ya
+  protege el canje, así que no estaba en el documento aprobado. Si se hace, el `code_verifier` viaja
+  dentro del `state` firmado (`docs/modules/auth.md`, decisión 40).
 - **Logs del frontend**: sin paquete decidido (el hermano es de NestJS y no sirve en navegador).
 
 ### Pendiente de decidir
