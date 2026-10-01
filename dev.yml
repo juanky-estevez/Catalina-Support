@@ -10,7 +10,8 @@ name: catalina-support-dev
 #
 # Los puertos publicados son 11001-11006 (no los 10001-10004 de Calibyou) para que los
 # dos proyectos puedan estar levantados a la vez; los dos últimos —11005, el directorio de
-# pruebas, y 11006, Keycloak— van detrás del perfil `auth`. Se publican sin dirección de escucha.
+# pruebas, y 11006, Keycloak— los publican sus propios archivos (`active-directory.yml` y
+# `keycloak.yml`), que entran en la red de este entorno. Se publican sin dirección de escucha.
 #
 # `mail` es el buzón de pruebas: recoge todo el correo que manda la aplicación y lo
 # enseña en http://127.0.0.1:11004. Sin él no se puede completar el alta de una cuenta
@@ -80,71 +81,6 @@ services:
   #
   # La imagen trae los navegadores instalados: es lo que permite cumplir la regla de que en la
   # máquina no se instala nada (docs/ambientes.md, sección 8.3).
-  # ---------------------------------------------------------------------------
-  # El directorio de pruebas, para el camino de AD. Va detrás de un perfil para que no estorbe en el
-  # día a día: sólo se levanta cuando se está probando ese camino
-  # (`docker compose -f dev.yml --profile auth up -d`; docs/modules/auth.md, sección 11).
-  # ---------------------------------------------------------------------------
-  ldap:
-    image: osixia/openldap:1.5.0
-    container_name: catalina_support_dev_ldap
-    profiles: ["auth"]
-    # **Sin `restart: always`, y a propósito**: los guiones de arranque de este contenedor no son
-    # idempotentes —al volver a arrancarlo intenta copiar los LDIF a una carpeta que ya no está y
-    # muere—, así que reiniciarlo solo lo dejaría en un bucle de arranques fallidos y el camino de AD
-    # caído. Se levanta a mano y, si hay que reiniciarlo, recreándolo
-    # (docs/modules/auth.md, sección 11).
-    environment:
-      LDAP_ORGANISATION: Catalina Support
-      LDAP_DOMAIN: ejemplo.com
-      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-admin-directorio}
-      # Las personas de prueba viven en el repositorio, no en un volumen que haya que mantener.
-      LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
-      # La configuración de arranque no se queda en el contenedor: es de las pruebas, no del servicio.
-      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
-      LDAP_NOFILE: "1024"
-    volumes:
-      - ./config/ldap:/ldifs:ro
-    ports:
-      - 11005:389
-
-  # ---------------------------------------------------------------------------
-  # Keycloak, para el camino de OIDC. Va detrás del mismo perfil que el directorio: son los dos
-  # caminos de entrada que una instalación puede tener o no, y no estorban en el día a día.
-  #
-  # **El reino vive en el repositorio** (`config/keycloak/`) y se importa al arrancar, igual que las
-  # personas del directorio: no hay nada que configurar a mano ni que se pierda entre reinicios. Con
-  # `--import-realm`, si el reino ya existe no se toca.
-  #
-  # **El navegador llega a Keycloak por el mismo dominio que a la aplicación, y por un camino**
-  # (`/sso/`, que nginx manda a este contenedor). Así el emisor es uno solo —el que ve el
-  # navegador— y no hay dos direcciones que puedan discrepar: el backend usa el mismo
-  # `OIDC_ISSUER`, y por eso la vuelta se firma y se comprueba siempre contra el mismo sitio
-  # (docs/modules/auth.md, sección 5.3).
-  # ---------------------------------------------------------------------------
-  keycloak:
-    # Como el directorio, **sin `restart: always`**: son los dos servicios de pruebas y se levantan a
-    # mano con `--profile auth` (docs/modules/auth.md, sección 11).
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: catalina_support_dev_keycloak
-    profiles: ["auth"]
-    # `start-dev` es el modo de desarrollo: sin TLS propio y sin clúster, que es lo que tiene al lado.
-    command: start-dev --import-realm
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-keycloak}
-      KC_HTTP_ENABLED: "true"
-      KC_HTTP_PORT: "8080"
-      # El camino por el que nginx lo publica, y el nombre con el que firma lo que devuelve.
-      KC_HTTP_RELATIVE_PATH: /sso
-      KC_HOSTNAME: https://dev-catalina-support.calibyou.com/sso
-      # Detrás de nginx: las cabeceras `X-Forwarded-*` que pone el vhost son de fiar.
-      KC_PROXY_HEADERS: xforwarded
-      KC_HEALTH_ENABLED: "true"
-    volumes:
-      - ./config/keycloak:/opt/keycloak/data/import:ro
-    ports:
-      - 11006:8080
 
   e2e:
     image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -191,6 +127,13 @@ services:
       retries: 12
 
 networks:
+  # **La red del entorno de desarrollo, con nombre fijo.** La crea este archivo (sin `external`) y
+  # los elementos que viven aparte —`active-directory.yml` y `keycloak.yml`— la declaran **externa**
+  # y entran en ella, con el nombre de servicio por alias (`ldap`, `keycloak`): así el backend los
+  # alcanza por su nombre **sin que estén en este archivo**, y levantar el entorno en una máquina
+  # nueva sigue siendo un solo comando.
+  default:
+    name: catalina-support-dev
   catalina-support-ai:
     # **No es externa: la crea el primero que arranca.** Con un nombre fijo, los tres archivos
     # apuntan a la misma red, y el primero que se levanta la crea y los demás entran en ella. Así

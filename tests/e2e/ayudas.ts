@@ -351,9 +351,9 @@ export async function ponerElMetodo(peticion: APIRequestContext, metodo: string)
  * pregunta una persona: se manda la configuración guardada —sin la contraseña y sin el secreto, que no
  * salen nunca por la API— y se mira si contesta que sí.
  *
- * Es lo que permite saltarse las pruebas de los caminos de directorio cuando el perfil `auth` no está
- * levantado, **sin depender del método que esté puesto**, y las del motor de IA cuando no está su
- * contenedor.
+ * Es lo que permite saltarse las pruebas de los caminos de directorio cuando su servicio no está
+ * levantado —`active-directory.yml` o `keycloak.yml`—, **sin depender del método que esté puesto**, y
+ * las del motor de IA cuando no está su contenedor.
  */
 export async function respondeAlProbar(
   peticion: APIRequestContext,

@@ -1,0 +1,63 @@
+# =====================================================================================
+#  Keycloak — el camino de OIDC, en su propio archivo
+#
+#  **Va aparte y es opcional** (como el motor de IA en `ai.yml` y el directorio de pruebas en
+#  `active-directory.yml`): se levanta **con su propio comando**, la mesa de ayuda funciona sin
+#  él, y sólo hace falta para probar el camino de entrada por Keycloak
+#  (`docs/modules/auth.md`, sección 11).
+#
+#  La red `catalina-support-dev` **la posee `dev.yml`** (nombre fijo, sin `external`). Aquí es
+#  **externa**: Keycloak entra en ella y no la toca, para que levantarlo **después** —con el
+#  entorno en marcha— no intente recrearla, y para que el backend lo alcance por su nombre de
+#  servicio (`keycloak`). Por eso **primero se levanta el entorno**:
+#
+#    docker compose -f dev.yml up -d
+#    docker compose -f keycloak.yml up -d
+#    docker compose -f keycloak.yml logs -f keycloak
+#    docker compose -f keycloak.yml down
+#
+#  **El reino vive en el repositorio** (`config/keycloak/`) y se importa al arrancar, igual que las
+#  personas del directorio: no hay nada que configurar a mano ni que se pierda entre reinicios. Con
+#  `--import-realm`, si el reino ya existe no se toca.
+#
+#  **El navegador llega a Keycloak por el mismo dominio que a la aplicación, y por un camino**
+#  (`/sso/`, que nginx manda a este contenedor). Así el emisor es uno solo —el que ve el
+#  navegador— y no hay dos direcciones que puedan discrepar: el backend usa el mismo
+#  `OIDC_ISSUER`, y por eso la vuelta se firma y se comprueba siempre contra el mismo sitio
+#  (docs/modules/auth.md, sección 5.3).
+# =====================================================================================
+# Nombre de proyecto propio, para que no comparta «proyecto» con los otros archivos sueltos
+# (`ai.yml`, `active-directory.yml`) y no los tome por contenedores huérfanos.
+name: catalina-support-keycloak
+
+services:
+  keycloak:
+    # Como el directorio, **sin `restart: always`**: son los dos servicios de pruebas y se levantan a
+    # mano (docs/modules/auth.md, sección 11).
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: catalina_support_dev_keycloak
+    # `start-dev` es el modo de desarrollo: sin TLS propio y sin clúster, que es lo que tiene al lado.
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-keycloak}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      # El camino por el que nginx lo publica, y el nombre con el que firma lo que devuelve.
+      KC_HTTP_RELATIVE_PATH: /sso
+      KC_HOSTNAME: https://dev-catalina-support.calibyou.com/sso
+      # Detrás de nginx: las cabeceras `X-Forwarded-*` que pone el vhost son de fiar.
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - 11006:8080
+    networks:
+      - catalina-support-dev
+
+networks:
+  # La red la crea `dev.yml`; aquí es **externa**: Keycloak entra en ella y no la toca.
+  catalina-support-dev:
+    name: catalina-support-dev
+    external: true

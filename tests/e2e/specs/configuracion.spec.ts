@@ -242,11 +242,11 @@ test.describe('Configuración', () => {
   test('las dos conexiones se prueban desde la pantalla', async ({ page, request }) => {
     test.skip(
       !(await respondeAlProbar(request, 'directory')),
-      'El directorio no responde: levántalo con `--profile auth`',
+      'El directorio no responde: levántalo con `docker compose -f active-directory.yml up -d`',
     );
     test.skip(
       !(await respondeAlProbar(request, 'keycloak')),
-      'Keycloak no responde: levántalo con `--profile auth`',
+      'Keycloak no responde: levántalo con `docker compose -f keycloak.yml up -d`',
     );
 
     // **Cada botón sale con su panel**: se elige el método, se prueba, y se cambia. Antes estaban los

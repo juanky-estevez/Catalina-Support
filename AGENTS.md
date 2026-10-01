@@ -122,8 +122,9 @@ grande lo tiene.
 ## Estado del proyecto
 
 Esqueleto en pie y verificado (2026-09-22), y **cuatro módulos en marcha** (2026-09-24): los cuatro
-contenedores de desarrollo levantan (incluido el buzón de pruebas, y **el directorio de pruebas y
-Keycloak** detrás del perfil `auth`), nginx publica el proyecto en `https://dev-catalina-support.calibyou.com` con
+contenedores de desarrollo levantan (incluido el buzón de pruebas), y **el directorio de pruebas y
+Keycloak** viven cada uno en su archivo (`active-directory.yml`, `keycloak.yml`) y se levantan aparte
+con su comando —ya no hay perfil `auth`—, nginx publica el proyecto en `https://dev-catalina-support.calibyou.com` con
 TLS, el backend Go conecta con PostgreSQL y responde `GET /api/health` (también a través de nginx), y
 el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 
@@ -138,8 +139,8 @@ tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejem
   vez** —el que está puesto en Configuración es el único que se atiende—. El local —correo y
   contraseña, y la cuenta de fábrica—, `me`, salir, olvidar la contraseña, establecerla desde el
   enlace y cambiarla desde dentro, con sus tres correos de cuenta y **las seis pantallas del
-  armazón**; el de **AD**, contra un directorio de verdad (OpenLDAP, en `dev.yml` detrás del perfil
-  `auth`); y el de **Keycloak**, contra un reino que vive en el repositorio, con el token de vuelta en
+  armazón**; el de **AD**, contra un directorio de verdad (OpenLDAP, en `active-directory.yml`); y el
+  de **Keycloak**, contra un reino que vive en el repositorio (en `keycloak.yml`), con el token de vuelta en
   el fragmento de la dirección. En los dos caminos de directorio **nadie da de alta a nadie**: la
   cuenta se crea, se vincula o se pone al día en el primer acceso. **La cuenta de fábrica entra
   siempre**, sea cual sea el método: es la puerta que permite volver a cambiarlo.
@@ -213,7 +214,8 @@ asistente en producción por este cambio. **La contraseña de la cuenta de fábr
 (`ADMIN_PASSWORD`): el asistente no la pide.
 
 **El motor de IA se levanta aparte y es opcional** (corrección del responsable, 2026-09-30): vive en
-**`ai.yml`**, su propio compose —como el directorio de pruebas y Keycloak—, **compartido por desarrollo y
+**`ai.yml`**, su propio compose —como el directorio de pruebas (`active-directory.yml`) y Keycloak
+(`keycloak.yml`)—, **compartido por desarrollo y
 producción** (un solo modelo, ~1,1 GB, en un volumen). El entorno **no** lo levanta: sin él la mesa de
 ayuda funciona entera, sin los dos resúmenes, y **el asistente de primer arranque lo avisa sin
 bloquear**, diciendo qué comprobar. **Su dirección y su modelo se configuran desde la pantalla de
@@ -307,8 +309,8 @@ previa que renderiza el backend**, para que lo que se ve sea lo que va a salir.
 elige otro.
 
 **Los dos caminos de directorio están hechos y verificados**: el de AD contra el directorio de pruebas
-(OpenLDAP) y el de Keycloak contra un reino que vive en el repositorio, los dos detrás del perfil
-`auth` de `dev.yml`. Una persona con cuenta allí **entra directamente, sin que nadie le dé de alta
+(OpenLDAP, en `active-directory.yml`) y el de Keycloak contra un reino que vive en el repositorio
+(`keycloak.yml`), cada uno en su archivo y levantado con su comando —ya no hay perfil `auth`—. Una persona con cuenta allí **entra directamente, sin que nadie le dé de alta
 nada** —es la corrección del responsable del 2026-09-25—, y su cuenta se crea, se vincula o se pone al
 día sola con lo que dice el directorio. **Con el método en AD la pantalla de entrada sigue siendo el
 mismo formulario** —lo que cambia es quién contesta, y se dice— y **con el de Keycloak no hay
@@ -335,7 +337,9 @@ de soporte manual (decisión del responsable, 2026-09-25).
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra el entorno de
 desarrollo, en PC y en móvil, con **214 casos** (196 en verde y 18 que se saltan: los de un
 dispositivo o de las herramientas y siete de los caminos de directorio, que se prueban una sola vez
-porque no dependen del ancho). Leen los correos del buzón de pruebas, así que prueban el enlace de
+porque no dependen del ancho). **Los dos caminos de directorio piden dos pasos**: levantar cada
+servicio con su archivo (`docker compose -f active-directory.yml up -d` y
+`docker compose -f keycloak.yml up -d`) y correr después la suite normal. Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no
 veían** —los dos últimos, que la cabecera del detalle le enseñaba al usuario el estado interno
 («Nuevo» donde su pantalla dice «Recibido») y que **la imagen con tope de 480 px se salía de la
@@ -345,16 +349,16 @@ corregidos con su prueba.
 El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 `docs/arquitectura.md`, sección 13. En resumen:
 
-- `docs/arquitectura.md` (**as-built**, **2 enmiendas**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado). Enmendado el 2026-10-01: la fila del **motor de IA medido** se corrige con lo medido —**1500 MiB de tope**, **~1,44 GiB en marcha (el 98% del tope)** y **sin tope de CPU**— y se quita el «1,09 GB con una entrada de 2 034 piezas».
+- `docs/arquitectura.md` (**as-built**, **3 enmiendas**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado). Enmendado el 2026-10-01: la fila del **motor de IA medido** se corrige con lo medido —**1500 MiB de tope**, **~1,44 GiB en marcha (el 98% del tope)** y **sin tope de CPU**— y se quita el «1,09 GB con una entrada de 2 034 piezas». Enmendado el 2026-10-01 (segunda vez): **el directorio de pruebas y Keycloak salen de `dev.yml`** a sus archivos `active-directory.yml` y `keycloak.yml`, con la red `catalina-support-dev` que posee `dev.yml`, y sus tablas y comandos se ponen al día.
 - `docs/propósito-y-alcance.md` (**as-built**, **3 enmiendas**): producto, los dos equipos y el modelo de tickets.
 - `docs/usuarios-y-permisos.md` (**as-built**, **10 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
 - `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
-- `docs/ambientes.md` (**as-built**, **13 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome. Y el 2026-10-01: los **tres elementos opcionales** se levantan cada uno con su comando (sección 9.3), y el directorio y Keycloak **comparten perfil pero pueden levantarse por separado** —comprobado— sin romper el comando de siempre `--profile auth up -d`. Y ese mismo día, la sección 3.3 **apunta a la tabla de las once cuentas de ejemplo del `README.md`** en vez de repetirla.
+- `docs/ambientes.md` (**as-built**, **14 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome. Y el 2026-10-01: los **tres elementos opcionales** se levantan cada uno con su comando (sección 9.3), y la sección 3.3 **apunta a la tabla de las once cuentas de ejemplo del `README.md`** en vez de repetirla. Enmendado el 2026-10-01 (segunda vez): el directorio de pruebas y Keycloak **dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, cada uno con su comando, y **el perfil `auth` desaparece** (secciones 3.3 y 9.3, con sus tablas y sus comandos).
 - `docs/interfaz-y-experiencia.md` (**as-built**, **36 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
 - `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
 - `docs/modules/settings.md` (**as-built**, **8 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con **el motor de IA**. Enmendado el 2026-09-30: declara **`ProberDeCorreo`**, que **reutiliza el asistente** para el paso 4.
-- `docs/modules/auth.md` (**as-built**, **6 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**.
+- `docs/modules/auth.md` (**as-built**, **7 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**. Enmendado el 2026-10-01: **el directorio de pruebas y Keycloak dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, con **su propio comando** y la red `catalina-support-dev` que posee `dev.yml`; **el perfil `auth` desaparece** (sección 11 y decisión 1).
 - `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
 - `docs/README.md`: índice de documentación.
 
@@ -369,12 +373,14 @@ puede mandar el correo de alta sin el módulo de correo.
 
 ```text
 .
-├── dev.yml                 # compose de desarrollo (frontend, backend, database, mail; y el
-│                           # directorio de pruebas y las de interfaz detrás de un perfil)
+├── dev.yml                 # compose de desarrollo (frontend, backend, database y mail; la red del
+│                           # entorno es suya y las de interfaz van detrás de un perfil)
 ├── prod.yml                # compose de producción (usado y verificado por dentro el 2026-09-25;
 │                           # hoy aparcado hasta que el producto esté terminado)
 ├── ai.yml                  # el motor de IA: un contenedor, compartido por los dos entornos
 │                           # (el modelo vive en un volumen, no en el repositorio)
+├── active-directory.yml    # el directorio de pruebas (OpenLDAP): opcional, con su propio comando
+├── keycloak.yml            # Keycloak de pruebas: opcional, con su propio comando
 ├── backend                 # Go: main.go, .air.toml, shared/, modules/ y migrations/
 ├── frontend                # Angular 22 + Tailwind v4: src/app/{core,shared,modules}, y public/ con el logo
 ├── config
@@ -406,9 +412,9 @@ debe tenerlos). `docs/arquitectura.md`, sección 10.
 
 ```bash
 # Los servicios de desarrollo (frontend, backend, database y el buzón de pruebas).
-# **Un solo comando de Docker, igual en Linux, macOS y Windows**: la red compartida con el motor de IA
-# (`catalina-support-ai`) la crea el primero que arranca, así que no hay que crear nada a mano. Para el
-# motor, que es opcional: `docker compose -f ai.yml up -d`
+# **Un solo comando de Docker, igual en Linux, macOS y Windows**: la red del entorno
+# (`catalina-support-dev`) la crea este archivo, como la del motor de IA (`catalina-support-ai`), así
+# que no hay que crear nada a mano. Para el motor, que es opcional: `docker compose -f ai.yml up -d`
 docker compose -f dev.yml up -d
 docker compose -f dev.yml ps
 docker compose -f dev.yml logs -f backend
@@ -436,7 +442,11 @@ open http://127.0.0.1:11004
 # el seeder borra también lo que haya a mano en desarrollo
 docker compose -f dev.yml run --rm e2e
 ./scripts/dev-seed.sh
-docker compose -f dev.yml --profile auth run --rm e2e      # con los dos caminos de directorio
+# Los dos caminos de directorio, en dos pasos: se levanta cada servicio con su archivo y se corre
+# después la suite de siempre
+docker compose -f active-directory.yml up -d
+docker compose -f keycloak.yml up -d
+docker compose -f dev.yml run --rm e2e
 docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e    # volcado de lo que hay en pantalla
 
 # El motor de IA: su propio compose, compartido por desarrollo y producción (docs/modules/ai.md).
@@ -446,12 +456,10 @@ docker compose -f ai.yml up -d
 docker compose -f ai.yml ps
 docker compose -f ai.yml logs -f ai
 
-# Los tres elementos opcionales, cada uno con su comando. El directorio de pruebas y Keycloak comparten
-# el perfil `auth`, pero **cada uno se levanta por separado** nombrándolo (sin activar el perfil); el
-# motor de IA tiene su propio compose. El de siempre levanta el directorio y Keycloak de una vez
-docker compose -f dev.yml --profile auth up -d          # el directorio y Keycloak, a la vez
-docker compose -f dev.yml up -d ldap                    # sólo el directorio de pruebas (AD/LDAP)
-docker compose -f dev.yml up -d keycloak                # sólo Keycloak
+# Los tres elementos opcionales, cada uno con su archivo y su comando. **Primero el entorno**: los dos
+# primeros entran en la red que posee `dev.yml`, que hay que tener levantada
+docker compose -f active-directory.yml up -d            # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d                    # Keycloak
 docker compose -f ai.yml up -d                          # el motor de IA (opcional)
 
 # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
