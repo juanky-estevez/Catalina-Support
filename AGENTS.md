@@ -90,7 +90,7 @@ completo.
 | `docs/flujos.md` | **as-built**: los recorridos paso a paso de los tickets y sus correos, que es lo que hacen `backend/modules/tickets/**` y sus pantallas |
 | `docs/ambientes.md` | El runbook: **el despliegue a producción** —`scripts/prod-build.sh`, hecho y usado en el primer despliegue—, las migraciones, **las copias de seguridad** —`scripts/backup-db.sh`, con las dos bases en el `cron`— y las tres capas de pruebas (`tests/e2e/`) |
 | `docs/interfaz-y-experiencia.md` | Cubre `frontend/src/app/core/**` (el armazón, los controles, las pantallas de la sesión y Configuración), `frontend/src/app/shared/components/**` y **la forma de las pantallas de producto**: las de usuarios (3.6), las de tickets (3.7) y el editor de los correos (3.8), todas hechas |
-| `docs/modules/settings.md` | Cubre `backend/modules/settings/**`, `backend/shared/version/**`, **las cuatro tablas de configuración de una fila** (`installation_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`) y `frontend/src/app/core/pages/settings-page.*` (el nombre de la instalación, **cómo se entra y las dos configuraciones de directorio con sus pruebas de conexión**, la marca, el color, el idioma, el prefijo y el reparto). **Está entero** |
+| `docs/modules/settings.md` | Cubre `backend/modules/settings/**`, `backend/shared/version/**`, **las cuatro tablas de configuración de una fila** (`installation_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`) y `frontend/src/app/core/pages/settings-page.*` (el nombre de la instalación, **cómo se entra y las dos configuraciones de directorio con sus pruebas de conexión**, la marca, el color, el idioma, el prefijo y el reparto, **y el motor de IA con su prueba**). **Está entero** |
 | `docs/primer-arranque.md` | **as-built**: la vista de primer arranque, que pide lo necesario para dejar la instalación en marcha en cuatro pasos. Es el **sello** de `installation_settings`, `backend/modules/settings/**` (la API `/api/setup/**`), `frontend/src/app/core/pages/setup-page.*` y el correo saliente del módulo `mail` |
 | `docs/modules/ai.md` | **aprobado**: los dos resúmenes del ticket —**motivo** y **última acción**— que redacta el **motor de IA de un contenedor aparte**, en español y en inglés. Cubre `backend/modules/ai/**`, la tabla `ai_insights` y el `ai.yml` del motor. Lo consume `tickets` a través de una interfaz que él mismo declara |
 | `docs/modules/mail.md` | Cubre `backend/modules/mail/**`, las plantillas de `backend/migrations/v1.0.0.sql` y **el editor de `frontend/src/app/modules/mail/**`**. **Está entero**, backend y editor |
@@ -203,10 +203,23 @@ y usarla en serio (`docs/modules/settings.md`, decisiones 13 a 15). Va **en la p
 aplicación lleva a **`/setup`**, que pide en cuatro pasos **la instalación** (nombre e idioma), **cómo
 se entra** (con su prueba), **dónde está** (región y dirección) y **el correo saliente** (que vive en la base:
 las variables `SMTP_*` del entorno se retiraron), y al terminar **sella** la instalación: la vista no vuelve y su API
-contesta **409** (`docs/primer-arranque.md`). El sello vive en `installation_settings.installed_at`, y
+contesta **409** (`docs/primer-arranque.md`). **El asistente prueba lo que pide** (2026-09-30): el paso 2
+y el paso 4 traen su botón de «Probar la conexión» —`POST /api/setup/entry/test` y
+`POST /api/setup/mail/test`, públicos y con el sello como único candado—, reutilizando las pruebas de
+`auth` (directorio y Keycloak) y de `mail` (correo), y la del correo **comprueba la conexión y la
+autenticación sin mandar ningún correo**. El sello vive en `installation_settings.installed_at`, y
 **una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
 asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
 (`ADMIN_PASSWORD`): el asistente no la pide.
+
+**El motor de IA se levanta aparte y es opcional** (corrección del responsable, 2026-09-30): vive en
+**`ai.yml`**, su propio compose —como el directorio de pruebas y Keycloak—, **compartido por desarrollo y
+producción** (un solo modelo, ~1,1 GB, en un volumen). El entorno **no** lo levanta: sin él la mesa de
+ayuda funciona entera, sin los dos resúmenes, y **el asistente de primer arranque lo avisa sin
+bloquear**, diciendo qué comprobar. **Su dirección y su modelo se configuran desde la pantalla de
+Configuración** (2026-09-30), con su tarjeta y su botón de probar la conexión: el módulo `ai` los lee
+**en cada petición** por una interfaz que él declara, y `AI_URL`/`AI_MODEL` quedan **como respaldo**
+(`docs/modules/settings.md`, decisión 16, y `docs/modules/ai.md`, decisión 21).
 
 **El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (MIT)**,
 cómo **participar**, y **cómo levantarlo** —en local con `dev.yml` y en serio con `prod-build.sh`, la
@@ -316,11 +329,11 @@ de soporte manual (decisión del responsable, 2026-09-25).
 
 **El despliegue a producción está hecho y verificado por dentro** (2026-09-25): `scripts/prod-build.sh` construye y publica los artefactos en `/srv/catalina-support` y levanta los tres contenedores de `prod.yml`, con el esquema de `v1.0.0.sql` aplicado **una sola vez** en la base de producción y **la cuenta de fábrica entrando** con la contraseña de `config/env/prod.env` —que no se versiona y **no aparece en la documentación**—. La base de producción **se copia a diario** desde el mismo día, con su línea en el `cron`.
 
-**Lo que falta**: **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión.
+**Lo que queda aparcado a propósito** (decisión del responsable, 2026-09-30): **el correo saliente de producción**, y con él **el alta de Soporte y Desarrollo** —sin correo no llega el enlace para establecer la contraseña, así que hoy sólo entra la cuenta de fábrica—; **abrir el dominio**, que sigue respondiendo 503 a propósito porque **la 1.0.0 no está cerrada**; y **la etiqueta `v1.0.0`**, que el responsable no quiere crear todavía porque puede haber cambios sobre la versión. **No se retoman hasta que el producto esté terminado.**
 
 **Las tres capas de pruebas están montadas**, incluidas las de interfaz: `docker compose -f dev.yml
 run --rm e2e` ejecuta Playwright **en un contenedor** (no en la máquina) contra el entorno de
-desarrollo, en PC y en móvil, con **212 casos** (194 en verde y 18 que se saltan: los de un
+desarrollo, en PC y en móvil, con **214 casos** (196 en verde y 18 que se saltan: los de un
 dispositivo o de las herramientas y siete de los caminos de directorio, que se prueban una sola vez
 porque no dependen del ancho). Leen los correos del buzón de pruebas, así que prueban el enlace de
 verdad y no una suposición. **Esa capa ya ha encontrado nueve fallos que las pruebas de unidad no
@@ -332,21 +345,21 @@ corregidos con su prueba.
 El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 `docs/arquitectura.md`, sección 13. En resumen:
 
-- `docs/arquitectura.md` (as-built): stack, contenedores, dominios y regla de modularidad.
+- `docs/arquitectura.md` (**as-built**, **1 enmienda**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado).
 - `docs/propósito-y-alcance.md` (**as-built**, **3 enmiendas**): producto, los dos equipos y el modelo de tickets.
-- `docs/usuarios-y-permisos.md` (**as-built**, **5 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
-- `docs/modules/tickets.md` (**as-built**, **6 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
+- `docs/usuarios-y-permisos.md` (**as-built**, **10 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
+- `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
-- `docs/ambientes.md` (**as-built**, **3 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; falta el correo de producción y abrir el dominio.
-- `docs/interfaz-y-experiencia.md` (**as-built**, **14 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
-- `docs/modules/mail.md` (**as-built**, **3 enmiendas**): el módulo de correo. **Terminado**, backend y editor.
-- `docs/modules/settings.md` (**as-built**, **4 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con la versión del sistema.
+- `docs/ambientes.md` (**as-built**, **11 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome.
+- `docs/interfaz-y-experiencia.md` (**as-built**, **36 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
+- `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
+- `docs/modules/settings.md` (**as-built**, **8 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con **el motor de IA**. Enmendado el 2026-09-30: declara **`ProberDeCorreo`**, que **reutiliza el asistente** para el paso 4.
 - `docs/modules/auth.md` (**as-built**, **6 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**.
 - `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
 - `docs/README.md`: índice de documentación.
 
-- `docs/primer-arranque.md` (**as-built**): la vista de primer arranque y su sello.
-- `docs/modules/ai.md` (**aprobado**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia.
+- `docs/primer-arranque.md` (**as-built**, **1 enmienda**): la vista de primer arranque y su sello. Enmendado el 2026-09-30: **el asistente prueba lo que pide** —los dos endpoints públicos `/entry/test` y `/mail/test`, con el candado del sello, y los botones de los pasos 2 y 4—, y la prueba del correo **conecta y autentica sin mandar ningún correo**.
+- `docs/modules/ai.md` (**as-built**, **1 enmienda**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia: su motor se configura desde Configuración.
 
 La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo
 antes de implementarlo. El orden es **`mail` → `auth` → `users` → `tickets`**, porque `auth` no
@@ -358,7 +371,8 @@ puede mandar el correo de alta sin el módulo de correo.
 .
 ├── dev.yml                 # compose de desarrollo (frontend, backend, database, mail; y el
 │                           # directorio de pruebas y las de interfaz detrás de un perfil)
-├── prod.yml                # compose de producción (sin verificar todavía)
+├── prod.yml                # compose de producción (usado y verificado por dentro el 2026-09-25;
+│                           # hoy aparcado hasta que el producto esté terminado)
 ├── ai.yml                  # el motor de IA: un contenedor, compartido por los dos entornos
 │                           # (el modelo vive en un volumen, no en el repositorio)
 ├── backend                 # Go: main.go, .air.toml, shared/, modules/ y migrations/
@@ -454,8 +468,8 @@ docker compose -f dev.yml --profile auth up -d
 ```
 
 En desarrollo se entra por **https://dev.catalina-support.example.com**, que es nginx (en la
-máquina) delante de los contenedores. Los puertos 11001 y 11002 siguen publicados en
-`127.0.0.1` para depurar sin pasar por nginx.
+máquina) delante de los contenedores. Los puertos 11001 y 11002 siguen publicados para depurar sin
+pasar por nginx.
 
 Los dos vhosts son **copias** de `config/nginx/` en `/etc/nginx/conf.d/` (no enlaces), igual que
 en Calibyou. Si se cambia un vhost en el repositorio, hay que volver a copiarlo y recargar:

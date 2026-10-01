@@ -1,7 +1,14 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-09-30
+>
+> **Enmendado el 2026-09-30 (sexta vez)**: **el despliegue a producción queda aparcado** hasta que el
+> producto esté terminado, así que **este runbook no se reescribe ahora**: la sección 4 lleva una **nota**
+> diciendo que su flujo **cambió el 2026-09-30** —las rutas de `prod.yml` pasan a ser relativas al propio
+> archivo, `scripts/prod-build.sh` publica el compose y `config/` en la carpeta de despliegue y ejecuta el
+> compose desde ahí, y los puertos dejan de ir atados a `127.0.0.1`— y que **se pondrá al día cuando se
+> retome el despliegue**. Lo que hay en la sección describe el despliegue **ya hecho** el 2026-09-25.
 >
 > **Enmendado el 2026-09-30 (quinta vez, y corregida el mismo día)**: **la red compartida con el motor
 > de IA la crea el entorno**, y el motor **entra en ella**. Los contenedores de `dev.yml`, `prod.yml` y
@@ -140,13 +147,12 @@ docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
 Se entra por `https://dev.catalina-support.example.com`. Los puertos 11001 y 11002 siguen publicados
-en `127.0.0.1` para depurar sin pasar por nginx.
+para depurar sin pasar por nginx.
 
 ### 3.2 La base de datos
 
 - El esquema se aplica **repetidas veces** sin miedo: `v1.0.0.sql` es transaccional e idempotente
-  (`docs/arquitectura.md`, sección 7). **El archivo todavía no existe**: nace con el primer módulo,
-  cuando `docs/modules/tickets.md` se implemente.
+  (`docs/arquitectura.md`, sección 7). **El archivo existe, está aplicado y crea 18 tablas.**
 - Aplicarlo, dentro del contenedor (comando probado el 2026-09-22):
 
 ```bash
@@ -227,18 +233,21 @@ docker compose -f ai.yml down       # el volumen del modelo se queda
 
 **Por qué aparte**: es **uno solo para los dos entornos**, porque no caben dos —el modelo ocupa
 ~1,1 GB y la máquina tiene 1,8 GB libres, sin GPU—. Los backends de desarrollo y de producción **entran
-en su red** (`catalina-support-ai`, declarada externa en los dos compose) y le hablan por su nombre,
-`http://catalina_support_ai:8080`. **No publica ningún puerto**: el motor no se alcanza desde la máquina
-ni desde fuera.
+en su red** (`catalina-support-ai`): **`dev.yml` y `prod.yml` la crean** —con su nombre fijo y sin
+`external`— y **`ai.yml` la declara externa**, para que el motor no intente recrearla. Le hablan por su
+nombre, `http://catalina_support_ai:8080`. **No publica ningún puerto**: el motor no se alcanza desde la
+máquina ni desde fuera.
 
 - **El modelo se descarga una vez** a un volumen con nombre (`ai_modelos`), así que sobrevive a `down`
   y a recrear el contenedor; sólo `down -v` lo borra. A partir de ahí el motor funciona **sin salida a
   internet**.
-- **Es opcional, y a propósito**: si `AI_URL` está vacía —o el contenedor no está—, los dos campos se
-  quedan sin texto y **todo lo demás funciona igual**. Un motor caído no puede parar la mesa de ayuda
-  (`docs/modules/ai.md`, decisión 2).
-- **Si se levanta el backend sin la red creada**, `docker compose up` lo dice: se arregla levantando el
-  motor.
+- **Es opcional, y a propósito**: **su dirección y su modelo se configuran en Configuración** —con su
+  botón de probar la conexión— y `AI_URL`/`AI_MODEL` quedan **como respaldo**; sin motor configurado
+  —o con el contenedor parado— los dos campos se quedan sin texto y **todo lo demás funciona igual**.
+  Un motor caído no puede parar la mesa de ayuda (`docs/modules/settings.md`, decisión 16, y
+  `docs/modules/ai.md`, decisión 2).
+- **La red la crea el entorno**, así que **el motor se puede levantar después, con el entorno en
+  marcha**: `docker compose -f dev.yml up -d` funciona en una máquina nueva sin crear nada a mano.
 - Antes de desplegar a producción, `docker compose -f ai.yml up -d` en el servidor: los dos entornos lo
   comparten.
 
@@ -253,6 +262,13 @@ Las dos son volúmenes montados en el backend: sobreviven a `down` y se copian d
 entrar al contenedor.
 
 ## 4. Producción
+
+> **Nota (2026-09-30):** este flujo **cambió** —las rutas de los volúmenes de `prod.yml` pasaron a ser
+> relativas al propio archivo, `scripts/prod-build.sh` publica el compose y `config/` en la carpeta de
+> despliegue y el despliegue se ejecuta desde ahí, y los puertos ya no van atados a `127.0.0.1`—, pero
+> **la sección no se pone al día todavía**: el despliegue a producción **queda aparcado** hasta que el
+> producto esté terminado. Lo que se lee debajo describe el despliegue **ya hecho** el 2026-09-25, no el
+> estado de hoy. Se pondrá al día cuando se retome el despliegue.
 
 ### 4.1 Cómo está montada
 
@@ -514,7 +530,6 @@ Cada grupo lo documenta quien lo usa, y aquí sólo se dice dónde vive:
 | Grupo | Quién lo documenta |
 | --- | --- |
 | `ENVIRONMENT`, `PROJECT_NAME`, `LOGS_FOLDER`, `TIMEZONE` (los de `go-logs`) | `docs/arquitectura.md`, sección 8 |
-| `SMTP_*` | `docs/arquitectura.md`, sección 9. En desarrollo apuntan al buzón de pruebas del `dev.yml` (`mail`, web en `127.0.0.1:11004`) |
 | `APP_PORT`, `POSTGRES_HOST`, `PGPORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `docs/arquitectura.md`, sección 10 |
 | `FILES_PATH` | `docs/modules/tickets.md`, sección 2.3 |
 | `ADMIN_PASSWORD` | `docs/usuarios-y-permisos.md`, sección 8 |
@@ -528,6 +543,12 @@ conexión» (`docs/modules/settings.md`, sección 5.8). **No queda ninguna por e
 caminos**: si se ven `LDAP_*` u `OIDC_*` en un archivo de entorno, son restos de una versión anterior
 y no las lee nadie. Y una consecuencia que hay que tener presente: **los secretos de los dos caminos
 van dentro de la copia de la base**, así que esa copia es un secreto más (sección 6).
+
+**Y el correo saliente tampoco es una variable de entorno**: vive en `installation_settings.smtp_*` y
+se configura en la vista de primer arranque o en Configuración; las variables `SMTP_*` se retiraron
+(`docs/arquitectura.md`, sección 9). En desarrollo lo deja puesto
+`backend/migrations/v1.0.0_dev.sql`, apuntando al buzón de pruebas del `dev.yml` (`mail`, web en
+`127.0.0.1:11004`).
 
 Reglas que valen para los dos entornos:
 

@@ -71,10 +71,25 @@ export const EN: Textos = {
     regionGuardada: 'The time zone and the address have been saved.',
     direccion: 'Public address',
     direccionAyuda:
-      'The address this installation is reached at: it is the base of the links in the e-mails and of Keycloak\'s return. http or https, with a port if needed, and localhost too.',
+      "The address this installation is reached at: it is the base of the links in the e-mails and of Keycloak's return. http or https, with a port if needed, and localhost too.",
     direccionEjemplo: 'https://support.my-institution.org',
     direccionInsegura:
       'This installation is not served over https: the password and the session travel unencrypted over the network. It can be used like this —to try it locally, for instance—, and for real use a certificate is worth having.',
+    motorDeIA: 'The AI engine',
+    motorDeIAAyuda:
+      "The engine that writes each ticket's “Reason” and “Last action”. It is optional: without it the help desk works the same, with those two fields without text. It is run apart, with its own command, and it can be on this installation or on another server.",
+    iaDireccion: 'Engine address',
+    iaDireccionAyuda:
+      'Where the engine listens. http or https, with a port if needed. If left empty, the installation has no engine and the environment acts as a fallback.',
+    iaDireccionEjemplo: 'http://catalina_support_ai:8080',
+    iaModelo: 'Model',
+    iaModeloAyuda:
+      'The model it writes with, as the engine names it. If left empty, the one from the environment is used.',
+    iaModeloEjemplo: 'qwen2.5-1.5b-instruct',
+    probarIA: 'Test the connection',
+    guardarIA: 'Save the AI engine',
+    motorOk: "The engine answered: it writes the ticket's two summaries.",
+    motorGuardado: 'The AI engine has been saved.',
     entrada: 'How people sign in',
     entradaAyuda:
       'The installation signs people in through one method at a time: the other two stay off even if they are configured. The factory account always gets in, and from it the choice can be changed.',
@@ -174,7 +189,7 @@ export const EN: Textos = {
     resumen: 'Summary',
     motorResponde: 'The AI engine answers: both ticket summaries are available.',
     motorNoEsta:
-      'The AI engine is not there: the help desk works the same, without the two summaries.',
+      'The AI engine is not responding. Check that its container is up; and if it is the first time, that it has finished downloading the model. You can finish without it: the help desk works, without the two summaries, and it is added later from Settings.',
     // The factory account password **is not asked for here**: it lives in the environment, and
     // saying so is exactly what stops anyone looking for it on the screen (section 4 of the doc).
     cuentaDeFabrica:
@@ -199,6 +214,9 @@ export const EN: Textos = {
     correoRemitenteNombre: 'Sender name',
     correoRemitenteCorreo: 'Sender address',
     correoRemitenteCorreoAyuda: 'The address whoever receives the email will see.',
+    probarCorreo: 'Test the connection',
+    // What the email test does and **does not** do, said in the message itself.
+    correoOk: 'The email server answered and the authentication worked. No email has been sent.',
   },
 
   menu: {
@@ -906,15 +924,20 @@ export const EN: Textos = {
     'users.directory.unavailable':
       'The directory could not be reached to check. Try again in a moment.',
     'users.origin.inUse': 'The origin of an active directory account cannot be changed.',
-    'users.password.notLocal': 'That account\'s password is checked by the directory: it is not changed here.',
+    'users.password.notLocal':
+      "That account's password is checked by the directory: it is not changed here.",
     'settings.timeZone.unknown': 'That time zone does not exist. Pick one from the list.',
     'settings.publicUrl.invalid':
       'The address must start with http:// or https:// and carry its server.',
-    // The three keys of the first-start wizard (docs/primer-arranque.md, section 6).
+    'settings.aiUrl.invalid':
+      'The AI engine address is not valid: there is none to test, or it does not start with http:// or https:// and is missing its server.',
+    'settings.ai.unreachable': 'The AI engine did not answer: check the address and that it is up.',
+    // The four keys of the first-start wizard (docs/primer-arranque.md, section 6).
     'setup.alreadyInstalled': 'This installation is already finished: it is not configured twice.',
     'setup.step.incomplete': 'This step is missing something. Check it and try again.',
-    'setup.mail.incomplete':
-      'Email needs the server, the port and the sender address.',
+    'setup.mail.incomplete': 'Email needs the server, the port and the sender address.',
+    'setup.mail.unreachable':
+      'The email server did not answer or did not accept the user and the password.',
     'auth.publicUrl.missing':
       'There is no public address configured: without it the link for the e-mail cannot be built. It is configured in Settings.',
     'users.accountInactive': 'That account is deactivated: activate it before sending it a link.',
@@ -962,7 +985,8 @@ export const EN: Textos = {
     'tickets.tag.forbidden': 'Only the Administrator can retire a tag.',
     'tickets.tag.duplicate': 'That tag already exists.',
     'tickets.cierre.sinComentario': 'To close the ticket you have to say why.',
-    'tickets.etiqueta.desconocida': 'That tag is not in the catalogue. Only the Administrator can create new tags.',
+    'tickets.etiqueta.desconocida':
+      'That tag is not in the catalogue. Only the Administrator can create new tags.',
     'tickets.tag.notFound': 'That tag does not exist.',
     'tickets.category.forbidden': 'Only an Administrator can retire or put back a category.',
     'tickets.tag.required': 'Write something for the tag: it cannot be empty.',

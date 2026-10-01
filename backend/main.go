@@ -77,6 +77,26 @@ func (a ajustesDeTickets) TicketSettings() (ticketservices.TicketSettings, error
 	}, nil
 }
 
+// proberDeCorreo traduce la prueba del correo saliente que pide el módulo de configuración a lo que
+// ofrece el módulo de correo. Vive aquí, en el único sitio donde los dos módulos se conocen, y así
+// **ninguno de los dos importa al otro** (docs/arquitectura.md, sección 4).
+type proberDeCorreo struct {
+	mail *services.Service
+}
+
+// ProbarCorreo prueba la conexión y la autenticación **sin mandar ningún correo**.
+func (p proberDeCorreo) ProbarCorreo(correo settingsservices.CorreoSaliente) error {
+	return p.mail.Probar(services.CorreoSaliente{
+		Host:      correo.Host,
+		Port:      correo.Port,
+		Secure:    correo.Secure,
+		User:      correo.User,
+		Password:  correo.Password,
+		FromName:  correo.FromName,
+		FromEmail: correo.FromEmail,
+	})
+}
+
 // resumidorDeIA traduce lo que `tickets` pide a lo que el módulo `ai` ofrece.
 //
 // Vive aquí, en el único sitio donde los dos módulos se conocen, y así **ninguno de los dos importa al
@@ -217,6 +237,11 @@ func run() error {
 	// directorio y con un reino: probar una conexión es hablar el protocolo, y eso no se duplica.
 	settingsService.SetProber(authService)
 
+	// Y la prueba del correo saliente la contesta `mail`, con la misma conexión y autenticación que
+	// usa para enviar: **sin mandar ningún correo**, que es lo que hace falta en el asistente
+	// (docs/primer-arranque.md, sección 3).
+	settingsService.SetProberDeCorreo(proberDeCorreo{mail: mailService})
+
 	// Reactivar una cuenta de AD pregunta al directorio si esa persona sigue allí, y la pregunta la
 	// contesta `auth` **con la configuración guardada**: la misma búsqueda y la misma cuenta de servicio
 	// con las que se entra (docs/modules/users.md, sección 5, punto 4).
@@ -252,6 +277,12 @@ func run() error {
 		},
 	)
 	ticketsService.SetInsights(resumidorDeIA{ai: aiService})
+
+	// **El motor sale de la configuración, no del entorno**: su dirección y su modelo se guardan
+	// desde Configuración y se leen en cada petición, así que cambiarlos vale sin reiniciar nada. Lo
+	// del entorno queda como respaldo para una instalación que ya lo tuviera puesto así
+	// (docs/modules/ai.md).
+	aiService.SetConfiguracion(instalacionesDeLaConfiguracion{settings: settingsService})
 
 	// El motor también necesita poder **volver a armar el texto** de un ticket: es lo que hace la
 	// puesta al día del arranque, cuando la cola se ha perdido y hay resúmenes a medias
@@ -330,6 +361,12 @@ func run() error {
 	mux.HandleFunc("POST /api/setup/entry", setupController.SaveEntry)
 	mux.HandleFunc("POST /api/setup/location", setupController.SaveLocation)
 	mux.HandleFunc("POST /api/setup/mail", setupController.SaveMail)
+	// Las dos pruebas de conexión del asistente: se prueba **lo que hay en pantalla**, antes de
+	// guardarlo, y por eso van por `POST` con los datos en el cuerpo y no tocan la base. El candado es
+	// el mismo que el del resto del asistente: sellada la instalación, contestan **409**
+	// (docs/primer-arranque.md, sección 6).
+	mux.HandleFunc("POST /api/setup/entry/test", setupController.TestEntry)
+	mux.HandleFunc("POST /api/setup/mail/test", setupController.TestMail)
 	mux.HandleFunc("POST /api/setup/finish", setupController.Finish)
 
 	// El resto de la sesión exige haber entrado, sin mirar el papel.
@@ -411,6 +448,9 @@ func run() error {
 	// (docs/modules/settings.md, sección 5.8).
 	mux.Handle("POST /api/settings/directory/test", admin(http.HandlerFunc(settingsController.TestDirectory)))
 	mux.Handle("POST /api/settings/keycloak/test", admin(http.HandlerFunc(settingsController.TestKeycloak)))
+	// La prueba del motor de IA: pregunta a su comprobación de salud la dirección que se le manda, o
+	// la que hay guardada si no llega ninguna (docs/modules/ai.md).
+	mux.Handle("POST /api/settings/ai/test", admin(http.HandlerFunc(settingsController.TestAI)))
 	mux.Handle("DELETE /api/settings/brand/logo", admin(http.HandlerFunc(settingsController.DeleteLogo)))
 
 	// Y la marca que necesita la aplicación **antes de que nadie entre**: el color institucional y el
@@ -542,6 +582,18 @@ func (i instalacionesDeLaConfiguracion) DireccionPublica() string {
 }
 
 func (i instalacionesDeLaConfiguracion) ZonaHoraria() string { return i.settings.ZonaHoraria() }
+
+// AI traduce el motor de la configuración al tipo que declara el módulo de IA, y **dice si hay uno
+// puesto**: en falso, el módulo de IA usa el respaldo del entorno, que es como funcionaba antes
+// (docs/modules/ai.md).
+func (i instalacionesDeLaConfiguracion) AI() (aiservices.AIDatos, error) {
+	motor, err := i.settings.AI()
+	if err != nil {
+		return aiservices.AIDatos{}, err
+	}
+
+	return aiservices.AIDatos{URL: motor.URL, Modelo: motor.Modelo, Hay: motor.Hay}, nil
+}
 
 // SMTP traduce el correo saliente de la configuración al tipo que declara el módulo de correo, y
 // **dice si hay alguno puesto**: en falso, el remitente usa el del entorno.

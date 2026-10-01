@@ -102,4 +102,3 @@ export const conCuentaPropia: CanActivateFn = async () => {
 
   return usuario.factory ? router.createUrlTree(['/forbidden']) : true;
 };
-

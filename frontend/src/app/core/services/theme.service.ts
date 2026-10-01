@@ -9,20 +9,20 @@ import { Injectable, computed, signal } from '@angular/core';
  * (`docs/interfaz-y-experiencia.md`, sección 6.2).
  */
 export type Tema =
-  | 'claro'
-  | 'oscuro'
-  | 'papel'
-  | 'niebla'
-  | 'contraste'
-  | 'grafito'
-  | 'noche'
-  | 'sepia';
+  'claro' | 'oscuro' | 'papel' | 'niebla' | 'contraste' | 'grafito' | 'noche' | 'sepia';
 
 /** Los de fábrica, que son los que se usan cuando nadie ha elegido. */
 export const TEMAS_DE_FABRICA: readonly Tema[] = ['claro', 'oscuro'];
 
 /** Los seis fijos, cada uno con su paleta. */
-export const TEMAS_FIJOS: readonly Tema[] = ['papel', 'niebla', 'contraste', 'grafito', 'noche', 'sepia'];
+export const TEMAS_FIJOS: readonly Tema[] = [
+  'papel',
+  'niebla',
+  'contraste',
+  'grafito',
+  'noche',
+  'sepia',
+];
 
 /** Todos, en el orden en que se ofrecen: primero los de fábrica. */
 export const TEMAS: readonly Tema[] = [...TEMAS_DE_FABRICA, ...TEMAS_FIJOS];
@@ -58,7 +58,9 @@ export class ThemeService {
    * Es lo que enseña el conmutador: si nadie ha elegido nada, enseña **lo que se ve** —claro u
    * oscuro según el sistema—, no una tercera opción que no existe.
    */
-  readonly tema = computed<Tema>(() => this.eleccion() ?? (this.sistemaOscuro() ? 'oscuro' : 'claro'));
+  readonly tema = computed<Tema>(
+    () => this.eleccion() ?? (this.sistemaOscuro() ? 'oscuro' : 'claro'),
+  );
 
   /** Si todavía no ha elegido nadie: el tema lo están decidiendo los dos de fábrica y el sistema. */
   readonly loDecideElSistema = computed(() => this.eleccion() === null);
@@ -70,7 +72,9 @@ export class ThemeService {
     aplicarAtributo(this.eleccion());
 
     // Si el sistema cambia de claro a oscuro —o al revés— y nadie ha elegido, la página cambia con él.
-    consultaOscuro()?.addEventListener('change', (evento) => this.sistemaOscuro.set(evento.matches));
+    consultaOscuro()?.addEventListener('change', (evento) =>
+      this.sistemaOscuro.set(evento.matches),
+    );
   }
 
   /** Elige un tema, y lo recuerda en este navegador. */

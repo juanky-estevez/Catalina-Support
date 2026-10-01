@@ -1,7 +1,7 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-09-30
 >
 > **Enmendado el 2026-09-30 (novena vez)**: **las tarjetas de Configuración se ordenaron y cada una
 > lleva lo que su título dice**. Estaban descolocadas desde el cambio anterior: «La numeración y el
@@ -645,7 +645,7 @@ modularidad (sección 4.4).
 | --- | --- | --- |
 | El editor de los correos | `/mail` | Administrador |
 
-- **A la izquierda, los diez correos**; a la derecha, el que se está editando: su **asunto**, su
+- **A la izquierda, los once correos**; a la derecha, el que se está editando: su **asunto**, su
   **cuerpo** y sus **marcadores**, con los imprescindibles marcados.
 - **Los dos idiomas van al lado** —el mismo correo en español y en inglés, para ver que dicen lo
   mismo— **y en móvil se apilan**: en un teléfono no caben dos columnas.

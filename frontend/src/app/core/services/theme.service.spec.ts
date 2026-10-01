@@ -1,9 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 
-import { aplicarTemaInicial, TEMAS, TEMAS_DE_FABRICA, TEMAS_FIJOS, ThemeService } from './theme.service';
+import {
+  aplicarTemaInicial,
+  TEMAS,
+  TEMAS_DE_FABRICA,
+  TEMAS_FIJOS,
+  ThemeService,
+} from './theme.service';
 
 /** Un sistema que dice claro u oscuro, para poder cambiar de opinión a mitad de la prueba. */
-function sistema(empiezaOscuro: boolean): { cambiarA: (oscuro: boolean) => void; restaurar: () => void } {
+function sistema(empiezaOscuro: boolean): {
+  cambiarA: (oscuro: boolean) => void;
+  restaurar: () => void;
+} {
   const oyentes = new Set<(evento: MediaQueryListEvent) => void>();
   const original = window.matchMedia;
 

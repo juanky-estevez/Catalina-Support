@@ -53,7 +53,11 @@
             <dt class="text-apagado">{{ t().instalacion.paso4 }}</dt>
             <!-- El correo, si no se puso, se dice: es opcional y hay que saber lo que eso significa. -->
             <dd class="font-medium text-texto">
-              {{ configuracion.mail.host ? t().instalacion.correoPuesto : t().instalacion.correoSinPoner }}
+              {{
+                configuracion.mail.host
+                  ? t().instalacion.correoPuesto
+                  : t().instalacion.correoSinPoner
+              }}
             </dd>
           </div>
         </dl>
@@ -141,7 +145,11 @@
 
     @if (paso() === 2) {
       <!-- ---------------------------------------------- 2 · cómo se entra -->
-      <app-tarjeta nivel="h2" [titulo]="t().instalacion.paso2" [descripcion]="t().configuracion.entradaAyuda">
+      <app-tarjeta
+        nivel="h2"
+        [titulo]="t().instalacion.paso2"
+        [descripcion]="t().configuracion.entradaAyuda"
+      >
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-3">
             <app-selector
@@ -168,7 +176,9 @@
             configuraciones a la vez era ofrecer trabajo que no toca.
           -->
           @if (metodo() === 'ad') {
-            <section class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+            <section
+              class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4"
+            >
               <div>
                 <h3 class="text-sm font-medium text-texto">{{ t().configuracion.directorio }}</h3>
                 <p class="mt-1 text-sm text-apagado">{{ t().configuracion.directorioAyuda }}</p>
@@ -278,11 +288,24 @@
                   (valorChange)="dirId.set($event)"
                 />
               </div>
+
+              <!-- La prueba **no guarda nada**: conecta con el directorio con lo que hay escrito. -->
+              <div>
+                <app-boton
+                  forma="secundario"
+                  [texto]="t().configuracion.probarDirectorio"
+                  [textoTrabajando]="t().configuracion.probando"
+                  [trabajando]="guardando()"
+                  (pulsado)="probarEntrada()"
+                />
+              </div>
             </section>
           }
 
           @if (metodo() === 'keycloak') {
-            <section class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4">
+            <section
+              class="flex flex-col gap-4 rounded-md border border-borde bg-superficie-suave p-4"
+            >
               <div>
                 <h3 class="text-sm font-medium text-texto">{{ t().configuracion.keycloak }}</h3>
                 <p class="mt-1 text-sm text-apagado">{{ t().configuracion.keycloakAyuda }}</p>
@@ -325,6 +348,17 @@
                 [valor]="kcVuelta()"
                 (valorChange)="kcVuelta.set($event)"
               />
+
+              <!-- La prueba **no guarda nada**: lee el reino con lo que hay escrito. -->
+              <div>
+                <app-boton
+                  forma="secundario"
+                  [texto]="t().configuracion.probarKeycloak"
+                  [textoTrabajando]="t().configuracion.probando"
+                  [trabajando]="guardando()"
+                  (pulsado)="probarEntrada()"
+                />
+              </div>
             </section>
           }
         </div>
@@ -409,7 +443,11 @@
 
     @if (paso() === 4) {
       <!-- ---------------------------------------------- 4 · el correo -->
-      <app-tarjeta nivel="h2" [titulo]="t().instalacion.paso4" [descripcion]="t().instalacion.correoOpcional">
+      <app-tarjeta
+        nivel="h2"
+        [titulo]="t().instalacion.paso4"
+        [descripcion]="t().instalacion.correoOpcional"
+      >
         <div class="flex flex-col gap-4">
           <div class="grid gap-4 sm:grid-cols-2">
             <app-campo
@@ -480,6 +518,20 @@
               [ayuda]="t().instalacion.correoRemitenteCorreoAyuda"
               [valor]="correoCorreo()"
               (valorChange)="correoCorreo.set($event)"
+            />
+          </div>
+
+          <!--
+            La prueba del correo **no manda ningún correo**: comprueba la conexión y la autenticación,
+            que es lo que se puede comprobar sin destinatario (`docs/primer-arranque.md`, sección 3).
+          -->
+          <div>
+            <app-boton
+              forma="secundario"
+              [texto]="t().instalacion.probarCorreo"
+              [textoTrabajando]="t().configuracion.probando"
+              [trabajando]="guardando()"
+              (pulsado)="probarCorreo()"
             />
           </div>
         </div>

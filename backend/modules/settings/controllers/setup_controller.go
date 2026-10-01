@@ -68,6 +68,41 @@ func (c *SetupController) Finish(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSetupResponse(estado))
 }
 
+// TestEntry prueba la conexión del paso 2 —el directorio o Keycloak, según el método— **con los datos
+// que llegan**, que son los que hay escritos en pantalla y todavía no están guardados. No toca la
+// base y no guarda nada: contesta lo mismo que las pruebas de Configuración.
+func (c *SetupController) TestEntry(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.SetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	if err := c.service.ProbarPasoDeLaEntrada(dtos.NewSetupStep(entrada)); err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// TestMail prueba la conexión del correo saliente del paso 4 **con los datos que llegan**. Comprueba
+// la conexión y la autenticación y **no manda ningún correo**: en el asistente no hay destinatario.
+func (c *SetupController) TestMail(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.SetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	if err := c.service.ProbarCorreoDeInstalacion(dtos.NewSetupStep(entrada).Mail); err != nil {
+		c.fail(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 // save lee un paso y lo guarda. Los cuatro pasos comparten el mismo cuerpo porque comparten la misma
 // forma: el paso que llega trae **lo suyo** y lo demás viene vacío a propósito.
 func (c *SetupController) save(w http.ResponseWriter, r *http.Request, paso int) {
@@ -109,6 +144,14 @@ func (c *SetupController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.incomplete")
 	case errors.Is(err, services.ErrKeycloakIncomplete):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.incomplete")
+	// Las dos pruebas de conexión del asistente: el detalle queda en el log y a la pantalla le llega
+	// la misma clave que usa Configuración, para que diga lo mismo en los dos sitios.
+	case errors.Is(err, services.ErrDirectoryUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.unreachable")
+	case errors.Is(err, services.ErrKeycloakUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.unreachable")
+	case errors.Is(err, services.ErrCorreoInalcanzable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "setup.mail.unreachable")
 	case errors.Is(err, services.ErrTimeZoneUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.timeZone.unknown")
 	case errors.Is(err, services.ErrPublicURLInvalid):

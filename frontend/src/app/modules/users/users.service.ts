@@ -47,7 +47,13 @@ export interface FiltrosDeCuentas {
 }
 
 /** Los filtros de partida: la lista entera, por la primera página. */
-export const FILTROS_VACIOS: FiltrosDeCuentas = { role: '', origin: '', active: '', q: '', page: 1 };
+export const FILTROS_VACIOS: FiltrosDeCuentas = {
+  role: '',
+  origin: '',
+  active: '',
+  q: '',
+  page: 1,
+};
 
 /** Lo que hace falta para dar de alta una cuenta. */
 export interface AltaDeCuenta {

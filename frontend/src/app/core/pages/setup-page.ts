@@ -46,9 +46,8 @@ const ZONAS_DE_RESPALDO: readonly string[] = [
 /** Las zonas que ofrece el navegador, o la lista corta si no las sabe dar. */
 function zonasDelNavegador(): readonly string[] {
   try {
-    const soportado = (
-      Intl as unknown as { supportedValuesOf?: (clave: string) => string[] }
-    ).supportedValuesOf;
+    const soportado = (Intl as unknown as { supportedValuesOf?: (clave: string) => string[] })
+      .supportedValuesOf;
     const zonas = soportado?.('timeZone');
     if (zonas && zonas.length > 0) {
       return [...zonas, ...DESFASES_FIJOS];
@@ -330,6 +329,54 @@ export class SetupPage {
     try {
       await this.setup.terminar();
       await this.router.navigate(['/login']);
+    } catch (error) {
+      this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  /**
+   * Prueba la conexión del paso 2 **con lo que hay en pantalla**, antes de guardarlo.
+   *
+   * Prueba lo que corresponda al método elegido —el directorio con AD y el reino con Keycloak— y **no
+   * guarda nada**: es lo que evita terminar la instalación con una puerta que no funciona. La contesta
+   * el mismo módulo que la prueba de Configuración (`docs/primer-arranque.md`, sección 3).
+   */
+  protected async probarEntrada(): Promise<void> {
+    const t = this.t().configuracion;
+    await this.probar(
+      () =>
+        this.setup.probarEntrada({
+          entryMethod: this.metodo(),
+          directory: this.directorioEscrito(),
+          keycloak: this.keycloakEscrito(),
+        }),
+      this.metodo() === 'keycloak' ? t.keycloakOk : t.directorioOk,
+    );
+  }
+
+  /**
+   * Prueba la conexión del correo del paso 4 **con lo que hay en pantalla**, antes de guardarlo.
+   *
+   * Comprueba la conexión y la autenticación y **no manda ningún correo**: en el asistente no hay
+   * destinatario (`docs/primer-arranque.md`, sección 3).
+   */
+  protected async probarCorreo(): Promise<void> {
+    await this.probar(
+      () => this.setup.probarCorreo({ mail: this.correoEscrito() }),
+      this.t().instalacion.correoOk,
+    );
+  }
+
+  /** Una prueba de conexión: no guarda nada y cuenta lo que ha pasado en el aviso de arriba. */
+  private async probar(peticion: () => Promise<unknown>, exito: string): Promise<void> {
+    this.guardando.set(true);
+    this.mensaje.set(null);
+
+    try {
+      await peticion();
+      this.mensaje.set({ forma: 'exito', texto: exito });
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textos.error(claveDelError(error)) });
     } finally {

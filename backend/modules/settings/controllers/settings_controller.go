@@ -63,6 +63,8 @@ func (c *SettingsController) Update(w http.ResponseWriter, r *http.Request) {
 		InternalNotification: entrada.InternalNotification,
 		TimeZone:             entrada.TimeZone,
 		PublicAppURL:         entrada.PublicAppURL,
+		AIURL:                entrada.AIURL,
+		AIModel:              entrada.AIModel,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, r, err)
@@ -227,6 +229,27 @@ func (c *SettingsController) TestKeycloak(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// TestAI prueba el motor de IA **sin guardarlo**: pregunta a su comprobación de salud.
+//
+// Prueba **la dirección que llega en el cuerpo** —lo que hay en pantalla—, y nunca la guardada: si
+// llega vacía se dice que no hay nada que probar (docs/modules/ai.md).
+func (c *SettingsController) TestAI(w http.ResponseWriter, r *http.Request) {
+	var entrada dtos.AITestRequest
+	if err := json.NewDecoder(r.Body).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+
+	if err := c.service.TestAI(entrada.URL); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+
+	// **La misma forma que las pruebas del directorio y de Keycloak**: las tres contestan lo mismo,
+	// para que la pantalla no tenga que saber cuál está probando.
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 // fail traduce el error del servicio a la clave y el código que le tocan
 // (docs/modules/settings.md, sección 7).
 func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err error) {
@@ -245,6 +268,10 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.directory.unreachable")
 	case errors.Is(err, services.ErrKeycloakUnreachable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.keycloak.unreachable")
+	case errors.Is(err, services.ErrAIURLInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.aiUrl.invalid")
+	case errors.Is(err, services.ErrAIUnreachable):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.unreachable")
 	case errors.Is(err, services.ErrLanguageUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.language.unknown")
 	case errors.Is(err, services.ErrPrimaryColorInvalid):

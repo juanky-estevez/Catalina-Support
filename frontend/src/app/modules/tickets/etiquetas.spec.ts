@@ -198,7 +198,11 @@ describe('la normalización de una etiqueta', () => {
   it('un texto se parte en sus etiquetas por espacios y comas', () => {
     // En el campo las palabras ya han pasado por `normalizarAlEscribir`, así que llegan unidas; esto es
     // para lo que se pega o se escribe de un tirón.
-    expect(etiquetasDeTexto('Red Wifi, licencia-office')).toEqual(['red', 'wifi', 'licencia-office']);
+    expect(etiquetasDeTexto('Red Wifi, licencia-office')).toEqual([
+      'red',
+      'wifi',
+      'licencia-office',
+    ]);
     expect(etiquetasDeTexto('red-wifi, vpn')).toEqual(['red-wifi', 'vpn']);
     expect(etiquetasDeTexto('  ,  ')).toEqual([]);
   });
@@ -294,8 +298,8 @@ describe('quién puede etiquetar un ticket', () => {
   it('el Administrador mira y un cerrado no se etiqueta', () => {
     expect(puedeEtiquetarElTicket({ ...base, esSoporte: true, soloLectura: true })).toBe(false);
     expect(puedeEtiquetarElTicket({ ...base, esSoporte: true, cerrado: true })).toBe(false);
-    expect(puedeEtiquetarElTicket({ ...base, interno: true, esDesarrollo: true, cerrado: true })).toBe(
-      false,
-    );
+    expect(
+      puedeEtiquetarElTicket({ ...base, interno: true, esDesarrollo: true, cerrado: true }),
+    ).toBe(false);
   });
 });

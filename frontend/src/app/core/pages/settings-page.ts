@@ -1,11 +1,15 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 
 import { TranslationService } from '../i18n/translation.service';
 import { BrandService, logoDeFabrica, type Marca } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
+import {
+  SettingsService,
+  type Configuracion,
+  type DirectorioEscrito,
+  type KeycloakEscrito,
+} from '../services/settings.service';
 import { Aviso } from '../../shared/components/aviso';
 import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
@@ -52,9 +56,8 @@ const ZONAS_DE_RESPALDO: readonly string[] = [
  */
 function zonasDelNavegador(): readonly string[] {
   try {
-    const soportado = (
-      Intl as unknown as { supportedValuesOf?: (clave: string) => string[] }
-    ).supportedValuesOf;
+    const soportado = (Intl as unknown as { supportedValuesOf?: (clave: string) => string[] })
+      .supportedValuesOf;
     const zonas = soportado?.('timeZone');
     if (zonas && zonas.length > 0) {
       // **Los desfases fijos se añaden a mano**: `Intl.supportedValuesOf` sólo trae zonas canónicas y
@@ -77,82 +80,6 @@ function paraBuscar(texto: string): string {
   return texto.toLowerCase().replace(/_/g, ' ').replace(/\//g, ' ').replace(/-/g, ' ');
 }
 
-/** Un hueco del logo, tal y como lo cuenta la configuración. */
-interface HuecoDeLogo {
-  readonly filled: boolean;
-  readonly fileName?: string;
-  readonly size?: number;
-  readonly width?: number;
-  readonly height?: number;
-  readonly updatedAt?: string;
-}
-
-interface Configuracion {
-  /**
-   * El nombre de la instalación: lo que se lee donde antes decía «Catalina Support».
-   *
-   * Va con **la marca** y no con la numeración: es cómo se llama esta instalación, y se enseña junto
-   * al logo en la pantalla de entrada y en el menú (docs/modules/settings.md).
-   */
-  readonly name: string;
-  /**
-   * Cómo se entra en la instalación: el método y las dos configuraciones, **sin sus secretos**.
-   *
-   * Lo que llega de la contraseña de la cuenta de servicio y del secreto del cliente son dos
-   * booleanos —`passwordSet` y `secretSet`—, y nunca el valor: se guardan para hablar con el
-   * directorio y no salen por la API (docs/modules/settings.md, sección 5.8).
-   */
-  readonly entryMethod: string;
-  readonly directory: Directorio;
-  readonly keycloak: Keycloak;
-  readonly language: string;
-  readonly primaryColor: string;
-  /**
-   * La zona horaria de la instalación, en nombre IANA (`America/Guayaquil`).
-   *
-   * Es la que decide cómo se leen todas las fechas, aquí y en los correos: las fechas guardadas siguen
-   * en UTC, así que cambiarla no mueve ningún ticket, sólo cambia la hora a la que se lee.
-   */
-  readonly timeZone: string;
-  /**
-   * La dirección pública de la instalación: la base de los enlaces que salen en los correos y la
-   * vuelta de Keycloak. La aplicación se navega en relativo, así que sirve cualquier dirección con la
-   * que se llegue a ella.
-   */
-  readonly publicAppUrl: string;
-  readonly numberPrefix: string;
-  readonly mainAssignment: string;
-  readonly mainNotification: string;
-  readonly internalAssignment: string;
-  readonly internalNotification: string;
-  readonly updatedAt: string;
-  readonly brand: { readonly light: HuecoDeLogo; readonly dark: HuecoDeLogo };
-}
-
-/** La configuración del directorio, tal y como viaja por la API. */
-interface Directorio {
-  readonly host: string;
-  readonly port: string;
-  readonly useTls: boolean;
-  readonly bindDn: string;
-  readonly searchBase: string;
-  readonly userFilter: string;
-  readonly attrEmail: string;
-  readonly attrName: string;
-  readonly attrLastName: string;
-  readonly attrId: string;
-  /** Si hay contraseña guardada. **El valor no llega nunca.** */
-  readonly passwordSet: boolean;
-}
-
-/** La configuración de Keycloak, con la misma regla para el secreto. */
-interface Keycloak {
-  readonly issuer: string;
-  readonly clientId: string;
-  readonly redirectUri: string;
-  readonly secretSet: boolean;
-}
-
 /**
  * La pantalla de Configuración: la marca de la instalación.
  *
@@ -170,7 +97,7 @@ interface Keycloak {
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
-  private readonly http = inject(HttpClient);
+  private readonly ajustes = inject(SettingsService);
   private readonly textos = inject(TranslationService);
   private readonly marca = inject(BrandService);
   private readonly sesion = inject(SessionService);
@@ -208,7 +135,9 @@ export class SettingsPage {
   protected readonly archivoOscuro = signal<File | null>(null);
 
   protected readonly cambioDeColorPendiente = computed(
-    () => this.colorElegido().toLowerCase() !== (this.configuracion()?.primaryColor ?? '').toLowerCase(),
+    () =>
+      this.colorElegido().toLowerCase() !==
+      (this.configuracion()?.primaryColor ?? '').toLowerCase(),
   );
 
   // --- Cómo se entra: el método y las dos configuraciones ---
@@ -242,7 +171,9 @@ export class SettingsPage {
   /** Lo mismo con Keycloak: sin emisor, cliente y vuelta no hay camino. */
   protected readonly keycloakConfigurado = computed(
     () =>
-      this.kcEmisor().trim() !== '' && this.kcCliente().trim() !== '' && this.kcVuelta().trim() !== '',
+      this.kcEmisor().trim() !== '' &&
+      this.kcCliente().trim() !== '' &&
+      this.kcVuelta().trim() !== '',
   );
 
   /** Si hay algo que guardar en cómo se entra. */
@@ -293,6 +224,10 @@ export class SettingsPage {
   protected readonly busquedaZona = signal('');
   /** La dirección pública que se está escribiendo, antes de guardarla. */
   protected readonly direccionPublica = signal('');
+
+  // --- El motor de IA: la dirección y el modelo ---
+  protected readonly iaDireccion = signal('');
+  protected readonly iaModelo = signal('');
 
   /** Las zonas que se ofrecen: las del navegador, o la lista corta si no las sabe dar. */
   protected readonly zonas = signal<readonly string[]>(zonasDelNavegador());
@@ -395,6 +330,19 @@ export class SettingsPage {
     );
   });
 
+  /** **Si hay algo que guardar en el motor de IA**: su tarjeta, con su botón. */
+  protected readonly cambioDeIAPendiente = computed(() => {
+    const configuracion = this.configuracion();
+    if (!configuracion) {
+      return false;
+    }
+
+    return (
+      this.iaDireccion().trim() !== configuracion.aiUrl ||
+      this.iaModelo().trim() !== configuracion.aiModel
+    );
+  });
+
   /** La dirección del logo propio que se está enseñando, con su sello para no ver el viejo. */
   protected readonly versionDeLaMarca = this.marca.version;
 
@@ -461,17 +409,7 @@ export class SettingsPage {
     }
 
     await this.pedir(
-      () => {
-        const datos = new FormData();
-        datos.append('logo', archivo, archivo.name);
-
-        return firstValueFrom(
-          this.http.post<Configuracion>(
-            `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
-            datos,
-          ),
-        );
-      },
+      () => this.marca.subirLogo(oscuro, archivo),
       this.t().configuracion.logoSubido,
       () => {
         if (oscuro) {
@@ -485,15 +423,7 @@ export class SettingsPage {
 
   /** Quita el logo propio de un hueco y lo devuelve al de fábrica. */
   protected async volverAlDeFabrica(oscuro: boolean): Promise<void> {
-    await this.pedir(
-      () =>
-        firstValueFrom(
-          this.http.delete<Configuracion>(
-            `/api/settings/brand/logo?variant=${oscuro ? 'oscuro' : 'claro'}`,
-          ),
-        ),
-      this.t().configuracion.logoQuitado,
-    );
+    await this.pedir(() => this.marca.restablecerLogo(oscuro), this.t().configuracion.logoQuitado);
   }
 
   /**
@@ -511,9 +441,7 @@ export class SettingsPage {
     }
 
     try {
-      const marca = await firstValueFrom(
-        this.http.get<Marca>(`/api/settings/brand?color=${encodeURIComponent(valor)}`),
-      );
+      const marca = await this.marca.previsualizarColor(valor);
       this.colorResuelto.set(marca.colors);
       this.aplicarVistaPrevia(marca.colors);
     } catch {
@@ -531,12 +459,10 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            primaryColor: this.colorElegido(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          primaryColor: this.colorElegido(),
+        }),
       this.t().configuracion.marcaGuardada,
       () => {
         this.colorResuelto.set(null);
@@ -564,15 +490,13 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            name: this.nombreElegido().trim(),
-            // **El idioma va con el nombre** (decisión del responsable, 2026-09-29): los guarda el mismo
-            // botón, y sin esto se mandaría el que estaba cargado y no el que se acaba de elegir.
-            language: this.idioma(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          name: this.nombreElegido().trim(),
+          // **El idioma va con el nombre** (decisión del responsable, 2026-09-29): los guarda el mismo
+          // botón, y sin esto se mandaría el que estaba cargado y no el que se acaba de elegir.
+          language: this.idioma(),
+        }),
       this.t().configuracion.instalacionGuardada,
     );
   }
@@ -596,6 +520,11 @@ export class SettingsPage {
     await this.guardarLaConfiguracion(this.t().configuracion.numeracionGuardada);
   }
 
+  /** Guarda el motor de IA: la dirección y el modelo. */
+  protected async guardarIA(): Promise<void> {
+    await this.guardarLaConfiguracion(this.t().configuracion.motorGuardado);
+  }
+
   /**
    * Guarda lo que pida la tarjeta que lo pide. El `PUT` manda **la configuración entera** —es un
    * documento, no un parche—, así que sólo cambia **el mensaje con el que se confirma**, que es lo que
@@ -609,20 +538,23 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            primaryColor: this.colorElegido(),
-            language: this.idioma(),
-            timeZone: this.zonaElegida().trim(),
-            publicAppUrl: this.direccionPublica().trim(),
-            numberPrefix: this.prefijo().trim(),
-            mainAssignment: this.asignacionPrincipal(),
-            mainNotification: this.avisoPrincipal(),
-            internalAssignment: this.asignacionInterno(),
-            internalNotification: this.avisoInterno(),
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          primaryColor: this.colorElegido(),
+          language: this.idioma(),
+          timeZone: this.zonaElegida().trim(),
+          publicAppUrl: this.direccionPublica().trim(),
+          numberPrefix: this.prefijo().trim(),
+          mainAssignment: this.asignacionPrincipal(),
+          mainNotification: this.avisoPrincipal(),
+          internalAssignment: this.asignacionInterno(),
+          internalNotification: this.avisoInterno(),
+          // **El motor de IA también va aquí**: es un `PUT` entero, así que la configuración se
+          // manda completa con lo que hay en pantalla, y guardar la región no borra lo escrito en
+          // la tarjeta del motor.
+          aiUrl: this.iaDireccion().trim(),
+          aiModel: this.iaModelo().trim(),
+        }),
       mensaje,
     );
   }
@@ -754,14 +686,12 @@ export class SettingsPage {
 
     await this.pedir(
       () =>
-        firstValueFrom(
-          this.http.put<Configuracion>('/api/settings', {
-            ...configuracion,
-            entryMethod: this.metodo(),
-            directory: { ...configuracion.directory, ...this.directorioEscrito() },
-            keycloak: { ...configuracion.keycloak, ...this.keycloakEscrito() },
-          }),
-        ),
+        this.ajustes.guardar({
+          ...configuracion,
+          entryMethod: this.metodo(),
+          directory: { ...configuracion.directory, ...this.directorioEscrito() },
+          keycloak: { ...configuracion.keycloak, ...this.keycloakEscrito() },
+        }),
       this.t().configuracion.entradaGuardada,
     );
   }
@@ -775,8 +705,7 @@ export class SettingsPage {
    */
   protected async probarDirectorio(): Promise<void> {
     await this.probar(
-      '/api/settings/directory/test',
-      this.directorioEscrito(),
+      () => this.ajustes.probarDirectorio(this.directorioEscrito()),
       this.t().configuracion.directorioOk,
     );
   }
@@ -784,14 +713,26 @@ export class SettingsPage {
   /** Lo mismo con Keycloak: se lee el reino y se comprueba que dice dónde está su pantalla. */
   protected async probarKeycloak(): Promise<void> {
     await this.probar(
-      '/api/settings/keycloak/test',
-      this.keycloakEscrito(),
+      () => this.ajustes.probarKeycloak(this.keycloakEscrito()),
       this.t().configuracion.keycloakOk,
     );
   }
 
+  /**
+   * Prueba el motor de IA **con lo que hay en pantalla**: se le pregunta a su comprobación de salud.
+   *
+   * Si el campo está vacío, el backend prueba **la dirección guardada**, que es lo que permite
+   * comprobar el motor ya configurado sin volver a escribirlo.
+   */
+  protected async probarIA(): Promise<void> {
+    await this.probar(
+      () => this.ajustes.probarMotor(this.iaDireccion().trim()),
+      this.t().configuracion.motorOk,
+    );
+  }
+
   /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
-  private directorioEscrito(): Partial<Directorio> & { bindPassword?: string } {
+  private directorioEscrito(): DirectorioEscrito {
     return {
       host: this.dirServidor().trim(),
       port: this.dirPuerto().trim(),
@@ -808,7 +749,7 @@ export class SettingsPage {
     };
   }
 
-  private keycloakEscrito(): Partial<Keycloak> & { clientSecret?: string } {
+  private keycloakEscrito(): KeycloakEscrito {
     return {
       issuer: this.kcEmisor().trim(),
       clientId: this.kcCliente().trim(),
@@ -818,12 +759,12 @@ export class SettingsPage {
   }
 
   /** Una prueba de conexión: no guarda nada y cuenta lo que ha pasado en el aviso de arriba. */
-  private async probar(url: string, cuerpo: object, exito: string): Promise<void> {
+  private async probar(peticion: () => Promise<unknown>, exito: string): Promise<void> {
     this.guardando.set(true);
     this.mensaje.set(null);
 
     try {
-      await firstValueFrom(this.http.post(url, cuerpo));
+      await peticion();
       this.mensaje.set({ forma: 'exito', texto: exito });
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
@@ -853,12 +794,13 @@ export class SettingsPage {
   private async cargar(): Promise<void> {
     this.cargando.set(true);
     try {
-      const configuracion = await firstValueFrom(this.http.get<Configuracion>('/api/settings'));
+      const configuracion = await this.ajustes.cargar();
       this.configuracion.set(configuracion);
       this.ponerEntrada(configuracion);
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerIA(configuracion);
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
     } finally {
@@ -882,6 +824,7 @@ export class SettingsPage {
       this.nombreElegido.set(configuracion.name);
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
+      this.ponerIA(configuracion);
       despues?.();
       this.mensaje.set({ forma: 'exito', texto: exito });
       void this.marca.cargar();
@@ -902,6 +845,12 @@ export class SettingsPage {
     this.avisoPrincipal.set(configuracion.mainNotification);
     this.asignacionInterno.set(configuracion.internalAssignment);
     this.avisoInterno.set(configuracion.internalNotification);
+  }
+
+  /** Deja los campos del motor de IA con lo que hay guardado. */
+  private ponerIA(configuracion: Configuracion): void {
+    this.iaDireccion.set(configuracion.aiUrl ?? '');
+    this.iaModelo.set(configuracion.aiModel ?? '');
   }
 
   /**

@@ -57,9 +57,17 @@ export class MailService {
   }
 
   /** Guarda el texto de una plantilla. El backend valida los marcadores. */
-  guardar(key: string, language: string, subject: string, body: string): Promise<RespuestaDePlantilla> {
+  guardar(
+    key: string,
+    language: string,
+    subject: string,
+    body: string,
+  ): Promise<RespuestaDePlantilla> {
     return firstValueFrom(
-      this.http.put<RespuestaDePlantilla>(`/api/mail/templates/${key}/${language}`, { subject, body }),
+      this.http.put<RespuestaDePlantilla>(`/api/mail/templates/${key}/${language}`, {
+        subject,
+        body,
+      }),
     );
   }
 
@@ -76,9 +84,17 @@ export class MailService {
    * Se manda **el borrador** que se está escribiendo, y no lo guardado: la vista previa sirve para
    * decidir antes de guardar, y además avisa del marcador inventado en el momento de escribirlo.
    */
-  previsualizar(key: string, language: string, subject: string, body: string): Promise<VistaPrevia> {
+  previsualizar(
+    key: string,
+    language: string,
+    subject: string,
+    body: string,
+  ): Promise<VistaPrevia> {
     return firstValueFrom(
-      this.http.post<VistaPrevia>(`/api/mail/templates/${key}/${language}/preview`, { subject, body }),
+      this.http.post<VistaPrevia>(`/api/mail/templates/${key}/${language}/preview`, {
+        subject,
+        body,
+      }),
     );
   }
 

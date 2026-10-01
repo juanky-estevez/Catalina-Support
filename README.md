@@ -42,8 +42,9 @@ y las dos conversaciones no se mezclan.
 - **Estados** con sus transiciones: nuevo, en progreso, en espera, resuelto, cerrado y escalado. Cada
   cambio **explica lo que va a pasar** antes de hacerlo, y **cerrar exige decir por qué**.
 - **Dos resúmenes por ticket los redacta un motor de IA propio** —«Motivo» y «Última acción»—, en
-  español y en inglés. Es **opcional a propósito**: si el motor no está, la mesa de ayuda funciona
-  entera.
+  español y en inglés. **El motor se levanta aparte** —como el directorio y Keycloak— y es **opcional**:
+  sin él la mesa de ayuda **funciona entera**, sin los dos resúmenes, y se añade después desde
+  Configuración.
 - **Personas y permisos**: usuario, Soporte, Desarrollo y Administrador, cada uno con lo suyo.
   Soporte no escribe en el interno y Desarrollo no escribe en el principal: **la interfaz no ofrece
   lo que no se puede hacer**, y el servidor tampoco lo acepta.
@@ -89,7 +90,8 @@ docker compose -f dev.yml ps
 ejecutar ningún guion. Los contenedores comparten la red `catalina-support-ai` con **el motor de IA**
 —que vive en su propio compose porque un solo motor sirve a desarrollo y a producción—: **la crea el
 entorno** y **el motor entra en ella**, así que puedes levantar el motor cuando quieras, con el entorno
-ya en marcha. El motor sigue siendo opcional: `docker compose -f ai.yml up -d`.
+ya en marcha. **El motor de IA se levanta aparte** y es opcional: `docker compose -f ai.yml up -d` (la
+primera vez baja su modelo, ~1,1 GB, al volumen). Sin él la mesa de ayuda funciona.
 
 - **La interfaz, en `http://127.0.0.1:11001`.** Así se prueba sin nginx y sin certificados, que es
   lo más cómodo para un primer contacto. El backend queda en `http://127.0.0.1:11002`
@@ -105,21 +107,24 @@ ya en marcha. El motor sigue siendo opcional: `docker compose -f ai.yml up -d`.
   Deja **once cuentas** (`user1@demo.com` … `dev3@demo.com`), **25 tickets** con su historia y sus
   adjuntos. Todas las cuentas entran con la contraseña **`123123123`**. **Cuidado: el guion borra
   los tickets que hubiera** y deja la base en un estado conocido.
-- **El motor de IA es opcional**, y va en **su propio compose** (el modelo vive en un volumen, y no
-  caben dos: el mismo motor sirve a desarrollo y a producción). Se explica abajo **con lo que
-  consume**:
+- **El motor de IA se levanta aparte** —como el directorio y Keycloak— y **es opcional**: sin él la
+  mesa de ayuda funciona, sin los dos resúmenes. Abajo se explica **cómo levantarlo, lo que consume** y
+  cómo cambiarlo por otro modelo.
 
-  ```bash
-  docker compose -f ai.yml up -d
-  ```
-
-En desarrollo también hay **nginx delante** (para probar con el dominio y el certificado de verdad)
-y, detrás de un perfil, un **directorio de pruebas (OpenLDAP)** y un **Keycloak** para probar los dos
-caminos de entrada:
+**El directorio y Keycloak son aparte, y son opcionales** (decisión del responsable): la instalación
+entra por **uno de los tres métodos**, y el que se use puede ser **el que ya tiene la institución**.
+Para **probarlos** en desarrollo hay dos servicios de pruebas detrás de un perfil —un directorio
+(OpenLDAP) y un Keycloak— que **no se levantan con el entorno**:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d
+docker compose -f dev.yml --profile auth up -d   # sólo para probar esos dos caminos
 ```
+
+**En producción, el directorio y Keycloak no se levantan aquí**: se configura el que ya exista —su
+servidor, su reino, sus credenciales— en la pantalla de **Configuración**, y la instalación entra
+contra él. Lo que trae el proyecto es el camino para hablar con ellos, no el servidor.
+
+En desarrollo también hay **nginx delante**, para probar con el dominio y el certificado de verdad.
 
 ### Ponerlo a funcionar de verdad (producción)
 
@@ -139,7 +144,7 @@ docker compose -f dev.yml --profile auth up -d
    | `ADMIN_PASSWORD` | La contraseña de **la cuenta de fábrica** (`admin`): la puerta para entrar la primera vez, y la única que entra **siempre**, sea cual sea el método configurado |
    | `TOKEN_SECRET` | El secreto con el que se firman las sesiones. **Largo y distinto en cada instalación** |
    | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Los datos de la base. La contraseña, puesta aquí, es la que se le da al contenedor al crearla |
-   | `AI_URL`, `AI_MODEL` | Dónde está el motor de IA y con qué modelo. **Es opcional**: si no hay motor, la aplicación funciona igual |
+   | `AI_URL`, `AI_MODEL` | **Opcional**: dónde está el motor de IA y con qué modelo. **La fuente es Configuración** —con su botón de «Probar la conexión»—, y esto queda como respaldo para una instalación que ya lo tuviera puesto aquí |
    | `TIMEZONE` | La zona del **contenedor** (sus registros). **No** es la región de la instalación: esa se elige en la pantalla, y es la que decide cómo se leen las fechas |
    | `PUBLIC_APP_URL` | **Opcional**: la dirección pública se configura en la pantalla y esto queda como respaldo |
 
@@ -188,7 +193,9 @@ docker compose -f dev.yml --profile auth up -d
      Keycloak. Sirve http o https, con puerto si hace falta, y también `localhost`. **Si no es https,
      la pantalla lo avisa** —la contraseña y la sesión viajan sin cifrar— y no bloquea nada: para
      probarlo en local está bien, y para usarlo en serio conviene un certificado;
-   - **el idioma de la instalación**, el prefijo de los tickets y su reparto.
+   - **el idioma de la instalación**, el prefijo de los tickets y su reparto;
+   - **el motor de IA**: su dirección y su modelo, con su botón de «Probar la conexión». Es opcional:
+     sin él la mesa de ayuda funciona entera, sin los dos resúmenes del ticket.
 > **La primera vez, la aplicación te lleva a su vista de instalación.** Al abrirla en una instalación
 > nueva —la base recién creada, sin el sello de instalación— aparece **`/setup`**: cuatro pasos que
 > piden **el nombre y el idioma, cómo se entra, la región y la dirección, y el correo saliente**, con
@@ -206,13 +213,24 @@ docker compose -f dev.yml --profile auth up -d
 
 ### El motor de IA, y lo que consume
 
-**Es opcional a propósito**: si no está, la mesa de ayuda **funciona entera** y los dos campos que
-redacta —«Motivo» y «Última acción»— se quedan sin texto, sin que nada se rompa.
+**Va aparte y es opcional**, como el directorio y Keycloak: se levanta con su propio comando y **un solo
+motor sirve a desarrollo y a producción** (el modelo ocupa ~1,1 GB, en un volumen). **La primera vez baja
+su modelo**, y se ve en sus registros:
 
 ```bash
-docker compose -f ai.yml up -d        # la primera vez descarga el modelo (~1,1 GB)
-docker compose -f ai.yml logs -f ai   # se ve la descarga y, después, el servidor
+docker compose -f ai.yml up -d         # la primera vez descarga el modelo (~1,1 GB)
+docker compose -f ai.yml logs -f ai    # la descarga y, después, el servidor
 ```
+
+**Sin él, la mesa de ayuda funciona entera**: los dos campos que redacta se quedan sin texto y la
+pantalla lo dice, para que nadie se quede sin trabajar mientras se arregla. Y se **añade cuando se
+quiera**, sin reinstalar nada.
+
+**Su dirección y su modelo se configuran en Configuración**, con el botón de «Probar la conexión», que
+pregunta a la comprobación de salud del motor. La instalación los lee **en cada petición**, así que
+cambiarlos vale sin reiniciar nada. Las variables `AI_URL` y `AI_MODEL` del archivo de entorno quedan
+**como respaldo** para una instalación que ya las tuviera puestas; `AI_PALABRAS` y
+`AI_ESPERA_SEGUNDOS` siguen siendo ajuste del entorno.
 
 **El modelo por defecto** es `qwen2.5-1.5b-instruct`, en cuantización `q4_k_m`:
 
@@ -223,11 +241,11 @@ docker compose -f ai.yml logs -f ai   # se ve la descarga y, después, el servid
 | **Tiempo por resumen** | **entre 12 y 24 segundos** por campo, en CPU |
 | **Procesador** | **no hace falta GPU**: va por CPU |
 
-**Cambiarlo por otro modelo** es dejar su `.gguf` en el volumen y poner su nombre en `ai.yml`
-(`--model /modelos/<archivo>.gguf`), **ajustando el tope de memoria** del contenedor a lo que pida el
-nuevo: **un modelo más grande pide más memoria y responde más rápido**, y el tope está puesto justo por
-encima de lo que ocupa el de por defecto. La aplicación **no elige el modelo**: vive en los
-contenedores, que es de donde se sirve, y la instalación sólo **prueba** que el motor responde.
+**Cambiarlo por otro modelo** es dejar su `.gguf` en el volumen y poner su nombre en el servicio `ai`
+de `ai.yml` (`--model /modelos/<archivo>.gguf`), **ajustando el tope de memoria** del contenedor a lo
+que pida el nuevo: **un modelo más grande pide más memoria y responde más rápido**, y el tope está
+puesto justo por encima de lo que ocupa el de por defecto. El nombre del modelo que se le pide al
+motor se elige en **Configuración**, y la instalación **comprueba** que responde.
 
 ## Las pruebas
 

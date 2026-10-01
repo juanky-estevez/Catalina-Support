@@ -31,7 +31,11 @@ import { SessionService } from '../services/session.service';
  * sesión**: si alguien con sesión abre un enlace caducado, lo que pasa es que el enlace caducó, no
  * que su sesión se haya muerto.
  */
-const RUTAS_QUE_NO_ECHAN_A_NADIE = ['/api/auth/login', '/api/auth/password/forgot', '/api/auth/password/reset'];
+const RUTAS_QUE_NO_ECHAN_A_NADIE = [
+  '/api/auth/login',
+  '/api/auth/password/forgot',
+  '/api/auth/password/reset',
+];
 
 export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
   const sesion = inject(SessionService);

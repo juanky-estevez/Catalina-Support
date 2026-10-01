@@ -75,7 +75,9 @@ describe('apiInterceptor', () => {
     const navegar = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     // Entrar no lleva token: el 401 es «esas credenciales no valen», y eso lo cuenta la pantalla.
-    const llamada = firstValueFrom(http.post('/api/auth/login', { email: 'a@b.com', password: 'x' }));
+    const llamada = firstValueFrom(
+      http.post('/api/auth/login', { email: 'a@b.com', password: 'x' }),
+    );
     control
       .expectOne('/api/auth/login')
       .flush({ error: 'auth.invalidCredentials' }, { status: 401, statusText: 'Unauthorized' });

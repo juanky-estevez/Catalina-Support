@@ -31,7 +31,13 @@ export const ESTADOS_DEL_PRINCIPAL = [
 ] as const;
 
 /** Los cinco del interno: el interno **es** la escalación, así que no tiene ese estado. */
-export const ESTADOS_DEL_INTERNO = ['nuevo', 'en progreso', 'en espera', 'resuelto', 'cerrado'] as const;
+export const ESTADOS_DEL_INTERNO = [
+  'nuevo',
+  'en progreso',
+  'en espera',
+  'resuelto',
+  'cerrado',
+] as const;
 
 /** Los tipos de adjunto que se pueden ver dentro del ticket. Lo demás se descarga siempre. */
 const PREVISUALIZABLES = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'];
@@ -148,7 +154,11 @@ export function nombreDe(persona: { name: string; lastName: string } | undefined
  * si falló, se dice con palabras (`docs/modules/ai.md`, decisiones 2 y 8). Un resumen vacío dice
  * «—», que es lo que se enseña cuando todavía no hay nada que contar.
  */
-export function textoDelResumen(resumen: Resumen | undefined, idioma: Idioma, textos: Textos): string {
+export function textoDelResumen(
+  resumen: Resumen | undefined,
+  idioma: Idioma,
+  textos: Textos,
+): string {
   if (!resumen) {
     return textos.tickets.resumenVacio;
   }
@@ -255,7 +265,9 @@ export const TOPE_DE_ETIQUETA = 32;
  * misma etiqueta, y dejar dos formas de escribirla es justo lo que la normalización evita.
  */
 export function normalizarEtiqueta(texto: string): string {
-  return limpiarEtiqueta(texto).replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return limpiarEtiqueta(texto)
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -272,13 +284,15 @@ export function normalizarAlEscribir(texto: string): string {
 
 /** La limpieza común: sin acentos, en minúsculas, espacios a guiones y fuera lo que no vale. */
 function limpiarEtiqueta(texto: string): string {
-  return texto
-    .normalize('NFD')
-    // Los acentos llegan como marcas sueltas después de descomponer: se quitan, no se sustituyen.
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+  return (
+    texto
+      .normalize('NFD')
+      // Los acentos llegan como marcas sueltas después de descomponer: se quitan, no se sustituyen.
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+  );
 }
 
 /**

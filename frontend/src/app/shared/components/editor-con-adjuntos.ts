@@ -367,10 +367,15 @@ export function colocacionDeLasSugerencias(
 ): { izquierda: number; arriba: number; maxAlto: number } {
   const margen = 8;
   const cabeDebajo = cursor.abajo + altoDeLaLista + margen <= ventana.alto;
-  const arriba = cabeDebajo ? cursor.abajo + 4 : Math.max(margen, cursor.arriba - altoDeLaLista - 4);
+  const arriba = cabeDebajo
+    ? cursor.abajo + 4
+    : Math.max(margen, cursor.arriba - altoDeLaLista - 4);
 
   // Y nunca se sale por la derecha: si no cabe, se aprieta contra el borde.
-  const izquierda = Math.max(margen, Math.min(cursor.izquierda, ventana.ancho - anchoDeLaLista - margen));
+  const izquierda = Math.max(
+    margen,
+    Math.min(cursor.izquierda, ventana.ancho - anchoDeLaLista - margen),
+  );
 
   return { izquierda, arriba, maxAlto: altoDeLaLista };
 }
@@ -592,9 +597,7 @@ export interface TextosDelEditorConAdjuntos {
         es lo que permite distinguir a dos personas que se llaman igual. Se elige con el ratón o con el
         teclado (el botón es un botón de verdad), y **Escape** cierra la lista sin tocar lo escrito.
       -->
-      @if (
-        puedeEtiquetar() && mencionAMedias() !== null && sugerenciasDeMencion().length
-      ) {
+      @if (puedeEtiquetar() && mencionAMedias() !== null && sugerenciasDeMencion().length) {
         <div
           class="fixed z-50 flex max-w-[20rem] flex-wrap gap-1 overflow-y-auto rounded-md border border-borde-fuerte bg-superficie p-2 shadow-lg"
           role="listbox"
@@ -1092,7 +1095,9 @@ export class EditorConAdjuntos {
   }
 
   /** Dónde poner la lista: el rectángulo del cursor, pasado por el ayudante puro. */
-  private posicionJuntoAlCursor(rango: Range): { izquierda: number; arriba: number; maxAlto: number } | null {
+  private posicionJuntoAlCursor(
+    rango: Range,
+  ): { izquierda: number; arriba: number; maxAlto: number } | null {
     const caja = rango.getBoundingClientRect();
     if (!caja.width && !caja.height) {
       // Un cursor sin caja (raro, pero pasa) no da dónde ponerla: mejor no enseñarla mal puesta.

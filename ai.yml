@@ -1,0 +1,79 @@
+# =====================================================================================
+#  El motor de IA — un contenedor, **compartido por desarrollo y producción**
+#
+#  **Va aparte y es opcional** (decisión y corrección del responsable, 2026-09-30): se levanta
+#  **con su propio comando**, como el directorio de pruebas y Keycloak, y la mesa de ayuda
+#  **funciona sin él** —sin los dos resúmenes— hasta que se añada desde Configuración.
+#
+#  Un solo motor sirve a los dos entornos: el modelo ocupa ~1,1 GB y vive en un volumen, así
+#  que no caben dos. La red `catalina-support-ai` la crea el entorno (`dev.yml`/`prod.yml`) y
+#  aquí es **externa**: el motor entra en ella y no la toca.
+#
+#    docker compose -f ai.yml up -d        # la primera vez baja el modelo (~1,1 GB)
+#    docker compose -f ai.yml logs -f ai   # se ve la descarga y, después, el servidor
+#    docker compose -f ai.yml down         # el volumen del modelo se queda
+# =====================================================================================
+services:
+  ai:
+    container_name: catalina_support_ai
+    # Etiqueta concreta: `server-b11206` (llama.cpp, compilación 11206). Es la misma imagen a la
+    # que apunta la etiqueta móvil `server`.
+    image: ghcr.io/ggml-org/llama.cpp:server-b11206
+    restart: always
+
+    # El guion descarga el modelo si falta en el volumen y, cuando termina, se convierte en el
+    # servidor con `exec` (config/ai/01-descargar-modelo.sh).
+    entrypoint: ["/bin/sh", "/config/ai/01-descargar-modelo.sh"]
+    volumes:
+      - ./config/ai:/config/ai:ro
+      # El modelo (~1,07 GB) **no está en el repositorio**: vive en este volumen, con nombre
+      # exacto para que no se vuelva a descargar.
+      - ai_modelos:/modelos
+
+    command:
+      - --model
+      - /modelos/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      - --alias
+      - qwen2.5-1.5b-instruct
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --ctx-size
+      - "4096"
+      - --threads
+      - "2"
+      - --threads-batch
+      - "2"
+      - --parallel
+      - "1"
+      - --n-predict
+      - "512"
+      - --no-webui
+
+    # El tope de memoria es lo que pide el modelo de por defecto: ~1,07 GB del modelo + su caché
+    # KV + buffers y servidor. Con otro modelo, se ajusta.
+    mem_limit: 1500m
+
+    healthcheck:
+      # Se reescribe para dar margen a **la primera descarga del modelo**.
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 20
+      start_period: 300s
+
+    networks:
+      - catalina-support-ai
+
+networks:
+  # La red la crean `dev.yml` y `prod.yml`; aquí es **externa**: el motor entra en ella y no la
+  # toca, para que levantarlo **después** —con el entorno en marcha— no intente recrearla.
+  catalina-support-ai:
+    name: catalina-support-ai
+    external: true
+
+volumes:
+  # Con nombre exacto: el modelo se descarga una vez y sobrevive a los `down`.
+  ai_modelos:
+    name: ai_modelos

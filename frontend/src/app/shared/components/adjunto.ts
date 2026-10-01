@@ -26,7 +26,9 @@ export interface AdjuntoDeTicket {
 @Component({
   selector: 'app-adjunto',
   template: `
-    <div class="flex flex-wrap items-center gap-2 rounded-md border border-borde bg-superficie px-2 py-1.5">
+    <div
+      class="flex flex-wrap items-center gap-2 rounded-md border border-borde bg-superficie px-2 py-1.5"
+    >
       <span class="truncate text-sm text-texto" [attr.title]="adjunto().filename">
         {{ adjunto().filename }}
       </span>

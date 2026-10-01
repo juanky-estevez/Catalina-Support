@@ -22,7 +22,11 @@
 
   <!-- El fondo oscuro del cajón: al tocarlo se cierra, como cualquier cajón. -->
   @if (cajonAbierto()) {
-    <div class="fixed inset-0 z-30 bg-black/40 lg:hidden" (click)="cerrarCajon()" aria-hidden="true"></div>
+    <div
+      class="fixed inset-0 z-30 bg-black/40 lg:hidden"
+      (click)="cerrarCajon()"
+      aria-hidden="true"
+    ></div>
   }
 
   <!--
@@ -38,11 +42,15 @@
   <aside
     class="fixed left-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto border-r border-borde bg-superficie transition-transform duration-200 lg:sticky lg:translate-x-0"
     [class]="
-      (cajonAbierto() ? 'translate-x-0 ' : '-translate-x-full ') + (plegadoEfectivo() ? 'w-16 px-2' : 'w-60 px-3')
+      (cajonAbierto() ? 'translate-x-0 ' : '-translate-x-full ') +
+      (plegadoEfectivo() ? 'w-16 px-2' : 'w-60 px-3')
     "
   >
     <!-- Zona 1: el producto. Es lo único que no se mueve. -->
-    <div class="flex items-center gap-2 border-b border-borde py-3" [class.justify-center]="plegadoEfectivo()">
+    <div
+      class="flex items-center gap-2 border-b border-borde py-3"
+      [class.justify-center]="plegadoEfectivo()"
+    >
       <app-logo tamano="menu" />
 
       @if (plegadoEfectivo()) {
@@ -95,7 +103,9 @@
         >
           <app-icono [nombre]="entrada.icono" />
           <!-- Plegado, el texto desaparece de la vista pero sigue ahí para quien no ve la pantalla. -->
-          <span [class]="plegadoEfectivo() ? 'sr-only' : 'truncate'">{{ etiquetaDe(entrada) }}</span>
+          <span [class]="plegadoEfectivo() ? 'sr-only' : 'truncate'">{{
+            etiquetaDe(entrada)
+          }}</span>
         </a>
       }
     </nav>

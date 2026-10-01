@@ -59,9 +59,7 @@ export class TicketPage implements OnInit {
   protected readonly esDesarrollo = computed(() => this.sesion.usuario()?.role === 'desarrollo');
 
   /** Si hay interno y quien mira puede verlo: sólo entonces existe la vista doble. */
-  protected readonly hayInterno = computed(
-    () => !this.esUsuario() && this.interno() !== null,
-  );
+  protected readonly hayInterno = computed(() => !this.esUsuario() && this.interno() !== null);
 
   /**
    * La vista con la que se abre el ticket.
@@ -197,10 +195,14 @@ export class TicketPage implements OnInit {
         // Se ha abierto el interno: su principal es el otro lado de la vista doble.
         this.pedidoEraElInterno = true;
         this.interno.set(pedido);
-        this.principal.set(pedido.ticket.parent ? await this.tickets.ficha(pedido.ticket.parent) : null);
+        this.principal.set(
+          pedido.ticket.parent ? await this.tickets.ficha(pedido.ticket.parent) : null,
+        );
       } else {
         this.principal.set(pedido);
-        this.interno.set(pedido.ticket.child ? await this.tickets.ficha(pedido.ticket.child) : null);
+        this.interno.set(
+          pedido.ticket.child ? await this.tickets.ficha(pedido.ticket.child) : null,
+        );
       }
 
       // **La vista por defecto es la del papel** (decisión del responsable, 2026-09-27): Soporte entra

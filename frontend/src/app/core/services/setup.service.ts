@@ -215,6 +215,28 @@ export class SetupService {
     return this.adoptar(estado);
   }
 
+  /**
+   * Prueba la conexión del paso 2 —el directorio o Keycloak, según el método— **con lo que hay
+   * escrito en pantalla**, antes de guardarlo.
+   *
+   * No guarda nada y no devuelve estado: contesta si la prueba ha ido bien o falla con su clave,
+   * igual que las pruebas de Configuración (`docs/primer-arranque.md`, sección 3).
+   */
+  async probarEntrada(paso: Paso2): Promise<void> {
+    await firstValueFrom(this.http.post('/api/setup/entry/test', paso));
+  }
+
+  /**
+   * Prueba la conexión del correo saliente del paso 4 **con lo que hay escrito en pantalla**, antes
+   * de guardarlo.
+   *
+   * Comprueba la conexión y la autenticación y **no manda ningún correo**: en el asistente todavía no
+   * hay destinatario (`docs/primer-arranque.md`, sección 3).
+   */
+  async probarCorreo(paso: Paso4): Promise<void> {
+    await firstValueFrom(this.http.post('/api/setup/mail/test', paso));
+  }
+
   /** Una petición que devuelve el estado nuevo: el asistente avanza con lo que le contestan. */
   private async guardar(url: string, cuerpo: object): Promise<EstadoDeInstalacion> {
     const estado = await firstValueFrom(this.http.post<EstadoDeInstalacion>(url, cuerpo));

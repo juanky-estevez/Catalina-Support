@@ -14,12 +14,7 @@ import { Component, ElementRef, effect, input, output, viewChild } from '@angula
 @Component({
   selector: 'app-dialogo',
   template: `
-    <dialog
-      #ventana
-      [attr.aria-label]="titulo()"
-      (close)="cerrado.emit()"
-      [class]="clases()"
-    >
+    <dialog #ventana [attr.aria-label]="titulo()" (close)="cerrado.emit()" [class]="clases()">
       <div class="flex items-start gap-4 border-b border-borde px-5 py-4">
         <h2 class="flex-1 text-base font-semibold text-texto">{{ titulo() }}</h2>
 
@@ -84,7 +79,8 @@ export class Dialogo {
     // preparación de Tailwind pone `margin: 0` a todo** —`*, ::before, ::after`—, así que la ventana se
     // iba a la esquina. Medido: salía en `x: 0, y: 0`. Devolver el `auto` es lo que la centra, y
     // `max-h` con desplazamiento propio es lo que evita que una ventana alta se salga por abajo.
-    const base = 'm-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-auto rounded-lg border border-borde bg-superficie p-0 text-texto backdrop:bg-black/40';
+    const base =
+      'm-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-auto rounded-lg border border-borde bg-superficie p-0 text-texto backdrop:bg-black/40';
     const anchos: Record<string, string> = {
       normal: 'w-[min(32rem,calc(100vw-2rem))]',
       grande: 'w-[min(72rem,calc(100vw-2rem))]',

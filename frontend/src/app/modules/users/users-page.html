@@ -59,11 +59,7 @@
       </div>
 
       @if (hayFiltros()) {
-        <app-boton
-          forma="secundario"
-          [texto]="t().usuarios.limpiar"
-          (pulsado)="limpiarFiltros()"
-        />
+        <app-boton forma="secundario" [texto]="t().usuarios.limpiar" (pulsado)="limpiarFiltros()" />
       }
     </div>
   </section>
@@ -94,7 +90,11 @@
       </div>
     } @else if (esAncha()) {
       <table class="w-full border-collapse text-sm">
-        <caption class="sr-only">{{ t().usuarios.titulo }}</caption>
+        <caption class="sr-only">
+          {{
+            t().usuarios.titulo
+          }}
+        </caption>
 
         <thead>
           <tr class="border-b border-borde text-left text-xs uppercase text-apagado">
@@ -281,7 +281,9 @@
 
     <!-- La paginación, con el total a la vista: es lo que dice cuánto hay y dónde se está. -->
     @if (!cargando() && total() > 0) {
-      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-borde px-4 py-3">
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-borde px-4 py-3"
+      >
         <p class="text-sm text-apagado">
           {{ total() }} {{ t().usuarios.total }} · {{ t().usuarios.pagina }} {{ filtros().page }} /
           {{ paginas() }}
@@ -439,5 +441,4 @@
       </div>
     </app-dialogo>
   }
-
 </main>

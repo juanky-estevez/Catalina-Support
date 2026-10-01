@@ -352,7 +352,9 @@ describe('AccionesDelTicket', () => {
 
     elegir(fixture, 'en progreso');
 
-    expect(host.textContent).toContain('Este ticket está cerrado: para seguir hablando hay que reabrirlo.');
+    expect(host.textContent).toContain(
+      'Este ticket está cerrado: para seguir hablando hay que reabrirlo.',
+    );
     pulsarTexto(host, 'Confirmar');
 
     const peticion = http.expectOne('/api/tickets/CS-2026-0001/reopen');

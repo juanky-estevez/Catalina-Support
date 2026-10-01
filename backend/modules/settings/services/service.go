@@ -38,7 +38,13 @@ var (
 	// (docs/modules/settings.md, decisión 15).
 	ErrTimeZoneUnknown = errors.New("settings.timeZone.unknown")
 	// ErrPublicURLInvalid: la dirección pública no es una dirección http o https con su host.
-	ErrPublicURLInvalid             = errors.New("settings.publicUrl.invalid")
+	ErrPublicURLInvalid = errors.New("settings.publicUrl.invalid")
+	// ErrAIURLInvalid: la dirección del motor de IA no es una dirección http o https con su host.
+	// Vacía sí vale: es «esta instalación no tiene motor» (docs/modules/ai.md).
+	ErrAIURLInvalid = errors.New("settings.aiUrl.invalid")
+	// ErrAIUnreachable: el motor de IA no ha contestado a la prueba de la conexión, o ha contestado
+	// mal. El detalle queda en el log; a la pantalla le llega que esa dirección no sirve.
+	ErrAIUnreachable                = errors.New("settings.ai.unreachable")
 	ErrNumberPrefixInvalid          = errors.New("settings.numberPrefix.invalid")
 	ErrAssignmentUnknown            = errors.New("settings.assignment.unknown")
 	ErrNotificationUnknown          = errors.New("settings.notification.unknown")
@@ -92,18 +98,34 @@ const NombreDeFabrica = "Catalina Support"
 // que ve quien lo escribe: «Ayuntamiento de Ávila» son 20, con acentos y todo.
 const MaxNameLength = 60
 
+// Repositorio es lo que este módulo necesita de la base de datos. Lo declara aquí quien lo usa y lo
+// cumple `repositories.SettingsRepository`: así el módulo se puede probar con un doble, sin base.
+type Repositorio interface {
+	Installation() (repositories.InstallationSettings, error)
+	Tickets() (repositories.TicketSettings, error)
+	Directory() (repositories.DirectorySettings, error)
+	Keycloak() (repositories.KeycloakSettings, error)
+	UpdateInstallation(cambios map[string]any, updatedByID *int64) error
+	UpdateDirectory(cambios map[string]any, updatedByID *int64) error
+	UpdateKeycloak(cambios map[string]any, updatedByID *int64) error
+	UpdateTickets(cambios map[string]any, updatedByID *int64) error
+}
+
 // Service es el módulo.
 type Service struct {
-	repo      *repositories.SettingsRepository
+	repo      Repositorio
 	filesPath string
 	prober    Prober
 	now       func() time.Time
 	// ia dice si el motor de IA responde, para poder contarlo en la instalación.
 	ia ProberDeIA
+	// correo prueba el correo saliente **sin mandar ningún correo**: es lo que hace falta en el
+	// asistente, donde no hay destinatario (docs/primer-arranque.md, sección 3).
+	correo ProberDeCorreo
 }
 
 // NewService construye el servicio.
-func NewService(repo *repositories.SettingsRepository, filesPath string) *Service {
+func NewService(repo Repositorio, filesPath string) *Service {
 	return &Service{repo: repo, filesPath: filesPath, now: time.Now}
 }
 
@@ -127,6 +149,11 @@ type UpdateInput struct {
 	// TimeZone es la zona horaria que se elige (nombre IANA) y PublicAppURL la dirección pública.
 	TimeZone     string
 	PublicAppURL string
+	// AIURL y AIModel son **el motor de IA**: su dirección y el modelo con el que redacta. Vacíos
+	// quieren decir «esta instalación no tiene motor», que es lo normal y no es un error
+	// (docs/modules/ai.md, decisión 2).
+	AIURL   string
+	AIModel string
 }
 
 // DirectoryInput es la configuración del directorio tal y como llega de la pantalla.
@@ -192,7 +219,11 @@ type Config struct {
 	// TimeZone es la zona horaria de la instalación, y PublicAppURL su dirección pública.
 	TimeZone     string
 	PublicAppURL string
-	Brand        Brand
+	// AIURL y AIModel son **el motor de IA** de la instalación. `AIURL` vacía es «no integrado»
+	// (docs/modules/ai.md).
+	AIURL   string
+	AIModel string
+	Brand   Brand
 }
 
 // Brand es el estado de la marca.
@@ -321,6 +352,38 @@ func (s *Service) TestKeycloak(input KeycloakInput) error {
 	return nil
 }
 
+// TestAI prueba el motor de IA **sin guardarlo**.
+//
+// Se prueba **la dirección que llega** —lo que hay en pantalla— y **nunca la guardada**: al abrir la
+// pantalla el campo viene relleno con lo que hay en la base, así que vaciarlo es borrarlo a
+// propósito, y decir que no hay nada que probar es más útil que probar una dirección que la persona
+// acaba de quitar. No toca la base.
+func (s *Service) TestAI(url string) error {
+	direccion := direccionPublicaDe(url)
+
+	// La misma comprobación que la dirección pública, con la clave de este módulo. Vacía tampoco vale
+	// aquí: no hay nada que probar.
+	if direccion == "" {
+		return ErrAIURLInvalid
+	}
+	if err := validarDireccionPublica(direccion); err != nil {
+		return ErrAIURLInvalid
+	}
+
+	if s.ia == nil {
+		return errors.New("no hay quien pruebe el motor de IA")
+	}
+
+	if err := s.ia.Probar(direccion); err != nil {
+		// El motivo —no contesta, o contesta mal— va al log. A la pantalla le llega que esa dirección
+		// no sirve, que es lo que tiene que hacer quien la está configurando.
+		logs.LogWarning("la prueba del motor de IA ha fallado: " + err.Error())
+		return ErrAIUnreachable
+	}
+
+	return nil
+}
+
 // Language es el idioma de la instalación.
 //
 // Lo lee el alta de cuentas para saber en qué idioma escribirle los correos a quien no se le ha
@@ -369,6 +432,8 @@ func (s *Service) Config() (Config, error) {
 		InternalAssignment:   tickets.InternalAssignment,
 		InternalNotification: tickets.InternalNotification,
 		UpdatedAt:            instalacion.UpdatedAt,
+		AIURL:                direccionPublicaDe(instalacion.AIURL),
+		AIModel:              strings.TrimSpace(instalacion.AIModel),
 		Brand: Brand{
 			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
 			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
@@ -402,6 +467,42 @@ func (s *Service) DireccionPublica() string {
 	}
 
 	return direccionPublicaDe(instalacion.PublicAppURL)
+}
+
+// AIDatos es el motor de IA resuelto: su dirección, su modelo y **si hay alguno puesto**.
+type AIDatos struct {
+	// URL es la dirección del motor, sin la barra del final.
+	URL string
+	// Modelo es el modelo con el que redacta. Puede venir vacío y quien lo use decide su valor de
+	// fábrica.
+	Modelo string
+	// Hay en falso quiere decir «esta instalación no tiene motor»: el módulo de IA usa entonces el
+	// respaldo del entorno (docs/modules/ai.md, decisión 2).
+	Hay bool
+}
+
+// AI devuelve **el motor de IA ya resuelto**, para el módulo de IA: lo de la configuración y, si no
+// hay nada, el respaldo del entorno, que lo pone el cableado. Tiene la misma forma que `SMTP()`
+// (docs/modules/ai.md).
+//
+// Se lee de la base en cada petición, no se recuerda: cambiar la dirección o el modelo desde
+// Configuración tiene que valer sin reiniciar nada.
+func (s *Service) AI() (AIDatos, error) {
+	instalacion, err := s.repo.Installation()
+	if err != nil {
+		return AIDatos{}, traducir(err)
+	}
+
+	direccion := direccionPublicaDe(instalacion.AIURL)
+	if direccion == "" {
+		return AIDatos{}, nil
+	}
+
+	return AIDatos{
+		URL:    direccion,
+		Modelo: strings.TrimSpace(instalacion.AIModel),
+		Hay:    true,
+	}, nil
 }
 func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error) {
 	language := strings.TrimSpace(input.Language)
@@ -480,6 +581,15 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 		return Config{}, err
 	}
 
+	// **El motor de IA** (docs/modules/ai.md): la dirección, vacía o http/https con su host. Vacía es
+	// «no integrado» y se acepta; con algo escrito, se le exige lo mismo que a la dirección pública
+	// —se reutiliza su comprobación, que es la misma regla— pero con su propia clave, porque quien la
+	// lee está en la tarjeta del motor.
+	motor := direccionPublicaDe(input.AIURL)
+	if err := validarDireccionPublica(motor); err != nil {
+		return Config{}, ErrAIURLInvalid
+	}
+
 	err = s.repo.UpdateInstallation(map[string]any{
 		"installation_name": nombre,
 		"entry_method":      metodo,
@@ -487,6 +597,8 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 		"primary_color":     color,
 		"time_zone":         zona,
 		"public_app_url":    direccion,
+		"ai_url":            motor,
+		"ai_model":          strings.TrimSpace(input.AIModel),
 	}, updatedByID)
 	if err != nil {
 		return Config{}, traducir(err)

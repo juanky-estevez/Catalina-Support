@@ -108,6 +108,28 @@ type Ajustes struct {
 // principal de este módulo (docs/modules/ai.md, decisión 2).
 func (a Ajustes) Configurado() bool { return strings.TrimSpace(a.URL) != "" }
 
+// AIDatos es **el motor de IA tal y como lo cuenta la configuración de la instalación**: su
+// dirección, su modelo y si hay alguno puesto.
+//
+// Es un tipo propio de este módulo a propósito: la configuración la declara `settings` y aquí no se
+// importa, porque un módulo no importa a otro. El cableado traduce de uno a otro
+// (docs/arquitectura.md, sección 4).
+type AIDatos struct {
+	URL    string
+	Modelo string
+	// Hay en falso quiere decir «esta instalación no tiene motor»: se usa el respaldo del entorno.
+	Hay bool
+}
+
+// Configuracion es lo que este módulo necesita de la configuración de la instalación: **el motor**.
+//
+// Se declara aquí, en quien la usa, y la cumple el módulo `settings`; se conecta en `main.go`. Se lee
+// **en cada petición**, no al arrancar: cambiar la dirección o el modelo desde Configuración tiene
+// que valer sin reiniciar nada (docs/modules/ai.md).
+type Configuracion interface {
+	AI() (AIDatos, error)
+}
+
 // Los valores de fábrica de lo que no venga puesto, para que una configuración incompleta no deje el
 // módulo sin saber cuánto esperar.
 const (
@@ -133,6 +155,10 @@ const (
 
 	// El tiempo del chequeo de «¿está el motor?»: preguntarlo no puede dejar colgada una pantalla.
 	esperaDelChequeo = 3 * time.Second
+
+	// El tiempo de la prueba de la conexión de Configuración: lo mismo, y más corto que una llamada
+	// de verdad, porque quien la pide está mirando una pantalla.
+	esperaDeLaPrueba = 3 * time.Second
 
 	// **Dos trabajadores**, porque el motor es lo caro: sin cola, diez comentarios seguidos pedirían
 	// diez resúmenes a la vez a un modelo que atiende de uno en uno (docs/modules/ai.md, sección 6).
@@ -168,6 +194,10 @@ type Service struct {
 	store   Store
 	ajustes Ajustes
 	motor   *motor
+
+	// configuracion da **el motor que está puesto en la instalación**. Es opcional: sin ella se usa
+	// lo del entorno, que es lo que había antes. Se lee en cada petición, no al arrancar.
+	configuracion Configuracion
 
 	// La cola vive **en memoria** y se pierde al reiniciar: por eso existe la puesta al día
 	// (docs/modules/ai.md, decisión 10). Se guarda por (ticket, campo) para que pedir dos veces lo
@@ -233,6 +263,35 @@ func nuevoServicio(repositorio Store, ajustes Ajustes) *Service {
 // a medias.
 func (s *Service) SetFuente(fuente Fuente) { s.fuente = fuente }
 
+// SetConfiguracion engancha de dónde sale el motor: **la configuración de la instalación**, con el
+// respaldo del entorno que ya trae `Ajustes`. Se llama al arrancar y no hace falta volver a llamarlo:
+// el módulo la relee en cada petición (docs/modules/ai.md).
+func (s *Service) SetConfiguracion(configuracion Configuracion) { s.configuracion = configuracion }
+
+// ajustesDeAhora resuelve el motor con lo que diga la configuración **en este momento**.
+//
+// Si no hay configuración, o no tiene motor puesto, o no se puede leer, devuelve los ajustes del
+// entorno: son el respaldo para una instalación que ya lo tuviera configurado así. Una lectura que
+// falla no puede dejar sin motor a quien lo tenía.
+func (s *Service) ajustesDeAhora() Ajustes {
+	ajustes := s.ajustes
+	if s.configuracion == nil {
+		return ajustes
+	}
+
+	datos, err := s.configuracion.AI()
+	if err != nil || !datos.Hay {
+		return ajustes
+	}
+
+	ajustes.URL = strings.TrimSpace(datos.URL)
+	if modelo := strings.TrimSpace(datos.Modelo); modelo != "" {
+		ajustes.Modelo = modelo
+	}
+
+	return ajustes
+}
+
 // Pedir apunta un encargo y **vuelve enseguida**: no espera al motor (docs/modules/ai.md, decisión 2).
 //
 // Puede llamarse desde cualquier sitio y cuantas veces haga falta. Un encargo nuevo del mismo ticket y
@@ -254,7 +313,7 @@ func (s *Service) Pedir(entrada Entrada) {
 
 	// **Sin motor configurado no se encola nada**: el campo queda dicho en la base y la aplicación
 	// entera sigue funcionando. Es una escritura local, no una espera al motor (decisión 2).
-	if !s.ajustes.Configurado() {
+	if !s.ajustesDeAhora().Configurado() {
 		s.apuntarFallo(entrada.Numero, entrada.Tipo, EstadoSinMotor, ClaveSinMotor)
 		return
 	}
@@ -317,7 +376,7 @@ func (s *Service) De(numeros []string) (map[string]DosResumenes, error) {
 // eso está «Regenerar»—, y reiniciar el backend no puede ser la forma de saltarse el tope de
 // intentos de un motor que no contesta.
 func (s *Service) Retomar() {
-	if !s.ajustes.Configurado() {
+	if !s.ajustesDeAhora().Configurado() {
 		logs.LogInfo("el motor de IA no está configurado: no hay nada que retomar")
 		return
 	}
@@ -358,13 +417,33 @@ func (s *Service) Retomar() {
 // Disponible dice si hay motor configurado **y responde**.
 //
 // Se pregunta de verdad, con un tiempo corto: un motor caído no se nota hasta que se le pide algo, y
-// «disponible» tiene que ser lo que pasa ahora y no lo que dice la configuración.
+// «disponible» tiene que ser lo que pasa ahora y no lo que dice la configuración. La dirección sale
+// de la configuración **en este momento**, así que cambiarla en Configuración vale al instante.
 func (s *Service) Disponible() bool {
-	if !s.ajustes.Configurado() {
+	ajustes := s.ajustesDeAhora()
+	if !ajustes.Configurado() {
 		return false
 	}
 
-	return s.motor.disponible(s.ctx, s.ajustes)
+	return s.motor.disponible(s.ctx, ajustes)
+}
+
+// Probar comprueba que el motor de esa dirección contesta, para el botón de «Probar la conexión» de
+// Configuración.
+//
+// Es la misma pregunta que `Disponible` —su comprobación de salud— pero con un error en vez de un
+// booleano, y **con la dirección que se le pasa**: la prueba es de lo que hay en pantalla, y no de lo
+// que esté guardado (docs/modules/ai.md).
+func (s *Service) Probar(url string) error {
+	direccion := strings.TrimSpace(url)
+	if direccion == "" {
+		return ErrSinMotor
+	}
+
+	ctx, cancelar := context.WithTimeout(context.Background(), esperaDeLaPrueba)
+	defer cancelar()
+
+	return s.motor.probar(ctx, direccion)
 }
 
 // Parar apaga la cola: los trabajadores terminan lo que están haciendo y se van, y la llamada al

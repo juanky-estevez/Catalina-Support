@@ -306,6 +306,10 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- correos y de la vuelta de Keycloak. Vacía es «no configurada», y entonces se usa la variable de
     -- entorno (docs/modules/settings.md, decisión 14).
     public_app_url text       NOT NULL DEFAULT '',
+    -- **El motor de IA** (docs/modules/ai.md): su dirección y su modelo. Vivían en el entorno y pasan
+    -- aquí, como el directorio, Keycloak y el correo, para poder integrarlo después desde Configuración.
+    ai_url        text        NOT NULL DEFAULT '',
+    ai_model      text        NOT NULL DEFAULT '',
     -- **El sello de instalación**: nulo mientras nadie haya terminado el asistente de primer arranque.
     -- Es lo que hace que la vista de instalación se enseñe **sólo** en una instalación sin configurar y
     -- que su API rechace configurarla dos veces (docs/primer-arranque.md, sección 2).
@@ -462,6 +466,10 @@ END
 $$;
 
 ALTER TABLE installation_settings
+    ADD COLUMN IF NOT EXISTS ai_url text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS ai_model text NOT NULL DEFAULT '';
+
+ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS smtp_host text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_port text NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS smtp_secure boolean NOT NULL DEFAULT false,
@@ -495,6 +503,12 @@ COMMENT ON COLUMN installation_settings.entry_method IS
 
 COMMENT ON COLUMN installation_settings.time_zone IS
     'La zona horaria de la instalación (nombre IANA). Decide cómo se leen las fechas; las guardadas siguen en UTC.';
+
+COMMENT ON COLUMN installation_settings.ai_url IS
+    'La dirección del motor de IA (http://ai:8080). Vacío es «no integrado»: la mesa de ayuda funciona sin él.';
+
+COMMENT ON COLUMN installation_settings.ai_model IS
+    'El modelo que sirve el motor, para poder decirlo en la pantalla.';
 
 COMMENT ON COLUMN installation_settings.installed_at IS
     'Cuándo se terminó el asistente de primer arranque. Nulo es «sin instalar»: sólo entonces se enseña la vista de instalación.';

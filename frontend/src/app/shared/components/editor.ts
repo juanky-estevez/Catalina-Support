@@ -40,17 +40,15 @@ export interface TextosDelEditor {
   template: `
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap items-center gap-2">
-        <label [for]="identificador()" class="text-sm font-medium text-texto">{{ etiqueta() }}</label>
+        <label [for]="identificador()" class="text-sm font-medium text-texto">{{
+          etiqueta()
+        }}</label>
 
         <!--
           Los botones van en grupo y con su nombre: un lector de pantalla tiene que poder decir que
           son el formato del texto, y qué hace cada uno.
         -->
-        <div
-          class="ml-auto flex flex-wrap gap-1"
-          role="group"
-          [attr.aria-label]="textos().barra"
-        >
+        <div class="ml-auto flex flex-wrap gap-1" role="group" [attr.aria-label]="textos().barra">
           @for (boton of botones(); track boton.texto) {
             <button
               type="button"
@@ -142,8 +140,18 @@ export class Editor {
     aplicar: () => void;
   }[] {
     return [
-      { texto: this.textos().negrita, muestra: 'N', clase: 'font-bold', aplicar: () => this.envolver('<strong>', '</strong>') },
-      { texto: this.textos().cursiva, muestra: 'C', clase: 'italic', aplicar: () => this.envolver('<em>', '</em>') },
+      {
+        texto: this.textos().negrita,
+        muestra: 'N',
+        clase: 'font-bold',
+        aplicar: () => this.envolver('<strong>', '</strong>'),
+      },
+      {
+        texto: this.textos().cursiva,
+        muestra: 'C',
+        clase: 'italic',
+        aplicar: () => this.envolver('<em>', '</em>'),
+      },
       { texto: this.textos().lista, muestra: '≡', clase: '', aplicar: () => this.lista() },
       { texto: this.textos().enlace, muestra: '↗', clase: '', aplicar: () => this.enlace() },
     ];

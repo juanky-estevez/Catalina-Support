@@ -179,6 +179,21 @@ func (s *Service) Send(key, language string, to []string, data map[string]string
 	return nil
 }
 
+// Probar comprueba **la conexión y la autenticación** del correo saliente, con los datos que se le
+// mandan, **sin mandar ningún correo**: lo usa el asistente de primer arranque, donde todavía no hay
+// destinatario y sólo se quiere saber si el servidor contesta y si las credenciales valen
+// (docs/primer-arranque.md, sección 3).
+//
+// Es la prueba que el módulo ofrece hacia fuera; el protocolo vive en el remitente, que es quien sabe
+// hablar con un servidor de correo.
+func (s *Service) Probar(correo CorreoSaliente) error {
+	if s.sender == nil {
+		return ErrNotConfigured
+	}
+
+	return s.sender.Probar(correo)
+}
+
 // SendAsync manda un correo en segundo plano y no devuelve nada.
 //
 // Es lo que usan los avisos: quien crea un ticket no tiene por qué esperar a que responda el

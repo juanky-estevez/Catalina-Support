@@ -120,98 +120,6 @@ services:
         echo "--- artefacto backend ---"
         ls -la /out
 
-  ai:
-    # Etiqueta concreta: `server-b11206` —llama.cpp, compilación 11206, publicada
-    # el 2026-09-27—. Es la misma imagen a la que apunta hoy la etiqueta móvil
-    # `server` (digest de índice `sha256:00bd6c289c590e576948cb3639b8195e4d3e6dd6ba1d761f0e2b871fcd4df24f`),
-    # pero **se fija la compilación** para que un `docker pull` no cambie el motor
-    # por debajo sin que nadie lo haya decidido. Para subir de compilación se
-    # cambia esta línea a propósito. (`server-b5350`, del 2025-05-12, también
-    # funciona: se probó antes.)
-    image: ghcr.io/ggml-org/llama.cpp:server-b11206
-    container_name: catalina_support_ai
-    restart: always
-
-    # El guion descarga el modelo si falta en el volumen y, cuando termina, se
-    # convierte en el servidor con `exec` (ver `config/ai/01-descargar-modelo.sh`).
-    # Se monta en sólo lectura: el contenedor no tiene por qué escribir en el
-    # repositorio.
-    entrypoint: ["/bin/sh", "/config/ai/01-descargar-modelo.sh"]
-    volumes:
-      - ./config/ai:/config/ai:ro
-      # El modelo (1,07 GB) **no está en el repositorio**: vive en este volumen con
-      # nombre, así que sobrevive a `down`/`up` y a recrear el contenedor, y sólo
-      # se descarga la primera vez.
-      - ai_modelos:/modelos
-
-    # Los argumentos del servidor. El guion de arranque los recibe y los pasa tal cual.
-    command:
-      - --model
-      - /modelos/qwen2.5-1.5b-instruct-q4_k_m.gguf
-      - --alias
-      - qwen2.5-1.5b-instruct
-      # Escucha en todas las interfaces **de su red interna**: la 8080 no está
-      # publicada en la máquina, así que esto no la abre a nadie de fuera.
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8080"
-      # Contexto moderado: el motor no necesita más para resumir un ticket, y la
-      # caché KV crece con el contexto (unos 28 KB por token en este modelo, así
-      # que 4096 tokens son ~115 MB y 32768 serían ~900 MB, que no caben).
-      # Sin decirlo, esta compilación toma el contexto del propio modelo.
-      - --ctx-size
-      - "4096"
-      # Dos hilos: la máquina tiene cuatro núcleos y hay otros proyectos corriendo.
-      # El segundo ajuste es el de la fase de lectura del mensaje, que es la que
-      # más pesa cuando la entrada es larga.
-      - --threads
-      - "2"
-      - --threads-batch
-      - "2"
-      # Una sola conversación a la vez: el backend ya encola los trabajos de dos en
-      # dos (`docs/modules/ai.md`, sección 6), y más ranuras multiplicarían la caché.
-      - --parallel
-      - "1"
-      # Tope de longitud de la respuesta: se piden dos frases, no literatura. Evita
-      # que una generación desbocada se lleve por delante el tiempo del motor.
-      - --n-predict
-      - "512"
-      # La interfaz web del servidor no la ve nadie (no hay puerto publicado) y
-      # cargarla es memoria que no sobra.
-      - --no-webui
-
-    # Sin puertos: es la regla, no un olvido. El motor sólo se habla por la red
-    # interna de docker.
-
-    # Límites: lo que impide que el motor se coma la máquina, que tiene 7,8 GB y
-    # otros proyectos dentro. Con 4096 de contexto el motor ronda los 1,4 GB
-    # (modelo ~1,07 GB + caché KV ~115 MB + buffers y servidor), así que 1500m es
-    # el techo real y no un número decorativo: `docker stats` lo confirma.
-    deploy:
-      resources:
-        limits:
-          memory: 1500m
-          # La mitad de los cuatro núcleos: es lo que piden los dos hilos de arriba,
-          # y los otros dos se quedan para el resto de proyectos.
-          cpus: "2.0"
-
-    # La imagen ya trae una comprobación de salud (`curl -f http://localhost:8080/health`),
-    # pero se reescribe para dar margen a **la primera descarga del modelo**: hasta
-    # que no está bajado (~1,1 GB), el servidor no escucha, y sin `start_period` el
-    # contenedor se declararía «enfermo» mientras sólo está bajando un archivo.
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15m
-
-    networks:
-      # El nombre exacto importa: es la red a la que entran el backend de desarrollo
-      # y el de producción (`docs/modules/ai.md`, decisión 1).
-      - catalina-support-ai
-
 networks:
   # La red del motor de IA, creada por `ai.yml`: aquí sólo se entra en ella.
   catalina-support-ai:
@@ -222,9 +130,5 @@ networks:
     name: catalina-support-ai
 
 volumes:
-  # **El modelo**: mismo nombre exacto que el volumen que ya existía, para que el motor no lo
-  # vuelva a descargar (1,1 GB). Vive aquí porque el motor es **parte del sistema**.
-  ai_modelos:
-    name: ai_modelos
   database:
     name: catalina_support_prod_database
