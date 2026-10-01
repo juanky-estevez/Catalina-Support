@@ -103,7 +103,14 @@ describe('TicketsService', () => {
     // El chip de vista cambia el filtro **y tiene que cambiar la petición**: cuando se quedó en la
     // pantalla y no en la URL, la lista de «Observo» enseñaba lo de siempre (lo cazó la prueba de
     // interfaz).
-    const peticion = tickets.listar({ type: '', state: '', q: '', page: 1, mine: true, view: 'watching' });
+    const peticion = tickets.listar({
+      type: '',
+      state: '',
+      q: '',
+      page: 1,
+      mine: true,
+      view: 'watching',
+    });
 
     const pidiendo = http.expectOne((peticion) => peticion.url === '/api/tickets');
     expect(pidiendo.request.params.get('mine')).toBe('1');
@@ -157,7 +164,9 @@ describe('TicketsService', () => {
     escalar.flush({ ticket: TICKET });
 
     void tickets.reabrir('CS-2026-0001');
-    http.expectOne({ url: '/api/tickets/CS-2026-0001/reopen', method: 'POST' }).flush({ ticket: TICKET });
+    http
+      .expectOne({ url: '/api/tickets/CS-2026-0001/reopen', method: 'POST' })
+      .flush({ ticket: TICKET });
 
     // Editar es un `PATCH`, y sólo lleva el asunto o la descripción.
     void tickets.editar('CS-2026-0001', { subject: 'Otro asunto' });
@@ -170,15 +179,21 @@ describe('TicketsService', () => {
     void tickets.comentar('CS-2026-0001', 'Ya está arreglado.');
     const comentar = http.expectOne({ url: '/api/tickets/CS-2026-0001/comments', method: 'POST' });
     expect(comentar.request.body).toEqual({ body: 'Ya está arreglado.' });
-    comentar.flush({ comment: { id: 3, body: 'Ya está arreglado.', edited: false, deleted: false, createdAt: '' } });
+    comentar.flush({
+      comment: { id: 3, body: 'Ya está arreglado.', edited: false, deleted: false, createdAt: '' },
+    });
 
     void tickets.editarComentario('CS-2026-0001', 3, 'Corregido.');
     const editar = http.expectOne({ url: '/api/tickets/CS-2026-0001/comments/3', method: 'PATCH' });
     expect(editar.request.body).toEqual({ body: 'Corregido.' });
-    editar.flush({ comment: { id: 3, body: 'Corregido.', edited: true, deleted: false, createdAt: '' } });
+    editar.flush({
+      comment: { id: 3, body: 'Corregido.', edited: true, deleted: false, createdAt: '' },
+    });
 
     void tickets.borrarComentario('CS-2026-0001', 3);
-    http.expectOne({ url: '/api/tickets/CS-2026-0001/comments/3', method: 'DELETE' }).flush({ status: 'ok' });
+    http
+      .expectOne({ url: '/api/tickets/CS-2026-0001/comments/3', method: 'DELETE' })
+      .flush({ status: 'ok' });
   });
 
   it('el alta manda el correo del solicitante cuando Soporte crea en nombre de otro', async () => {
@@ -274,12 +289,23 @@ describe('TicketsService', () => {
     const subir = http.expectOne({ url: '/api/tickets/CS-2026-0001/attachments', method: 'POST' });
     expect(subir.request.body instanceof FormData).toBe(true);
     expect((subir.request.body as FormData).get('commentId')).toBe('3');
-    subir.flush({ attachment: { id: 9, filename: 'prueba.pdf', contentType: 'application/pdf', size: 6, createdAt: '' } });
+    subir.flush({
+      attachment: {
+        id: 9,
+        filename: 'prueba.pdf',
+        contentType: 'application/pdf',
+        size: 6,
+        createdAt: '',
+      },
+    });
 
     // La descarga pide el archivo como datos: la cabecera de la sesión es obligatoria, y un enlace no
     // la lleva.
     const descarga = tickets.descargar('CS-2026-0001', 9);
-    const bajando = http.expectOne({ url: '/api/tickets/CS-2026-0001/attachments/9', method: 'GET' });
+    const bajando = http.expectOne({
+      url: '/api/tickets/CS-2026-0001/attachments/9',
+      method: 'GET',
+    });
     expect(bajando.request.responseType).toBe('blob');
     bajando.flush(new Blob(['un pdf']));
 

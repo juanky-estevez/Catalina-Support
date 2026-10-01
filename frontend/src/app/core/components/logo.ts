@@ -59,6 +59,8 @@ export class Logo {
   }
 
   protected imagen(): string {
-    return this.tamano() === 'menu' ? 'h-full w-full object-contain' : 'max-h-full max-w-full object-contain';
+    return this.tamano() === 'menu'
+      ? 'h-full w-full object-contain'
+      : 'max-h-full max-w-full object-contain';
   }
 }

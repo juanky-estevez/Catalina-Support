@@ -241,7 +241,9 @@ export class SessionService {
 
   /** Cambia la contraseña propia, con la actual. */
   cambiarContrasena(currentPassword: string, password: string): Promise<unknown> {
-    return firstValueFrom(this.http.post('/api/auth/password/change', { currentPassword, password }));
+    return firstValueFrom(
+      this.http.post('/api/auth/password/change', { currentPassword, password }),
+    );
   }
 
   /**

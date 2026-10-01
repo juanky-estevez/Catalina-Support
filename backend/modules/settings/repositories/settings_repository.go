@@ -31,6 +31,9 @@ type InstallationSettings struct {
 	// y la vuelta de Keycloak. Vacía es «no configurada» y se usa la variable de entorno
 	// (docs/modules/settings.md, decisión 14).
 	PublicAppURL string `gorm:"column:public_app_url"`
+	// **El motor de IA**: su dirección y su modelo. Vacíos es «no integrado».
+	AIURL   string `gorm:"column:ai_url"`
+	AIModel string `gorm:"column:ai_model"`
 	// InstalledAt es **el sello de instalación**: nulo mientras nadie haya terminado el asistente de
 	// primer arranque. Nulo es «sin instalar»: sólo entonces se enseña la vista de instalación y su API
 	// acepta configurar (docs/primer-arranque.md, sección 2).

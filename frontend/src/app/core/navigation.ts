@@ -23,7 +23,8 @@ export interface EntradaDeMenu {
    */
   readonly clavePorPapel?: Partial<Record<Papel, ClaveDeMenu>>;
   /** Qué icono lleva cuando el menú está plegado: los dibuja el propio componente. */
-  readonly icono: 'tickets' | 'principales' | 'internos' | 'categorias' | 'usuarios' | 'configuracion';
+  readonly icono:
+    'tickets' | 'principales' | 'internos' | 'categorias' | 'usuarios' | 'configuracion';
   readonly papeles: readonly Papel[];
 }
 
@@ -82,5 +83,7 @@ export function claveDeEntrada(entrada: EntradaDeMenu, papel: string): ClaveDeMe
 
 /** Las entradas que le tocan a ese papel. */
 export function entradasPara(papel: string): readonly EntradaDeMenu[] {
-  return ENTRADAS.filter((entrada) => entrada.papeles.length === 0 || entrada.papeles.includes(papel as Papel));
+  return ENTRADAS.filter(
+    (entrada) => entrada.papeles.length === 0 || entrada.papeles.includes(papel as Papel),
+  );
 }

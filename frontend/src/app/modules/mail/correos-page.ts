@@ -66,7 +66,10 @@ export class CorreosPage {
   /** El idioma que está esperando confirmación para volver al texto de fábrica. */
   protected readonly restaurando = signal<string>('');
 
-  private temporizadores: Record<string, ReturnType<typeof setTimeout> | null> = { es: null, en: null };
+  private temporizadores: Record<string, ReturnType<typeof setTimeout> | null> = {
+    es: null,
+    en: null,
+  };
 
   protected readonly idiomas = IDIOMAS;
 
@@ -177,7 +180,10 @@ export class CorreosPage {
       clearTimeout(this.temporizadores[idioma]!);
     }
 
-    this.temporizadores[idioma] = setTimeout(() => void this.pedirVista(idioma), ESPERA_DE_VISTA_PREVIA);
+    this.temporizadores[idioma] = setTimeout(
+      () => void this.pedirVista(idioma),
+      ESPERA_DE_VISTA_PREVIA,
+    );
   }
 
   protected async guardar(idioma: string): Promise<void> {

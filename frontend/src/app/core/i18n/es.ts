@@ -76,6 +76,21 @@ export const ES = {
     direccionEjemplo: 'https://soporte.mi-institucion.org',
     direccionInsegura:
       'Esta instalación no está sirviendo por https: la contraseña y la sesión viajan sin cifrar por la red. Se puede usar así —para probarla en local, por ejemplo—, y para usarla en serio conviene ponerle un certificado.',
+    motorDeIA: 'El motor de IA',
+    motorDeIAAyuda:
+      'El motor que redacta el «Motivo» y la «Última acción» de cada ticket. Es opcional: sin él la mesa de ayuda funciona entera, con esos dos campos sin texto. Se levanta aparte, con su propio comando, y puede estar en esta instalación o en otro servidor.',
+    iaDireccion: 'Dirección del motor',
+    iaDireccionAyuda:
+      'Dónde escucha el motor. Sirve http o https, con puerto si hace falta. Si se deja vacío, la instalación no tiene motor y el entorno hace de respaldo.',
+    iaDireccionEjemplo: 'http://catalina_support_ai:8080',
+    iaModelo: 'Modelo',
+    iaModeloAyuda:
+      'El modelo con el que redacta, tal y como lo nombra el motor. Si se deja vacío, se usa el del entorno.',
+    iaModeloEjemplo: 'qwen2.5-1.5b-instruct',
+    probarIA: 'Probar la conexión',
+    guardarIA: 'Guardar el motor de IA',
+    motorOk: 'El motor ha contestado: redacta los dos resúmenes del ticket.',
+    motorGuardado: 'El motor de IA se ha guardado.',
     entrada: 'Método de autenticación',
     entradaAyuda:
       'La instalación entra por un método a la vez: los otros dos quedan apagados aunque estén configurados. La cuenta de fábrica entra siempre, y desde ella se puede volver a cambiar si se elige mal.',
@@ -174,7 +189,8 @@ export const ES = {
     terminar: 'Terminar la instalación',
     resumen: 'Resumen',
     motorResponde: 'El motor de IA responde: los dos resúmenes del ticket están disponibles.',
-    motorNoEsta: 'El motor de IA no está: la mesa de ayuda funciona igual, sin los dos resúmenes.',
+    motorNoEsta:
+      'El motor de IA no responde. Comprueba que su contenedor está levantado; y si es la primera vez, que ha terminado de bajar el modelo. Puedes terminar sin él: la mesa de ayuda funciona, sin los dos resúmenes, y se añade después desde Configuración.',
     // La contraseña de la cuenta de fábrica **no se pide aquí**: vive en el entorno, y contarlo es
     // justo lo que evita que alguien la busque en la pantalla (sección 4 del documento).
     cuentaDeFabrica:
@@ -200,6 +216,10 @@ export const ES = {
     correoRemitenteNombre: 'Nombre del remitente',
     correoRemitenteCorreo: 'Correo del remitente',
     correoRemitenteCorreoAyuda: 'La dirección que verá quien reciba el correo.',
+    probarCorreo: 'Probar la conexión',
+    // Lo que hace y lo que **no** hace la prueba del correo, dicho en el propio mensaje.
+    correoOk:
+      'El servidor de correo ha contestado y la autenticación ha funcionado. No se ha enviado ningún correo.',
   },
 
   menu: {
@@ -947,15 +967,22 @@ export const ES = {
     'users.directory.unavailable':
       'No se ha podido comprobar con el directorio. Inténtalo en un momento.',
     'users.origin.inUse': 'No se puede cambiar el origen de una cuenta de directorio activa.',
-    'users.password.notLocal': 'La contraseña de esa cuenta la comprueba el directorio: no se cambia desde aquí.',
+    'users.password.notLocal':
+      'La contraseña de esa cuenta la comprueba el directorio: no se cambia desde aquí.',
     'settings.timeZone.unknown': 'Esa zona horaria no existe. Elige una de la lista.',
     'settings.publicUrl.invalid':
       'La dirección tiene que empezar por http:// o https:// y llevar su servidor.',
-    // Las tres claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
+    'settings.aiUrl.invalid':
+      'La dirección del motor de IA no vale: no hay ninguna que probar, o no empieza por http:// o https:// y le falta su servidor.',
+    'settings.ai.unreachable':
+      'El motor de IA no ha contestado: revisa la dirección y que esté levantado.',
+    // Las cuatro claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
     'setup.alreadyInstalled': 'Esta instalación ya está terminada: no se configura dos veces.',
     'setup.step.incomplete': 'A este paso le falta algún dato. Repásalo y vuelve a intentarlo.',
     'setup.mail.incomplete':
       'Para el correo hacen falta el servidor, el puerto y la dirección del remitente.',
+    'setup.mail.unreachable':
+      'El servidor de correo no ha contestado o no ha aceptado el usuario y la contraseña.',
     'auth.publicUrl.missing':
       'No hay dirección pública configurada: sin ella no se puede armar el enlace que va en el correo. Se configura en Configuración.',
     'users.accountInactive': 'Esa cuenta está desactivada: actívala antes de mandarle un enlace.',
@@ -1004,7 +1031,8 @@ export const ES = {
     'tickets.tag.forbidden': 'Sólo el Administrador puede retirar una etiqueta.',
     'tickets.tag.duplicate': 'Esa etiqueta ya existe.',
     'tickets.cierre.sinComentario': 'Para cerrar el ticket hay que decir por qué.',
-    'tickets.etiqueta.desconocida': 'Esa etiqueta no está en el catálogo. Sólo el Administrador puede crear etiquetas nuevas.',
+    'tickets.etiqueta.desconocida':
+      'Esa etiqueta no está en el catálogo. Sólo el Administrador puede crear etiquetas nuevas.',
     'tickets.tag.notFound': 'Esa etiqueta no existe.',
     'tickets.category.forbidden':
       'Sólo el Administrador puede retirar o volver a poner una categoría.',

@@ -27,7 +27,10 @@ type SettingsResponse struct {
 	InternalAssignment   string       `json:"internalAssignment"`
 	InternalNotification string       `json:"internalNotification"`
 	UpdatedAt            string       `json:"updatedAt"`
-	Brand                BrandDto     `json:"brand"`
+	// AIURL y AIModel son **el motor de IA**: su dirección y su modelo. Vacíos es «no integrado».
+	AIURL   string   `json:"aiUrl"`
+	AIModel string   `json:"aiModel"`
+	Brand   BrandDto `json:"brand"`
 }
 
 // BrandDto es el estado de la marca: los dos huecos.
@@ -94,6 +97,16 @@ type UpdateSettingsRequest struct {
 	// PublicAppURL es la dirección pública: la base de los enlaces de los correos y de la vuelta
 	// de Keycloak (docs/modules/settings.md, decisión 14).
 	PublicAppURL string `json:"publicAppUrl"`
+	// AIURL y AIModel son **el motor de IA**: su dirección y su modelo. Vacíos es «no integrado»
+	// (docs/modules/ai.md).
+	AIURL   string `json:"aiUrl"`
+	AIModel string `json:"aiModel"`
+}
+
+// AITestRequest es lo que llega para probar el motor de IA. `URL` vacía quiere decir «prueba la que
+// hay guardada», que es lo que permite comprobar el motor ya configurado sin volver a escribirlo.
+type AITestRequest struct {
+	URL string `json:"url"`
 }
 
 // BrandResponse es lo que la aplicación necesita **antes de que nadie haya entrado**: el color
@@ -157,6 +170,8 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 		InternalAssignment:   config.InternalAssignment,
 		InternalNotification: config.InternalNotification,
 		UpdatedAt:            config.UpdatedAt.UTC().Format(time.RFC3339),
+		AIURL:                config.AIURL,
+		AIModel:              config.AIModel,
 		Brand: BrandDto{
 			Light: newLogoDto(config.Brand.Light),
 			Dark:  newLogoDto(config.Brand.Dark),

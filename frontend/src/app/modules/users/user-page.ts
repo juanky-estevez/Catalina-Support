@@ -114,7 +114,9 @@ export class UserPage implements OnInit {
   protected readonly hayCambios = computed(() => Object.keys(this.cambios()).length > 0);
 
   /** Si el origen elegido es distinto del que tiene: es lo que enciende su botón. */
-  protected readonly cambiaElOrigen = computed(() => this.origenElegido() !== this.cuenta()?.origin);
+  protected readonly cambiaElOrigen = computed(
+    () => this.origenElegido() !== this.cuenta()?.origin,
+  );
 
   /**
    * Si esa cuenta es la de quien mira.
@@ -237,7 +239,9 @@ export class UserPage implements OnInit {
       return '';
     }
 
-    const clave = cuenta.hasPassword ? this.t().usuarios.mandarEnlaceRecuperacion : this.t().usuarios.mandarEnlaceAlta;
+    const clave = cuenta.hasPassword
+      ? this.t().usuarios.mandarEnlaceRecuperacion
+      : this.t().usuarios.mandarEnlaceAlta;
 
     return `${interpolar(this.t().usuarios.mandarEnlacePregunta, {
       nombre: `${cuenta.name} ${cuenta.lastName}`.trim() || cuenta.email,

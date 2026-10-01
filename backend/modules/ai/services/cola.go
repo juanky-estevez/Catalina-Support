@@ -83,12 +83,17 @@ func (s *Service) trabajador() {
 // y **una respuesta que no vale se reintenta una sola vez** y después el campo queda en `error`,
 // porque volver a preguntarle lo mismo a un modelo que ya contestó mal es pedirle que se repita.
 func (s *Service) atender(t trabajo) {
+	// **El motor se resuelve aquí, en cada trabajo**: la dirección y el modelo salen de la
+	// configuración de la instalación en este momento, así que cambiarlos en Configuración vale sin
+	// reiniciar nada (docs/modules/ai.md).
+	ajustes := s.ajustesDeAhora()
+
 	for intento := 1; ; intento++ {
-		es, en, err := s.motor.pedir(s.ctx, s.ajustes, encargoDe(t.tipo, t.texto, s.ajustes.Palabras))
+		es, en, err := s.motor.pedir(s.ctx, ajustes, encargoDe(t.tipo, t.texto, ajustes.Palabras))
 
 		if err == nil {
 			s.contarIntento(t)
-			s.guardar(t, es, en)
+			s.guardar(t, es, en, ajustes.Modelo)
 			return
 		}
 
@@ -130,8 +135,8 @@ func (s *Service) atender(t trabajo) {
 }
 
 // guardar escribe las dos redacciones en la fila del campo.
-func (s *Service) guardar(t trabajo, es, en string) {
-	err := s.store.GuardarResultado(t.numero, string(t.tipo), es, en, s.ajustes.Modelo, s.now())
+func (s *Service) guardar(t trabajo, es, en, modelo string) {
+	err := s.store.GuardarResultado(t.numero, string(t.tipo), es, en, modelo, s.now())
 	if err != nil {
 		logs.LogError("no se pudo guardar el resumen del ticket " + t.numero + " (" + string(t.tipo) + "): " + err.Error())
 		return

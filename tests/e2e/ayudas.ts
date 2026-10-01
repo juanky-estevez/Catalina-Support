@@ -352,11 +352,12 @@ export async function ponerElMetodo(peticion: APIRequestContext, metodo: string)
  * salen nunca por la API— y se mira si contesta que sí.
  *
  * Es lo que permite saltarse las pruebas de los caminos de directorio cuando el perfil `auth` no está
- * levantado, **sin depender del método que esté puesto**.
+ * levantado, **sin depender del método que esté puesto**, y las del motor de IA cuando no está su
+ * contenedor.
  */
 export async function respondeAlProbar(
   peticion: APIRequestContext,
-  camino: 'directory' | 'keycloak',
+  camino: 'directory' | 'keycloak' | 'ai',
 ): Promise<boolean> {
   const token = await tokenDeFabrica(peticion);
 
@@ -367,9 +368,13 @@ export async function respondeAlProbar(
 
   const configuracion = (await ajustes.json()) as Record<string, unknown>;
 
+  // El motor de IA no tiene su configuración anidada: su dirección vive en la raíz y su prueba la
+  // recibe como `url`. Los otros dos caminos mandan su objeto tal cual (docs/modules/ai.md).
+  const cuerpo = camino === 'ai' ? { url: configuracion['aiUrl'] } : configuracion[camino];
+
   const prueba = await peticion.post(`/api/settings/${camino}/test`, {
     headers: { Authorization: `Bearer ${token}` },
-    data: configuracion[camino],
+    data: cuerpo,
   });
 
   return prueba.status() === 200;

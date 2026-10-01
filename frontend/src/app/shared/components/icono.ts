@@ -71,7 +71,9 @@ export type NombreDeIcono =
         }
         @case ('configuracion') {
           <circle cx="12" cy="12" r="3" />
-          <path d="M12 2.5v3M12 18.5v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2.5 12h3M18.5 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />
+          <path
+            d="M12 2.5v3M12 18.5v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2.5 12h3M18.5 12h3M4.9 19.1 7 17M17 7l2.1-2.1"
+          />
         }
         @case ('menu') {
           <path d="M4 6h16M4 12h16M4 18h16" />

@@ -82,7 +82,7 @@ func (s *Sender) Send(to []string, subject, htmlBody string) error {
 
 	// Conexión cifrada desde el principio (el puerto 465 de siempre).
 	if correo.Secure {
-		return s.sendSecure(address, to, message, correo)
+		return s.sendSecure(to, message, correo)
 	}
 
 	// Sin cifrado explícito se usa el camino de la biblioteca estándar, que negocia STARTTLS si el
@@ -95,39 +95,103 @@ func (s *Sender) Send(to []string, subject, htmlBody string) error {
 	return smtp.SendMail(address, auth, correo.FromEmail, to, message)
 }
 
-func (s *Sender) sendSecure(address string, to []string, message []byte, correo CorreoSaliente) error {
-	connection, err := tls.DialWithDialer(
-		&net.Dialer{Timeout: s.timeout},
-		"tcp",
-		address,
-		&tls.Config{ServerName: correo.Host, MinVersion: tls.VersionTLS12},
-	)
-	if err != nil {
-		return fmt.Errorf("mail.smtp.connect: %w", err)
+// Probar abre la conexión y **valida la autenticación, sin mandar ningún correo**: no hay MAIL FROM,
+// ni RCPT TO, ni DATA. Es lo que necesita el asistente, donde no hay destinatario y sólo se quiere
+// saber si el servidor contesta y si las credenciales valen (docs/primer-arranque.md, sección 3).
+//
+// Usa **la misma conexión y la misma autenticación que el envío** —`conectar`—, así que lo que se
+// prueba es exactamente lo que se va a usar al mandar.
+func (s *Sender) Probar(correo CorreoSaliente) error {
+	if correo.Host == "" || correo.Port == "" {
+		return ErrNotConfigured
 	}
 
-	client, err := smtp.NewClient(connection, correo.Host)
+	cliente, err := s.conectar(correo)
 	if err != nil {
-		return fmt.Errorf("mail.smtp.handshake: %w", err)
+		return err
 	}
-	defer client.Close()
+	defer cliente.Close()
 
-	if correo.User != "" {
-		if err := client.Auth(smtp.PlainAuth("", correo.User, correo.Password, correo.Host)); err != nil {
-			return fmt.Errorf("mail.smtp.auth: %w", err)
+	return cliente.Quit()
+}
+
+// conectar deja un cliente SMTP **ya conectado y autenticado**, listo para entregar un mensaje o para
+// comprobar la conexión. El cifrado directo (puerto 465) y STARTTLS (587) se resuelven aquí, con el
+// mismo tiempo límite: un servidor que no responde no puede dejar colgada una petición.
+func (s *Sender) conectar(correo CorreoSaliente) (*smtp.Client, error) {
+	address := net.JoinHostPort(correo.Host, correo.Port)
+
+	espera := s.timeout
+	if espera == 0 {
+		espera = 15 * time.Second
+	}
+
+	var cliente *smtp.Client
+
+	if correo.Secure {
+		conexion, err := tls.DialWithDialer(
+			&net.Dialer{Timeout: espera},
+			"tcp",
+			address,
+			&tls.Config{ServerName: correo.Host, MinVersion: tls.VersionTLS12},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("mail.smtp.connect: %w", err)
+		}
+
+		cliente, err = smtp.NewClient(conexion, correo.Host)
+		if err != nil {
+			conexion.Close()
+			return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
+		}
+	} else {
+		conexion, err := net.DialTimeout("tcp", address, espera)
+		if err != nil {
+			return nil, fmt.Errorf("mail.smtp.connect: %w", err)
+		}
+
+		cliente, err = smtp.NewClient(conexion, correo.Host)
+		if err != nil {
+			conexion.Close()
+			return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
+		}
+
+		// Si el servidor ofrece STARTTLS, se sube la conexión antes de mandar credenciales.
+		if soportado, _ := cliente.Extension("STARTTLS"); soportado {
+			if err := cliente.StartTLS(&tls.Config{ServerName: correo.Host, MinVersion: tls.VersionTLS12}); err != nil {
+				cliente.Close()
+				return nil, fmt.Errorf("mail.smtp.handshake: %w", err)
+			}
 		}
 	}
 
-	if err := client.Mail(correo.FromEmail); err != nil {
+	if correo.User != "" {
+		if err := cliente.Auth(smtp.PlainAuth("", correo.User, correo.Password, correo.Host)); err != nil {
+			cliente.Close()
+			return nil, fmt.Errorf("mail.smtp.auth: %w", err)
+		}
+	}
+
+	return cliente, nil
+}
+
+func (s *Sender) sendSecure(to []string, message []byte, correo CorreoSaliente) error {
+	cliente, err := s.conectar(correo)
+	if err != nil {
+		return err
+	}
+	defer cliente.Close()
+
+	if err := cliente.Mail(correo.FromEmail); err != nil {
 		return fmt.Errorf("mail.smtp.from: %w", err)
 	}
 	for _, recipient := range to {
-		if err := client.Rcpt(recipient); err != nil {
+		if err := cliente.Rcpt(recipient); err != nil {
 			return fmt.Errorf("mail.smtp.recipient: %w", err)
 		}
 	}
 
-	writer, err := client.Data()
+	writer, err := cliente.Data()
 	if err != nil {
 		return fmt.Errorf("mail.smtp.data: %w", err)
 	}
@@ -138,5 +202,5 @@ func (s *Sender) sendSecure(address string, to []string, message []byte, correo 
 		return fmt.Errorf("mail.smtp.close: %w", err)
 	}
 
-	return client.Quit()
+	return cliente.Quit()
 }

@@ -1,7 +1,16 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-09-30
+>
+> **Enmendado el 2026-09-30**: el motor **se levanta aparte** (`ai.yml`, como el directorio de pruebas y
+> Keycloak) y **es opcional** —decisión y corrección del responsable—: sin él la mesa de ayuda
+> funciona entera, sin los dos resúmenes, y el asistente de primer arranque **lo avisa sin
+> bloquear**, diciendo qué comprobar (su contenedor, y el modelo la primera vez). **Su dirección y
+> su modelo ya se configuran desde Configuración** (decisión 16 de `docs/modules/settings.md`), con
+> su tarjeta y su botón de «Probar la conexión»: este módulo los lee **en cada petición** por la
+> interfaz `Configuracion` que él declara (sección 5), y si no hay nada puesto usa `AI_URL` y
+> `AI_MODEL` **como respaldo** (`AI_PALABRAS` y `AI_ESPERA_SEGUNDOS` siguen siendo del entorno).
 >
 > **Pasa a as-built el 2026-09-27**, el mismo día en que se escribió: el módulo, el contenedor del
 > motor, la tabla `ai_insights`, los dos campos en la lista y en la ficha, y sus pruebas **están
@@ -155,6 +164,30 @@ func (s *Service) Pedir(entrada tickets.EntradaDeResumen)
 func (s *Service) De(numeros []string) (map[string]tickets.Resumen, error)
 ```
 
+**Y del otro lado, el motor**: `ai` declara lo que necesita de la configuración de la instalación y
+`settings` lo cumple, **sin que ninguno de los dos importe al otro**:
+
+```go
+// En ai: de dónde sale el motor que está puesto.
+type Configuracion interface {
+    AI() (AIDatos, error)
+}
+
+// El cableado lo conecta y traduce al tipo de cada módulo (main.go).
+aiService.SetConfiguracion(instalacionesDeLaConfiguracion{settings: settingsService})
+```
+
+- **La configuración se lee en cada petición**, no al arrancar: la dirección y el modelo de la base
+  son los que mandan cada vez que se encola un resumen, se resuelve un trabajo o se pregunta por la
+  salud del motor. Es lo que hace que cambiarlos en Configuración valga sin reiniciar nada.
+- **Si la configuración no tiene motor, el entorno hace de respaldo** (`AI_URL`, `AI_MODEL`), y lo
+  resuelve el módulo con sus propios ajustes: la configuración dice **si hay** motor, no cuál es el de
+  reserva (decisión 21).
+- **La prueba de la conexión** (`Probar(url)`) es la que pide el botón de Configuración: pregunta a
+  `<url>/health` con un contexto de tres segundos y devuelve el error en vez de un booleano. La
+  declara `settings` en su interfaz `ProberDeIA` y la cumple este módulo —igual que `Disponible()`,
+  que es la que usa el asistente de primer arranque—.
+
 - **El texto no se guarda**: la tabla no tiene columna de texto a propósito —sería copiar el ticket
   entero en otra tabla, y con él los datos de las personas—. Eso obliga a que, para volver a pedir un
   resumen que quedó a medias al reiniciar, alguien **vuelva a armar el texto**: `ai` declara también
@@ -240,3 +273,4 @@ func (s *Service) De(numeros []string) (map[string]tickets.Resumen, error)
 | 19 | **El módulo depende de una interfaz de almacén** | La cumple el repositorio, y es lo que permite probar la cola, los reintentos y los estados sin base de datos |
 | 20 | **La cola tiene dos trabajadores, y el motor atiende de uno en uno** | El motor tiene una sola ranura (`--parallel 1`), así que el segundo trabajador hace cola dentro de él. Se quedan dos a propósito: es lo que evita que un ticket se quede esperando detrás de la cola de otro en la aplicación |
 | 10 | **Qué pasa al reiniciar el backend** | La cola vive en memoria y **se pierde**, así que al arrancar **se vuelve a pedir** lo que quedó en `pendiente` o con pocos intentos. Lo que estaba en `error` **no se reintenta solo**: para eso está el botón |
+| 21 | **El motor sale de la configuración** | **Decisión del responsable, 2026-09-30**: la dirección y el modelo se guardan en Configuración (decisión 16 de `docs/modules/settings.md`) y este módulo los lee **en cada petición** por la interfaz `Configuracion` que él declara; el entorno (`AI_URL`, `AI_MODEL`) queda **como respaldo**. La prueba de la conexión —`Probar(url)` contra `<url>/health`, con tres segundos de tope— la consume `settings` por su interfaz `ProberDeIA` |

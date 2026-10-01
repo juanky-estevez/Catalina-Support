@@ -88,7 +88,9 @@ describe('fechaCorta', () => {
     // La misma marca leída en dos zonas de la instalación: el navegador sólo puede estar en una, así
     // que al menos una de las dos lecturas demuestra que se usa la zona que se le pasa y no la suya.
     expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'America/Guayaquil')).toBe('29/09/2026, 21:00');
-    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe('30/09/2026, 16:00');
+    expect(fechaCorta('2026-09-30T02:00:00Z', 'es', 'Pacific/Kiritimati')).toBe(
+      '30/09/2026, 16:00',
+    );
   });
 
   // La marca es pública: si la zona no llega —o llega un nombre que `Intl` no conoce— se lee con la

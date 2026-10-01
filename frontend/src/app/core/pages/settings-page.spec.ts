@@ -38,6 +38,8 @@ const CONFIGURACION = {
   mainNotification: 'al_asignado',
   internalAssignment: 'ninguna',
   internalNotification: 'a_nadie',
+  aiUrl: 'http://catalina_support_ai:8080',
+  aiModel: 'qwen2.5-1.5b-instruct',
   updatedAt: '2026-09-29T00:00:00Z',
   brand: { light: { filled: false }, dark: { filled: false } },
 };
@@ -122,16 +124,18 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
 
   /** El texto del aviso de que la dirección no va cifrada, o vacío si no está. */
   function avisoInseguro(fixture: ComponentFixture<SettingsPage>): string {
-    const avisos = Array.from(
-      fixture.nativeElement.querySelectorAll('app-aviso'),
-    ) as HTMLElement[];
+    const avisos = Array.from(fixture.nativeElement.querySelectorAll('app-aviso')) as HTMLElement[];
     return (
       avisos.find((aviso) => aviso.textContent?.includes('sin cifrar'))?.textContent?.trim() ?? ''
     );
   }
 
   /** Escribe en un campo como lo haría alguien: valor y evento `input`. */
-  function escribir(fixture: ComponentFixture<SettingsPage>, selector: string, valor: string): void {
+  function escribir(
+    fixture: ComponentFixture<SettingsPage>,
+    selector: string,
+    valor: string,
+  ): void {
     const campo = fixture.nativeElement.querySelector(selector) as HTMLInputElement;
     campo.value = valor;
     campo.dispatchEvent(new Event('input'));
@@ -214,5 +218,24 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     const texto = fixture.nativeElement.textContent as string;
     expect(texto).toContain('Ahora son las');
     expect(texto).toMatch(/GMT[+-]\d/);
+  });
+
+  // **La vista previa del color la sirve la marca**: la pantalla usa `BrandService` para preguntar
+  // cómo quedaría el color, sin guardarlo, y la petición va con el color escapado.
+  it('elegir un color pide la vista previa a la marca', async () => {
+    const fixture = await montar();
+
+    const campo = fixture.nativeElement.querySelector('input[type="color"]') as HTMLInputElement;
+    campo.value = '#123456';
+    campo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const peticion = http.expectOne('/api/settings/brand?color=%23123456');
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush({ ...MARCA, primaryColor: '#123456' });
+    await esperar();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string).toContain('#123456');
   });
 });

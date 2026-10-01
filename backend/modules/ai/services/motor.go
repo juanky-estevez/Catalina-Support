@@ -141,6 +141,32 @@ func (m *motor) disponible(ctx context.Context, ajustes Ajustes) bool {
 	return respuestaHTTP.StatusCode >= 200 && respuestaHTTP.StatusCode <= 299
 }
 
+// probar pregunta por la salud del motor de esa dirección y **devuelve el error** en vez de un
+// booleano: es lo que necesita el botón de probar la conexión, que tiene que decir qué ha pasado.
+//
+// El tiempo límite lo pone quien llama (un contexto corto): probar una conexión no puede dejar la
+// pantalla esperando a un contenedor que no está.
+func (m *motor) probar(ctx context.Context, url string) error {
+	peticionHTTP, err := http.NewRequestWithContext(ctx, http.MethodGet, direccionDe(url, "/health"), nil)
+	if err != nil {
+		return ErrSinMotor
+	}
+
+	respuestaHTTP, err := m.cliente.Do(peticionHTTP)
+	if err != nil {
+		return ErrSinMotor
+	}
+	defer respuestaHTTP.Body.Close()
+
+	vaciar(respuestaHTTP.Body)
+
+	if respuestaHTTP.StatusCode < 200 || respuestaHTTP.StatusCode > 299 {
+		return ErrSinMotor
+	}
+
+	return nil
+}
+
 // dosIdiomas saca las dos redacciones de lo que haya contestado el modelo, **con tolerancia**: un
 // modelo pequeño contesta con el JSON pedido, o con el JSON envuelto en ```json … ```, o con una
 // frase delante. Nada de eso es motivo para tirar una respuesta que sirve.

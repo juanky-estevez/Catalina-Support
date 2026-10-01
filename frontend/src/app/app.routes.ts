@@ -2,7 +2,12 @@ import { Routes } from '@angular/router';
 
 import { Armazon } from './core/components/armazon';
 import { instalacionComprobada, instalacionSinSellar } from './core/guards/instalacion.guard';
-import { conCuentaPropia, conPapel, inicioSegunPapel, sesionActiva } from './core/guards/sesion.guard';
+import {
+  conCuentaPropia,
+  conPapel,
+  inicioSegunPapel,
+  sesionActiva,
+} from './core/guards/sesion.guard';
 
 /**
  * Las rutas, en dos grupos.
@@ -71,8 +76,7 @@ export const routes: Routes = [
           },
           {
             path: 'forbidden',
-            loadComponent: () =>
-              import('./core/pages/forbidden-page').then((m) => m.ForbiddenPage),
+            loadComponent: () => import('./core/pages/forbidden-page').then((m) => m.ForbiddenPage),
           },
           {
             // La bandeja: **«lo mío»** para el usuario, Soporte y Desarrollo —asignado, abierto por uno o
@@ -80,7 +84,8 @@ export const routes: Routes = [
             // el nombre que le toca a cada uno (docs/interfaz-y-experiencia.md, secciones 3.2, 3.3 y 3.7).
             path: 'tickets',
             data: { listado: 'mios' },
-            loadComponent: () => import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
+            loadComponent: () =>
+              import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
           },
           {
             // Las dos listas del «todo», sólo para Soporte y Desarrollo, que son los dos papeles que
@@ -89,13 +94,15 @@ export const routes: Routes = [
             path: 'tickets/main',
             data: { listado: 'principal' },
             canActivate: [conPapel('soporte', 'desarrollo')],
-            loadComponent: () => import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
+            loadComponent: () =>
+              import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
           },
           {
             path: 'tickets/internal',
             data: { listado: 'interno' },
             canActivate: [conPapel('soporte', 'desarrollo')],
-            loadComponent: () => import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
+            loadComponent: () =>
+              import('./modules/tickets/bandeja-page').then((m) => m.BandejaPage),
           },
           {
             // **El catálogo de categorías y etiquetas**: una pantalla del módulo `tickets` y no una sección

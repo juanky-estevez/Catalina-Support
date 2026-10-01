@@ -39,7 +39,13 @@ describe('UsersService', () => {
   });
 
   it('la lista lleva sus filtros y su página, y no manda los que están vacíos', async () => {
-    const peticion = users.listar({ role: '', origin: 'local', active: 'false', q: '  ana ', page: 2 });
+    const peticion = users.listar({
+      role: '',
+      origin: 'local',
+      active: 'false',
+      q: '  ana ',
+      page: 2,
+    });
 
     const pidiendo = http.expectOne((peticion) => peticion.url === '/api/users');
     expect(pidiendo.request.method).toBe('GET');

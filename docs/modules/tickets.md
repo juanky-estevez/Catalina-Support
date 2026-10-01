@@ -20,28 +20,7 @@
 > buscar: nace **`ticket_categories`** —«Red», «Software x», «Licencias»…— con la que **todo ticket
 > nace clasificado** (nunca hay uno sin categoría, y lo garantiza la propia base) y que se puede
 > corregir después, y **`ticket_tag_names`**
-
-**El catálogo de etiquetas** (decisión 72): el nombre de cada etiqueta, para poder crearla sin que la
-lleve ningún ticket, renombrarla de una sola vez y contarla.
-
-| Columna | Para qué |
-| --- | --- |
-| `id` | Clave |
-| `tag` | El nombre, ya normalizado: minúsculas, con guiones, sin acentos. **La forma normalizada es la que se guarda**, a diferencia del nombre de una categoría —que es un nombre que se lee—: una etiqueta es una clave con la que se agrupa |
-| `normalized` | El mismo nombre normalizado, **único**: es lo que impide `red-wifi` y `Red-Wifi` a la vez |
-| `created_by_id` | Quién la creó, **nulo** si nació de una base puesta al día o de una etiqueta de antes |
-| `created_at` | Cuándo |
-
-**`ticket_tags`**
-
-**Qué ticket lleva qué etiqueta**: la tabla puente entre el ticket y el catálogo.
-
-| Columna | Para qué |
-| --- | --- |
-| `id` | Clave |
-| `ticket_id` | El ticket. Clave ajena con **borrado en cascada**, como los comentarios |
-| `tag_id` | La etiqueta, **clave ajena al catálogo con borrado en cascada**: retirar una etiqueta es borrar su fila del catálogo y sus enlaces se van con ella, en un solo movimiento |
-| `created_by_id`, `created_at` | Quién la puso en ese ticket y cuándo | —opcionales, **en minúsculas y con guion medio** (`red-wifi`),
+> —opcionales, **en minúsculas y con guion medio** (`red-wifi`),
 > con sugerencias de las que ya existen—. **La categoría y las etiquetas son del principal** y el
 > interno las hereda al leerse. Las dos sirven para **filtrar** (chips) y para **buscar** (entran en la
 > misma caja de texto). El catálogo lo mantienen **Soporte y el Administrador**, y **retirar** una
@@ -148,6 +127,12 @@ lleve ningún ticket, renombrarla de una sola vez y contarla.
 > Soporte** —su menú estrena la entrada, porque puede crear en nombre de otra persona y ese permiso no
 > tenía puerta; corrección del responsable—, el escalado **en un diálogo**, los adjuntos **con vista
 > previa**, y que **el detalle es una sola pantalla para los cuatro papeles**.
+>
+> **Enmendado el 2026-09-24, al escribir `docs/modules/settings.md`** (aprobado por el responsable el
+> mismo día): esta tabla se llamaba `ticket_number_settings` y **sólo recogía el prefijo**, cuando el
+> reparto y los avisos de la sección 3.3 no cabían en ninguna parte. Pasa a llamarse
+> **`ticket_settings`** y recoge las cinco cosas: el prefijo, la asignación y el aviso de los tickets
+> principales y los de los internos.
 >
 > **Estado de la implementación (2026-09-24): el módulo está entero**, backend y pantallas. El backend
 > —las ocho tablas, la numeración, el reparto, los endpoints y los ocho correos— está probado de
@@ -288,12 +273,6 @@ Es una tabla de **una sola fila** y no una de «ajustes» con clave y valor: una
 el cajón donde entra todo. Con una fila se ve de un vistazo **qué** es configurable, y añadir otro
 ajuste exige tocar el esquema, que es justo la conversación que conviene tener.
 
-> **Enmendado el 2026-09-24, al escribir `docs/modules/settings.md`** (aprobado por el responsable el
-> mismo día): esta tabla se llamaba `ticket_number_settings` y **sólo recogía el prefijo**, cuando el
-> reparto y los avisos de la sección 3.3 no cabían en ninguna parte. Pasa a llamarse
-> **`ticket_settings`** y recoge las cinco cosas: el prefijo, la asignación y el aviso de los tickets
-> principales y los de los internos.
-
 ### 2.3 Comentarios, adjuntos e historial
 
 Las tres tablas que siguen apuntan a **un principal o a un interno**: llevan `ticket_id` y
@@ -432,20 +411,27 @@ tickets, y su pantalla es una pantalla de este módulo (decisión 64).
 **`tickets.category_id`**: columna nueva, **`NOT NULL`** con clave ajena a `ticket_categories`
 (decisión 65). La trae la migración con la categoría **«General»** ya puesta a lo que exista.
 
-**`ticket_tags`**
-
-Las etiquetas de un ticket: opcionales, muchas por ticket, y **sólo en el principal** (decisión 67).
+**El catálogo de etiquetas** (decisión 72): el nombre de cada etiqueta, para poder crearla sin que la
+lleve ningún ticket, renombrarla de una sola vez y contarla.
 
 | Columna | Para qué |
 | --- | --- |
 | `id` | Clave |
-| `ticket_id` | El ticket al que pertenece. **Clave ajena con borrado en cascada**, como los comentarios |
-| `tag` | La etiqueta, ya normalizada: minúsculas, con guiones, sin acentos |
-| `created_by_id`, `created_at` | Quién la puso y cuándo |
+| `tag` | El nombre, ya normalizado: minúsculas, con guiones, sin acentos. **La forma normalizada es la que se guarda**, a diferencia del nombre de una categoría —que es un nombre que se lee—: una etiqueta es una clave con la que se agrupa |
+| `normalized` | El mismo nombre normalizado, **único**: es lo que impide `red-wifi` y `Red-Wifi` a la vez |
+| `created_by_id` | Quién la creó, **nulo** si nació de una base puesta al día o de una etiqueta de antes |
+| `created_at` | Cuándo |
 
-- **`UNIQUE (ticket_id, tag)`**: la misma etiqueta no se repite en el mismo ticket.
-- **Índice por `tag`**: es como se filtran los tickets de una etiqueta, y como se cuentan para
-  sugerirlas.
+**`ticket_tags`**
+
+**Qué ticket lleva qué etiqueta**: la tabla puente entre el ticket y el catálogo.
+
+| Columna | Para qué |
+| --- | --- |
+| `id` | Clave |
+| `ticket_id` | El ticket. Clave ajena con **borrado en cascada**, como los comentarios |
+| `tag_id` | La etiqueta, **clave ajena al catálogo con borrado en cascada**: retirar una etiqueta es borrar su fila del catálogo y sus enlaces se van con ella, en un solo movimiento |
+| `created_by_id`, `created_at` | Quién la puso en ese ticket y cuándo |
 
 **`ticket_observers`**
 

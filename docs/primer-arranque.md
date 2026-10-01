@@ -3,33 +3,43 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-09-30
 >
+> **Enmendado el 2026-09-30**: **el asistente prueba lo que pide**, como prometía la §3 y la §6. Se
+> añaden dos endpoints públicos más —`POST /api/setup/entry/test` y `POST /api/setup/mail/test`— con
+> el mismo candado del sello (**409** `setup.alreadyInstalled`), el paso 2 y el paso 4 estrenan su
+> botón de «Probar la conexión» y la prueba del correo **comprueba la conexión y la autenticación sin
+> mandar ningún correo**, porque en el asistente no hay destinatario. Los datos que llegan se validan
+> igual que al guardar, con las mismas claves. Con esto **quedan corregidas las desviaciones 1 y 1.b**
+> del bloque de abajo. Cuenta como **1 enmienda** (`docs/README.md`).
+>
 > **Escrito a petición del responsable** (2026-09-30) y **aprobado e implementado el mismo día**: quería
 > poder probar **la vista de primer arranque en otra máquina**, y que esa vista **pida toda la
 > información necesaria para arrancar** —dominio, dirección, puerto, correo, método de entrada— sin
 > tener que editar archivos en el servidor.
 >
 > **Lo que se desvió de esta propuesta, contado aquí** (Regla 0):
-> 1. **Ni la prueba de conexión del directorio o Keycloak (paso 2) ni la del correo (paso 4) están en
->    el asistente.** La API de `/api/setup/**` no tiene endpoints de prueba y **todavía no hay sesión**
->    con la que probar: los botones de «Probar la conexión» de Configuración piden ser Administrador, y
->    aquí no hay ninguno. Los datos se guardan y se validan —el método tiene que estar configurado para
->    poder terminar—, y **la prueba se hace después**, desde Configuración o mandando un correo de
->    prueba desde el editor. Queda apuntado como lo que falta.
+> 1. **Ni la prueba de conexión del directorio o Keycloak (paso 2) ni la del correo (paso 4) estaban en
+>    el asistente** al implementarlo. La API de `/api/setup/**` no tenía endpoints de prueba y
+>    **todavía no hay sesión** con la que probar: los botones de «Probar la conexión» de Configuración
+>    piden ser Administrador, y aquí no hay ninguno. Los datos se guardaban y se validaban —el método
+>    tiene que estar configurado para poder terminar—, y **la prueba se hacía después**. **Corregido el
+>    2026-09-30**: los dos endpoints existen y son públicos, con el sello como único candado, y el
+>    paso 2 y el paso 4 traen su botón (§3.1).
 >
-> 1.b. **La prueba del correo saliente desde el asistente no se hizo.** El paso 4 guarda y valida, pero no
->    manda un correo de prueba: para eso hay que tener ya el correo configurado, y el editor de correos
->    tiene su propio botón de prueba, que es donde se comprueba de verdad. Queda dicho para que no se
->    busque un botón que no está.
+> 1.b. **La prueba del correo saliente desde el asistente no se hacía.** El paso 4 guardaba y validaba,
+>    pero no probaba nada: para mandar un correo de prueba hay que tener ya el correo configurado y un
+>    destinatario, y en el asistente no hay ninguno. **Corregido el 2026-09-30**: el paso 4 tiene su
+>    botón y prueba **la conexión y la autenticación**, no el envío, que es lo que se puede comprobar
+>    sin destinatario (§3.1).
 > 2. **El asistente no tiene botón propio de «probar el motor de IA»**: el resumen **dice** si responde
 >    —el backend lo pregunta al arrancar el paso y lo devuelve en `aiAvailable`—, que es lo que hace
 >    falta saber antes de terminar.
 > 3. **El camino completo de instalación no está en la suite de interfaz.** El contenedor de las pruebas
 >    no habla con la base y no se puede quitar el sello desde él, así que el recorrido de los cuatro
->    pasos se verificó **por la API, a mano** (los cuatro pasos, los 422 de cada paso y el 409 al volver
->    a configurar), y lo que sí está en la suite es **el candado**: en una instalación ya configurada,
->    `/setup` lleva a la entrada y la API lo rechaza.
-> 4. **Los caminos de la API son** `POST /api/setup/installation`, `/entry`, `/location`, `/mail` y
->    `/finish`.
+>    pasos se verifica **por la API, a mano** (los cuatro pasos, los 422 de cada paso, las dos pruebas
+>    de conexión y el 409 al volver a configurar), y lo que sí está en la suite es **el candado**: en
+>    una instalación ya configurada, `/setup` lleva a la entrada y la API lo rechaza.
+> 4. **Los caminos de la API son** `POST /api/setup/installation`, `/entry`, `/entry/test`, `/location`,
+>    `/mail`, `/mail/test` y `/finish`.
 
 ## 1. Qué problema resuelve
 
@@ -68,7 +78,7 @@ cerrar el navegador a medias no pierde lo hecho: al volver, el asistente sigue d
 | Paso | Qué pide | Por qué |
 | --- | --- | --- |
 | **1 · La instalación** | **El nombre** y **el idioma** | Es lo que se lee en la entrada, en el menú y en los correos |
-| **2 · Cómo se entra** | **El método** —local, Active Directory o Keycloak— y **sus datos**. **La cuenta de fábrica se explica siempre**, sea cual sea el método: cómo se llama y **de dónde sale su contraseña** (`ADMIN_PASSWORD`, del entorno) | Es la puerta: sin esto no entra nadie, y la de fábrica entra con **cualquiera** de los tres métodos. **La contraseña no se pide aquí**: sigue en el entorno, y esa regla —que la puerta de fábrica **no dependa de la base**— no se toca |
+| **2 · Cómo se entra** | **El método** —local, Active Directory o Keycloak— y **sus datos**, **con su prueba**: el botón comprueba lo que corresponda al método elegido. **La cuenta de fábrica se explica siempre**, sea cual sea el método: cómo se llama y **de dónde sale su contraseña** (`ADMIN_PASSWORD`, del entorno) | Es la puerta: sin esto no entra nadie, y la de fábrica entra con **cualquiera** de los tres métodos. **La contraseña no se pide aquí**: sigue en el entorno, y esa regla —que la puerta de fábrica **no dependa de la base**— no se toca |
 | **3 · Dónde está** | **La región horaria** —de la lista con buscador— y **la dirección pública** —esquema, host y puerto—, con **el aviso si no es https** | Deciden cómo se leen las fechas y a dónde apuntan los enlaces de los correos |
 | **4 · El correo** | **El servidor saliente**: host, puerto, TLS, usuario, contraseña y remitente, **con su prueba** | Sin él no sale ningún correo: ni un alta, ni un restablecer, ni un aviso |
 
@@ -80,6 +90,31 @@ que es lo que pone el sello.
 Configuración un método sin sus datos se ofrece apagado, y aquí **no puede ser**, porque si no habría
 forma de rellenar los campos del que se quiere usar. Elegirlo abre sus campos, y al avanzar se
 comprueba que estén completos.
+
+### 3.1 Las pruebas de conexión del asistente
+
+Los dos pasos que configuran algo que hay que comprobar traen su botón de **«Probar la conexión»**,
+como Configuración. **La prueba no guarda nada**: manda lo que hay escrito en pantalla y contesta si
+eso funciona, así que se puede corregir antes de avanzar.
+
+| Paso | Qué prueba | Qué **no** hace |
+| --- | --- | --- |
+| **2 · Cómo se entra** | **El directorio (AD) o Keycloak, según el método elegido**: con AD abre la conexión y valida la cuenta de servicio; con Keycloak lee el documento del reino. Con el método **local** no hay nada que conectar y el botón no se enseña. | No guarda nada, no valida la contraseña de nadie —eso sólo se sabe cuando alguien entra— y no toca la base. |
+| **4 · El correo** | **La conexión y la autenticación del correo saliente**: host, puerto, TLS, usuario y contraseña. Es la misma conexión y la misma autenticación que usa el envío. | **No manda ningún correo**: no hay MAIL FROM, ni RCPT TO, ni DATA. En el asistente no hay destinatario, y por eso no se puede —ni se debe— probar el envío desde aquí. |
+
+**Las contesta quien ya sabía hacerlo**, sin duplicar nada: el directorio y Keycloak los prueba el
+módulo `auth` —el mismo que contesta a los botones de Configuración— y el correo lo prueba el módulo
+`mail`, con la conexión que usa para enviar. El módulo `settings` declara lo que necesita
+(`Prober`, `ProberDeCorreo`) y `main.go` se lo da, como manda la regla de modularidad
+(`docs/arquitectura.md`, sección 4).
+
+**Los datos que llegan se validan igual que al guardar**, con las mismas claves: el método tiene que
+ser uno de los tres y estar configurado, el directorio y Keycloak tienen que estar completos, y el
+correo necesita servidor, puerto y remitente con arroba. La contraseña o el secreto vacíos usan **lo
+que ya esté guardado**, que es lo que permite probar sin volver a escribir un secreto que no sale
+nunca por la API. Cuando la prueba no llega, la pantalla lee `settings.directory.unreachable`,
+`settings.keycloak.unreachable` o `setup.mail.unreachable`, según el caso, y el detalle técnico queda
+en el log.
 
 ## 4. Lo que el asistente **no** pregunta, y por qué
 
@@ -109,10 +144,18 @@ en Configuración.
 - **La pantalla**: una ruta propia, `/setup`, **sin el armazón del menú** —no hay nada que navegar
   todavía— y con la marca de fábrica.
 - **La API**: `/api/setup/**`, en el módulo `settings`, **disponible sólo mientras el sello sea
-  nulo**. Guardar dos veces la misma instalación se rechaza con **409** y su clave.
-- **Las pruebas**: la unitaria de cada paso, y **la que más importa**, un caso de interfaz que
-  comprueba que **una instalación ya configurada no enseña el asistente y su API lo rechaza**; y otro
-  que recorre los cuatro pasos desde cero y acaba entrando con la configuración puesta.
+  nulo**. Guardar dos veces la misma instalación se rechaza con **409** y su clave. Además de los cinco
+  caminos que guardan y sellan, están **las dos pruebas** del paso 2 y del paso 4 —`POST
+  /api/setup/entry/test` y `POST /api/setup/mail/test`—, que reciben los datos escritos, **no tocan la
+  base**, contestan `{"status":"ok"}` o la clave del fallo, y **con la instalación sellada contestan
+  también 409** `setup.alreadyInstalled` (§3.1).
+- **Las pruebas**: las unitarias de cada paso y **las dos de los endpoints de prueba** —con dobles, sin
+  salir a la red: el 409 con el sello puesto, la validación de los datos malos y que con datos buenos
+  se llama a la prueba del módulo—, la del remitente del correo —que conecta y autentica sin mandar
+  nada— y **la que más importa en la suite de interfaz**: que **una instalación ya configurada no
+  enseña el asistente y su API lo rechaza**. El recorrido de los cuatro pasos desde cero no está en la
+  suite —el contenedor de las pruebas no toca la base y no puede quitar el sello—: se verifica por la
+  API, a mano (desviación 3).
 
 ## 7. Lo que queda fuera, y hay que decirlo
 

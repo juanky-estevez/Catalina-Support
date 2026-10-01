@@ -52,7 +52,10 @@ export function etiquetaDeIdioma(idioma: string): string {
 }
 
 /** Los papeles que se pueden repartir: Soporte sólo crea usuarios, y eso lo decide la pantalla. */
-export function opcionesDePapel(textos: Textos, papeles: readonly string[]): readonly OpcionSelector[] {
+export function opcionesDePapel(
+  textos: Textos,
+  papeles: readonly string[],
+): readonly OpcionSelector[] {
   return papeles.map((papel) => ({
     valor: papel,
     etiqueta: etiquetaDePapel(textos, papel),

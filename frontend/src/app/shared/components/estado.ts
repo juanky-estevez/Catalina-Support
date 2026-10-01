@@ -12,9 +12,7 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'app-estado',
-  template: `
-    <span [class]="clases()">{{ texto() }}</span>
-  `,
+  template: ` <span [class]="clases()">{{ texto() }}</span> `,
 })
 export class Estado {
   /** El estado de verdad, que es lo que decide el color: `nuevo`, `en espera`… */
@@ -35,6 +33,8 @@ export class Estado {
       cerrado: 'border-borde bg-superficie text-apagado',
     };
 
-    return [base, formas[this.estado()] ?? 'border-borde bg-superficie-suave text-apagado'].join(' ');
+    return [base, formas[this.estado()] ?? 'border-borde bg-superficie-suave text-apagado'].join(
+      ' ',
+    );
   }
 }

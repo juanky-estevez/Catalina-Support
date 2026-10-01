@@ -61,7 +61,12 @@
   --aviso-suave: light-dark(#fdf3e2, #352c1b);
   --foco: light-dark(#1d4ed8, #7ea2ff);
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
 /*
@@ -215,7 +220,6 @@
   --aviso: #f0c583;
   --aviso-suave: #362b18;
 }
-
 
 /*
  * `inline` es lo que hace que las utilidades de Tailwind lean estas variables en vez de copiar su

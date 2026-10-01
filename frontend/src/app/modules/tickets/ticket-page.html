@@ -27,7 +27,9 @@
         Soporte y el Administrador— y el otro va al lado, en apagado, para saber a cuál pertenece.
       -->
       @if (numeroDeReferencia(); as referencia) {
-        <span class="rounded border border-borde px-1.5 py-0.5 text-xs text-apagado">{{ referencia }}</span>
+        <span class="rounded border border-borde px-1.5 py-0.5 text-xs text-apagado">{{
+          referencia
+        }}</span>
       }
 
       @if (estadoDeArriba(); as estado) {

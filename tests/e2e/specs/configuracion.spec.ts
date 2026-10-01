@@ -232,8 +232,9 @@ test.describe('Configuración', () => {
   });
 
   /**
-   * Los dos botones de «Probar la conexión» prueban **lo que hay en pantalla**, antes de guardarlo: es
-   * lo que evita quedarse sin poder entrar por guardar algo que no funciona.
+   * Los dos botones de «Probar la conexión» de los métodos prueban **lo que hay en pantalla**, antes de
+   * guardarlo: es lo que evita quedarse sin poder entrar por guardar algo que no funciona. La tarjeta
+   * del motor de IA tiene el suyo, y esa prueba va aparte.
    *
    * Necesitan los dos servicios de pruebas levantados, así que se saltan si no lo están, en vez de
    * fallar por algo que no es del producto.
@@ -250,14 +251,16 @@ test.describe('Configuración', () => {
 
     // **Cada botón sale con su panel**: se elige el método, se prueba, y se cambia. Antes estaban los
     // dos a la vez, y desde el 2026-09-27 cada configuración se enseña sólo con su método.
+    // `first()` porque desde el 2026-09-30 la tarjeta del motor de IA tiene **su** botón de probar, y
+    // el del método elegido es el primero de la pantalla.
     const metodo = page.getByLabel('Método de entrada');
 
     await metodo.selectOption('ad');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(page.getByText('El directorio ha contestado y la cuenta de servicio entra.')).toBeVisible();
 
     await metodo.selectOption('keycloak');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(
       page.getByText('El reino ha contestado y dice dónde está su pantalla de entrada.'),
     ).toBeVisible();
@@ -265,7 +268,7 @@ test.describe('Configuración', () => {
     // Y lo que no funciona se dice: con el servidor cambiado por uno que no existe, la prueba falla.
     await metodo.selectOption('ad');
     await page.getByLabel('Servidor').fill('no-existe-de-verdad');
-    await page.getByRole('button', { name: 'Probar la conexión' }).click();
+    await page.getByRole('button', { name: 'Probar la conexión' }).first().click();
     await expect(page.getByText('No se ha podido conectar con el directorio')).toBeVisible();
 
     // Se deja como estaba, sin guardar nada: la prueba de conexión **no toca la base**. Tras recargar
@@ -336,6 +339,79 @@ test.describe('Configuración', () => {
       data: { ...antes, publicAppUrl: 'https://dev-catalina-support.calibyou.com' },
     });
   });
+  /**
+   * **El motor de IA**: su dirección y su modelo se configuran desde aquí, con su prueba de la
+   * conexión, en vez de vivir en el entorno (`docs/modules/ai.md`).
+   *
+   * Se prueba lo que hace que sirva de algo: que lo guardado se enseña, que el guardado llega, que la
+   * prueba dice que sí cuando el motor contesta y que dice que no cuando la dirección no existe. El
+   * motor de desarrollo tiene que estar levantado, así que la prueba se salta si no lo está.
+   */
+  test('el motor de IA se configura y se prueba desde la pantalla', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    test.skip(
+      !(await respondeAlProbar(request, 'ai')),
+      'El motor de IA no responde: levántalo con `docker compose -f ai.yml up -d`',
+    );
+
+    // **Se parte de otra dirección distinta** de la que se va a escribir: el botón de guardar está
+    // apagado mientras no haya cambios, y una prueba que dependa de lo que hubiera antes deja de ser
+    // una prueba. Se deja apuntada la de verdad, para devolverla al final.
+    const peticion = await tokenDeFabrica(request);
+    const antes = (await (
+      await request.get('/api/settings', { headers: { Authorization: `Bearer ${peticion}` } })
+    ).json()) as Record<string, unknown>;
+    await request.put('/api/settings', {
+      headers: { Authorization: `Bearer ${peticion}` },
+      data: { ...antes, aiUrl: 'http://antes.example.org', aiModel: 'modelo-de-antes' },
+    });
+
+    await entrarComo(page, FABRICA.email, FABRICA.password);
+    await page.goto('/settings');
+
+    // **La tarjeta nueva**, con la dirección y el modelo tal y como se guardaron.
+    await expect(page.getByRole('heading', { name: 'El motor de IA' })).toBeVisible();
+    const direccion = page.getByLabel('Dirección del motor');
+    const modelo = page.getByLabel('Modelo');
+    await expect(direccion).toHaveValue('http://antes.example.org');
+    await expect(modelo).toHaveValue('modelo-de-antes');
+
+    // Se guarda el motor de desarrollo, que es el que tiene que quedar.
+    await direccion.fill('http://catalina_support_ai:8080');
+    await modelo.fill('qwen2.5-1.5b-instruct');
+    await page.getByRole('button', { name: 'Guardar el motor de IA' }).click();
+    await expect(page.getByText('El motor de IA se ha guardado.')).toBeVisible();
+
+    // **Y se prueba la conexión**: el motor de desarrollo contesta, así que la prueba lo dice.
+    // `last()` porque el botón del motor es el último de la pantalla: los otros dos salen sólo con su
+    // método de entrada.
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText('El motor ha contestado: redacta los dos resúmenes del ticket.')).toBeVisible();
+
+    // Y lo que no funciona se dice: con una dirección que no existe, la prueba falla.
+    await direccion.fill('http://no-existe-de-verdad:8080');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText(/El motor de IA no ha contestado/)).toBeVisible();
+
+    // **Vaciar la dirección no prueba la guardada** (decisión del responsable, 2026-09-30): al abrir
+    // la pantalla el campo viene con lo que hay en la base, así que vaciarlo es borrarlo a propósito y
+    // lo que toca es decir que no hay nada que probar.
+    await direccion.fill('');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+    await expect(page.getByText(/no hay ninguna que probar/)).toBeVisible();
+
+    // Se devuelve la dirección que había. Al final, y no en un `finally`, porque en una prueba fallida
+    // el contexto ya está cerrado: entonces lo deja el seeder.
+    await request.put('/api/settings', {
+      headers: { Authorization: `Bearer ${peticion}` },
+      data: {
+        ...antes,
+        aiUrl: 'http://catalina_support_ai:8080',
+        aiModel: 'qwen2.5-1.5b-instruct',
+      },
+    });
+  });
+
   test('las tarjetas de Configuración están en su orden y cada cosa en la suya', async ({ page }) => {
     // **La pantalla se ordenó el 2026-09-30** (decisión del responsable): cada tarjeta lleva lo que su
     // título dice. Antes, «La numeración y el reparto» tenía dentro el idioma, y el prefijo y el reparto
@@ -345,7 +421,7 @@ test.describe('Configuración', () => {
     await page.goto('/settings');
 
     const tarjetas = page.locator('app-tarjeta');
-    await expect(tarjetas).toHaveCount(6);
+    await expect(tarjetas).toHaveCount(7);
 
     // Los títulos, en orden: de lo que la instalación **es** a cómo se entra, cómo trabaja y cómo avisa.
     for (const [i, titulo] of [
@@ -354,6 +430,7 @@ test.describe('Configuración', () => {
       'Método de autenticación',
       'La numeración y el reparto',
       'Región horaria y dirección pública',
+      'El motor de IA',
       'Los correos',
     ].entries()) {
       await expect(tarjetas.nth(i).getByRole('heading').first()).toHaveText(titulo);
@@ -375,5 +452,10 @@ test.describe('Configuración', () => {
     await expect(tarjetas.nth(4).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Dirección pública')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Prefijo de los números')).toHaveCount(0);
+
+    // **Y el motor de IA tiene la suya**, con su dirección y su modelo, que ya no viven en el entorno.
+    await expect(tarjetas.nth(5).getByLabel('Dirección del motor')).toBeVisible();
+    await expect(tarjetas.nth(5).getByLabel('Modelo')).toBeVisible();
+    await expect(tarjetas.nth(5).getByRole('button', { name: 'Probar la conexión' })).toBeVisible();
   });
 });

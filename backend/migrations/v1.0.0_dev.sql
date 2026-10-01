@@ -847,6 +847,8 @@ UPDATE installation_settings
    SET installation_name = 'Catalina Support',
        -- **El correo saliente de desarrollo vive aquí**, no en el entorno (decisión del responsable,
        -- 2026-09-30): es el buzón de pruebas, y sin él no saldría ningún correo en el entorno.
+       ai_url          = 'http://catalina_support_ai:8080',
+       ai_model        = 'qwen2.5-1.5b-instruct',
        smtp_host       = 'mail',
        smtp_port       = '1025',
        smtp_secure     = false,

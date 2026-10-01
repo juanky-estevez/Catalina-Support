@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/juanky-estevez/go-logs"
+
 	"catalina-support/backend/shared/auth"
 )
 
@@ -20,10 +22,39 @@ var ErrPasoIncompleto = errors.New("setup.step.incomplete")
 // ErrCorreoIncompleto: los datos del correo saliente no están completos o no son válidos.
 var ErrCorreoIncompleto = errors.New("setup.mail.incomplete")
 
-// ProberDeIA es lo que este módulo necesita para poder decir si el motor de IA responde. Lo declara
-// quien lo usa y lo cumple el módulo `ai`, que es el que sabe hablar con el motor.
+// ErrCorreoInalcanzable: el servidor de correo no ha contestado, o no ha aceptado la autenticación.
+// El detalle queda en el log; a la pantalla le llega que esa configuración no sirve.
+var ErrCorreoInalcanzable = errors.New("setup.mail.unreachable")
+
+// ProberDeIA es lo que este módulo necesita para poder decir si el motor de IA responde, y para
+// probarlo desde Configuración. Lo declara quien lo usa y lo cumple el módulo `ai`, que es el que
+// sabe hablar con el motor.
 type ProberDeIA interface {
 	Disponible() bool
+	// Probar comprueba que el motor de esa dirección contesta. Se le pasa la dirección a propósito:
+	// la prueba es de **lo que hay en pantalla**, y no de lo que esté guardado.
+	Probar(url string) error
+}
+
+// ProberDeCorreo es lo que este módulo necesita para **probar el correo saliente sin mandar ningún
+// correo**: abre la conexión y valida la autenticación —host, puerto, TLS, usuario y contraseña— y
+// no entrega ningún mensaje. Lo declara quien lo usa y lo cumple el módulo `mail`, que es el que sabe
+// hablar con un servidor de correo (docs/primer-arranque.md, sección 3).
+type ProberDeCorreo interface {
+	ProbarCorreo(correo CorreoSaliente) error
+}
+
+// CorreoSaliente es el correo saliente **con sus secretos**, para probarlo: lo que se le manda al
+// módulo de correo es lo que hay en pantalla, no lo que esté guardado. Declarado aquí y traducido en
+// el cableado, como todo lo que cruza de un módulo a otro.
+type CorreoSaliente struct {
+	Host      string
+	Port      string
+	Secure    bool
+	User      string
+	Password  string
+	FromName  string
+	FromEmail string
 }
 
 // EstadoDeInstalacion es lo que la vista de instalación necesita para empezar: si ya está instalada
@@ -136,6 +167,130 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 
 // SetProberDeIA fija quién dice si el motor de IA responde. Lo llama el cableado.
 func (s *Service) SetProberDeIA(ia ProberDeIA) { s.ia = ia }
+
+// SetProberDeCorreo fija quién prueba el correo saliente. Lo llama el cableado.
+func (s *Service) SetProberDeCorreo(correo ProberDeCorreo) { s.correo = correo }
+
+// ProbarPasoDeLaEntrada prueba **el directorio o Keycloak con los datos que llegan**, según el método
+// elegido, **sin guardar nada**: es lo que hace el botón «Probar la conexión» del paso 2 del
+// asistente. Con el método local no hay nada que probar y no se sale a ninguna parte.
+//
+// Los datos se validan **igual que al guardar** —mismo método, mismas configuraciones y mismas
+// claves—, y después se llama **a la misma prueba que usa Configuración**: el módulo `auth` es el
+// único que sabe hablar con un directorio y con un reino, y aquí no se duplica nada.
+func (s *Service) ProbarPasoDeLaEntrada(entrada PasoDeInstalacion) error {
+	if instalada, err := s.EstáInstalada(); err != nil {
+		return err
+	} else if instalada {
+		return ErrYaInstalada
+	}
+
+	metodo := strings.TrimSpace(entrada.EntryMethod)
+	if !metodoValido(metodo) {
+		return ErrMethodUnknown
+	}
+
+	// La contraseña vacía usa la guardada, como en Configuración: el secreto no sale nunca por la API,
+	// así que la pantalla no puede mandarlo de vuelta.
+	directorio, err := s.directoryDeInput(entrada.Directory, true)
+	if err != nil {
+		return err
+	}
+	keycloak, err := s.keycloakDeInput(entrada.Keycloak, true)
+	if err != nil {
+		return err
+	}
+	if err := s.metodoEstaConfigurado(metodo, directorio, keycloak); err != nil {
+		return err
+	}
+
+	// El método local no tiene a qué conectarse: no hay nada que probar.
+	if metodo == auth.MethodLocal {
+		return nil
+	}
+	if s.prober == nil {
+		return errors.New("no hay quien pruebe la entrada")
+	}
+
+	switch metodo {
+	case auth.MethodAD:
+		if err := s.prober.ProbeDirectory(directorio); err != nil {
+			logs.LogWarning("la prueba del directorio del asistente ha fallado: " + err.Error())
+			return ErrDirectoryUnreachable
+		}
+	case auth.MethodKeycloak:
+		if err := s.prober.ProbeKeycloak(keycloak); err != nil {
+			logs.LogWarning("la prueba de Keycloak del asistente ha fallado: " + err.Error())
+			return ErrKeycloakUnreachable
+		}
+	}
+
+	return nil
+}
+
+// ProbarCorreoDeInstalacion prueba **el correo saliente con los datos que llegan**, sin guardarlo y
+// **sin mandar ningún correo**: comprueba la conexión y la autenticación —host, puerto, TLS, usuario y
+// contraseña—, que es lo que hace falta en el paso 4, donde no hay destinatario.
+//
+// Los datos se validan **igual que al guardar**: sin servidor, sin puerto o sin remitente con arroba
+// se contesta la misma clave que guardaría.
+func (s *Service) ProbarCorreoDeInstalacion(entrada MailInput) error {
+	if instalada, err := s.EstáInstalada(); err != nil {
+		return err
+	} else if instalada {
+		return ErrYaInstalada
+	}
+
+	correo, err := s.correoDeInput(entrada, true)
+	if err != nil {
+		return err
+	}
+	if s.correo == nil {
+		return errors.New("no hay quien pruebe el correo")
+	}
+
+	if err := s.correo.ProbarCorreo(correo); err != nil {
+		// El motivo —no contesta, o no acepta las credenciales— va al log, que es donde lo ve quien
+		// administra. A la pantalla le llega una clave, nunca un secreto.
+		logs.LogWarning("la prueba del correo del asistente ha fallado: " + err.Error())
+		return ErrCorreoInalcanzable
+	}
+
+	return nil
+}
+
+// correoDeInput arma el correo saliente a partir de lo que llega de la pantalla.
+//
+// Con `usarLaGuardada`, la contraseña vacía se rellena con la que hay en la base: es lo que permite
+// probar una configuración sin volver a escribir el secreto. Al guardar, en cambio, vacío quiere
+// decir «no la cambies» y se resuelve en el propio paso.
+func (s *Service) correoDeInput(input MailInput, usarLaGuardada bool) (CorreoSaliente, error) {
+	correo := CorreoSaliente{
+		Host:      strings.TrimSpace(input.Host),
+		Port:      strings.TrimSpace(input.Port),
+		Secure:    input.Secure,
+		User:      strings.TrimSpace(input.User),
+		Password:  strings.TrimSpace(input.Password),
+		FromName:  strings.TrimSpace(input.FromName),
+		FromEmail: strings.TrimSpace(input.FromEmail),
+	}
+
+	if usarLaGuardada && correo.Password == "" {
+		guardada, err := s.repo.Installation()
+		if err != nil {
+			return CorreoSaliente{}, traducir(err)
+		}
+		correo.Password = guardada.SMTPPassword
+	}
+
+	// Sin servidor, sin puerto y sin remitente con arroba no hay nada que probar: es la misma
+	// condición que exige el guardado.
+	if correo.Host == "" || correo.Port == "" || !strings.Contains(correo.FromEmail, "@") {
+		return CorreoSaliente{}, ErrCorreoIncompleto
+	}
+
+	return correo, nil
+}
 
 // GuardarPasoDeInstalacion guarda **un paso** del asistente. Se niega si la instalación ya está
 // sellada, y cada paso comprueba **sólo lo suyo**: el resto todavía no está puesto.
