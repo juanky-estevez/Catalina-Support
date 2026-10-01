@@ -85,4 +85,6 @@ echo
 # Se cuentan **las cuentas de ejemplo**, no todas: el entorno puede tener además las de las pruebas de
 # interfaz (`e2e-…`), que no son parte del juego de datos.
 echo "Listo: $(psql -At -c "SELECT count(*) FROM users WHERE lower(email) LIKE '%@demo.com' AND lower(email) NOT LIKE 'e2e-%'") cuentas, $(psql -At -c 'SELECT count(*) FROM tickets') tickets y $copiados adjuntos."
-echo "Se entra con cualquiera de las once cuentas (user1@demo.com… dev3@demo.com) y la contraseña «123123123»."
+# **No se repiten las cuentas aquí**: la tabla con el nombre, el correo, el rol y la contraseña de las
+# once está en el `README.md`, en «Probarlo en local (desarrollo)».
+echo "Listo. Las once cuentas de ejemplo —con su rol y su contraseña— están en la tabla del README."

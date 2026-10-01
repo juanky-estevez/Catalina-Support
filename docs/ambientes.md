@@ -3,6 +3,12 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-01
 >
+> **Enmendado el 2026-10-01 (segunda vez)**: la sección 3.3 **deja de enumerar las once cuentas de
+> ejemplo** —y de repetir su contraseña— y **apunta a la tabla del `README.md`**, que es donde se
+> detallan con su **nombre, su correo, su rol y su contraseña** («Probarlo en local (desarrollo)»):
+> el mismo dato en dos documentos se separa solo con el tiempo, así que vive en uno y el otro lo
+> referencia en vez de copiarlo.
+>
 > **Enmendado el 2026-10-01**: los **tres elementos opcionales** se levantan cada uno con su propio
 > comando y así queda dicho (sección 9.3): el motor de IA (`docker compose -f ai.yml up -d`, sección
 > 3.4), el directorio de pruebas (`docker compose -f dev.yml up -d ldap`) y Keycloak
@@ -192,19 +198,20 @@ Aplica `v1.0.0.sql` (por si la base está recién creada), aplica `v1.0.0_dev.sq
 archivos de los adjuntos** desde `config/seed/` a `_files/`, en la carpeta de su ticket: un seeder
 SQL no puede crear archivos, y un adjunto sin su archivo no se puede abrir.
 
-Deja **once cuentas** —`user1@demo.com`…`user5` para quien pide, `support1`…`support3` y `dev1`…
-`dev3`— y **25 tickets** repartidos por todos los estados, con asignaciones, reasignaciones,
-comentarios de los tres papeles, **siete con ticket interno** (uno esperando a Desarrollo, otro
-devuelto a Soporte, otros resueltos o cerrados), adjuntos de verdad y **las fechas repartidas en los
-últimos tres meses**, para que la bandeja no salga toda del mismo día.
+Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en el
+`README.md`**, en «Probarlo en local (desarrollo)», y **aquí no se repite**— y **25 tickets**
+repartidos por todos los estados, con asignaciones, reasignaciones, comentarios de los tres papeles,
+**siete con ticket interno** (uno esperando a Desarrollo, otro devuelto a Soporte, otros resueltos o
+cerrados), adjuntos de verdad y **las fechas repartidas en los últimos tres meses**, para que la
+bandeja no salga toda del mismo día.
 
 **Las direcciones son `@demo.com`** (decisión del responsable, 2026-09-26), igual que las de las
 personas del directorio de pruebas y del reino: en desarrollo todo es de mentira, y un dominio solo
 —el mismo en los tres sitios— es lo que hace que no haya que pensar cuál toca.
 
-**Las once entran con `123123123`** (decisión del responsable, 2026-09-25): en desarrollo se entra y se
-sale muchas veces al día, y una contraseña que se escribe con una mano es lo que hace que probar no dé
-pereza.
+**Las once entran con la misma contraseña**, la que dice la tabla del `README.md` (decisión del
+responsable, 2026-09-25): en desarrollo se entra y se sale muchas veces al día, y una contraseña que
+se escribe con una mano es lo que hace que probar no dé pereza.
 
 - **Cumple la política del producto**, que pide **8 caracteres** como mínimo —bajados de 12 el
   2026-09-25—, así que el seeder **no se salta ninguna regla**: escribe el `bcrypt` ya hecho porque un
