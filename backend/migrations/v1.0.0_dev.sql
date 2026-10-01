@@ -814,8 +814,9 @@ ON CONFLICT (ticket_id, tag_id) DO NOTHING;
 -- entrando con las once cuentas de ejemplo, y cambiar de método se hace desde Configuración, que es
 -- justo lo que hay que poder probar a mano (docs/ambientes.md, sección 3.3).
 --
--- Los dos servicios viven en `dev.yml` detrás del perfil `auth`. Con el perfil levantado, «Probar la
--- conexión» contesta que sí y se puede cambiar el método; sin él, contesta que no, que es la verdad.
+-- Los dos servicios viven **cada uno en su archivo** (`active-directory.yml` y `keycloak.yml`) y se
+-- levantan con su propio comando. Con ellos levantados, «Probar la conexión» contesta que sí y se
+-- puede cambiar el método; sin ellos, contesta que no, que es la verdad.
 --
 -- La contraseña de la cuenta de servicio es la del LDIF de pruebas (`config/ldap/`): es un directorio
 -- de mentira en un contenedor de desarrollo, no un secreto.

@@ -1,0 +1,51 @@
+# =====================================================================================
+#  El directorio de pruebas (OpenLDAP) — el camino de Active Directory, en su propio archivo
+#
+#  **Va aparte y es opcional** (como el motor de IA en `ai.yml` y Keycloak en `keycloak.yml`):
+#  se levanta **con su propio comando**, la mesa de ayuda funciona sin él, y sólo hace falta
+#  para probar el camino de entrada por AD (`docs/modules/auth.md`, sección 11).
+#
+#  La red `catalina-support-dev` **la posee `dev.yml`** (nombre fijo, sin `external`). Aquí es
+#  **externa**: el directorio entra en ella y no la toca, para que levantarlo **después** —con
+#  el entorno en marcha— no intente recrearla, y para que el backend lo alcance por su nombre
+#  de servicio (`ldap`). Por eso **primero se levanta el entorno**:
+#
+#    docker compose -f dev.yml up -d
+#    docker compose -f active-directory.yml up -d
+#    docker compose -f active-directory.yml logs -f ldap
+#    docker compose -f active-directory.yml down
+# =====================================================================================
+# Nombre de proyecto propio, para que no comparta «proyecto» con los otros archivos sueltos
+# (`ai.yml`, `keycloak.yml`) y no los tome por contenedores huérfanos.
+name: catalina-support-active-directory
+
+services:
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: catalina_support_dev_ldap
+    # **Sin `restart: always`, y a propósito**: los guiones de arranque de este contenedor no son
+    # idempotentes —al volver a arrancarlo intenta copiar los LDIF a una carpeta que ya no está y
+    # muere—, así que reiniciarlo solo lo dejaría en un bucle de arranques fallidos y el camino de AD
+    # caído. Se levanta a mano y, si hay que reiniciarlo, recreándolo
+    # (docs/modules/auth.md, sección 11).
+    environment:
+      LDAP_ORGANISATION: Catalina Support
+      LDAP_DOMAIN: ejemplo.com
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-admin-directorio}
+      # Las personas de prueba viven en el repositorio, no en un volumen que haya que mantener.
+      LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
+      # La configuración de arranque no se queda en el contenedor: es de las pruebas, no del servicio.
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
+      LDAP_NOFILE: "1024"
+    volumes:
+      - ./config/ldap:/ldifs:ro
+    ports:
+      - 11005:389
+    networks:
+      - catalina-support-dev
+
+networks:
+  # La red la crea `dev.yml`; aquí es **externa**: el directorio entra en ella y no la toca.
+  catalina-support-dev:
+    name: catalina-support-dev
+    external: true

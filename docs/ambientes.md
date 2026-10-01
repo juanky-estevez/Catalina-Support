@@ -3,6 +3,14 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-01
 >
+> **Enmendado el 2026-10-01 (tercera vez)**: el directorio de pruebas y Keycloak **dejan `dev.yml`** y
+> pasan a **`active-directory.yml`** y **`keycloak.yml`**, cada uno con **su propio comando**, y **el
+> perfil `auth` desaparece**. Los dos entran en la red **`catalina-support-dev`**, que **posee
+> `dev.yml`** (nombre fijo, sin `external`), y por eso **primero se levanta el entorno** y después el
+> servicio. Quedan al día la sección 3.3 (los dos servicios ya no viven en `dev.yml`), la 9.3 (los
+> tres comandos y el comando nuevo de la suite, en dos pasos) y la tabla de casos (necesitan su
+> servicio levantado, no un perfil).
+>
 > **Enmendado el 2026-10-01 (segunda vez)**: la sección 3.3 **deja de enumerar las once cuentas de
 > ejemplo** —y de repetir su contraseña— y **apunta a la tabla del `README.md`**, que es donde se
 > detallan con su **nombre, su correo, su rol y su contraseña** («Probarlo en local (desarrollo)»):
@@ -225,11 +233,12 @@ probando—, las cuentas `@demo.com` y los adjuntos que no sean la marca. Es un 
 desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
 
 **Y deja configurados los dos caminos de directorio, con el método de entrada en `local`**
-(enmienda del 2026-09-25): escribe la configuración del directorio apuntando al `ldap` del `dev.yml`
-y la de Keycloak apuntando al reino de pruebas, **sin cambiar el método**. Así el entorno arranca
-entrando con las once cuentas de ejemplo y **cambiar de método es un clic en Configuración**, que es
-justo lo que hay que poder probar a mano. Los dos servicios viven detrás del perfil `auth`: con él
-levantado, «Probar la conexión» contesta que sí; sin él, contesta que no, que es la verdad.
+(enmienda del 2026-09-25): escribe la configuración del directorio apuntando al `ldap` que levanta
+`active-directory.yml` y la de Keycloak apuntando al reino de pruebas, **sin cambiar el método**. Así
+el entorno arranca entrando con las once cuentas de ejemplo y **cambiar de método es un clic en
+Configuración**, que es justo lo que hay que poder probar a mano. Los dos servicios de pruebas viven
+cada uno en su archivo (`active-directory.yml` y `keycloak.yml`): con ellos levantados, «Probar la
+conexión» contesta que sí; sin ellos, contesta que no, que es la verdad.
 
 - **La limpieza de las cuentas va en minúsculas** (`lower(email) LIKE '%@demo.com'`): el correo se
   guarda como lo escribe quien lo escribe, y sin eso una cuenta de ejemplo con mayúsculas sobrevivía
@@ -710,29 +719,32 @@ cosa. Si se dejan, esos casos se saltan solos diciendo qué hay que limpiar
 (`docs/modules/auth.md`, sección 11).
 
 **Los casos de los caminos de directorio —AD y Keycloak— necesitan sus servicios levantados**, que en
-desarrollo viven detrás del perfil `auth`:
+desarrollo viven cada uno en **su propio archivo**: `active-directory.yml` (OpenLDAP) y `keycloak.yml`.
+Los dos entran en la red `catalina-support-dev`, que **posee `dev.yml`** con un nombre fijo, así que
+**primero se levanta el entorno** y después cada servicio. La suite se corre después, con el comando
+de siempre, **en dos pasos**:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d          # el directorio y Keycloak, con sus personas
-docker compose -f dev.yml --profile auth run --rm e2e   # la suite entera, con los dos caminos
+docker compose -f dev.yml up -d                  # el entorno (crea la red)
+docker compose -f active-directory.yml up -d     # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d             # Keycloak
+docker compose -f dev.yml run --rm e2e           # la suite entera, con los dos caminos
 ```
 
-**Los dos comparten el perfil `auth`, pero se pueden levantar por separado** (comprobado): nombrar el
-servicio lo levanta **sin activar el perfil**, así que cada uno tiene su propio comando y quien quiera
-sólo el directorio no levanta Keycloak —ni al revés—. El motor de IA, el tercer elemento opcional,
-tiene su propio compose (sección 3.4). Los **tres comandos** son:
+**Cada elemento opcional tiene su comando y no hace falta levantar los otros**: el motor de IA, el
+tercero, tiene su propio compose (sección 3.4). Los **tres comandos** son:
 
 ```bash
 docker compose -f ai.yml up -d               # el motor de IA (opcional; sección 3.4)
-docker compose -f dev.yml up -d ldap         # sólo el directorio de pruebas (AD/LDAP)
-docker compose -f dev.yml up -d keycloak     # sólo Keycloak
+docker compose -f active-directory.yml up -d # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d         # Keycloak
 ```
 
-Y el de siempre —`docker compose -f dev.yml --profile auth up -d`— levanta **el directorio y Keycloak
-de una vez**, que es lo que necesitan estos casos.
+**El perfil `auth` ya no existe**: el directorio y Keycloak no están en `dev.yml`, así que no hay un
+comando que levante los dos de una vez —se levanta cada uno con el suyo—.
 
-Sin él, esos casos **se saltan** en vez de fallar: la suite tiene que poder correr en una instalación
-que no tenga AD (`docs/modules/auth.md`, decisión 28).
+Sin ellos, esos casos **se saltan** en vez de fallar: la suite tiene que poder correr en una
+instalación que no tenga AD (`docs/modules/auth.md`, decisión 28).
 
 **Y cinco de ellos —el alta automática y el vínculo de cada camino, que son los que crean la
 cuenta— corren sólo en PC**: los dos proyectos comparten la misma base de datos, así que el segundo
@@ -774,9 +786,9 @@ Los casos, con lo que hay hoy:
 | El aspecto del ticket | El estado con **su color y su borde** medidos, las tarjetas con el borde del tema, la ficha **a la derecha en PC y debajo en móvil**, y que en móvil **no se pinte la tabla** | **Hecho** |
 | Los permisos de los tickets | El usuario no ve el interno, Desarrollo no escribe en el principal y al Administrador no se le ofrece ningún botón | **Hecho** |
 | El editor de los correos | Llegar desde Configuración, cambiar el asunto y el cuerpo, **insertar un marcador pulsándolo**, ver la vista previa que renderiza el backend, guardarlo, **mandarse una prueba y leerla en el buzón**, y volver al texto de fábrica. Y que **un marcador inventado se avise antes de guardar** | **Hecho** |
-| El camino de Keycloak | Que el botón **esté sólo si la instalación tiene ese camino** y que lleve a la pantalla de Keycloak, que una persona entre por el reino **sin que nadie le dé de alta nada** y su cuenta aparezca con origen `keycloak`, que quien ya es de Keycloak vuelva a entrar, que una cuenta local con el correo de alguien del reino **se vincule** (y su contraseña local deje de servir), **que el fragmento con el token se borre de la dirección**, y que una vuelta que no vale se cuente en la pantalla de entrada | **Hecho** (necesita el perfil `auth`) |
-| Las tres acciones del directorio en `users` | Que la ficha de una cuenta de **AD** desactivada **sí ofrezca reactivarla** y que la reactivación pregunte al directorio de verdad, y que la de una cuenta de **Keycloak** no ofrezca el botón y **cuente lo que pasa** —que vuelve sola al entrar— en vez de llevar a un error | **Hecho** (necesita el perfil `auth`) |
-| El camino de AD | Que una persona del directorio **entre sin que nadie le dé de alta nada** y que su cuenta aparezca con origen `ad` y sin contraseña local, que quien ya es del directorio vuelva a entrar, que la contraseña equivocada **la rechace el directorio** y que una cuenta local con el correo de alguien del directorio **se vincule** al entrar por su camino (y su contraseña local deje de servir) | **Hecho** (necesita el perfil `auth`) |
+| El camino de Keycloak | Que el botón **esté sólo si la instalación tiene ese camino** y que lleve a la pantalla de Keycloak, que una persona entre por el reino **sin que nadie le dé de alta nada** y su cuenta aparezca con origen `keycloak`, que quien ya es de Keycloak vuelva a entrar, que una cuenta local con el correo de alguien del reino **se vincule** (y su contraseña local deje de servir), **que el fragmento con el token se borre de la dirección**, y que una vuelta que no vale se cuente en la pantalla de entrada | **Hecho** (necesita Keycloak levantado) |
+| Las tres acciones del directorio en `users` | Que la ficha de una cuenta de **AD** desactivada **sí ofrezca reactivarla** y que la reactivación pregunte al directorio de verdad, y que la de una cuenta de **Keycloak** no ofrezca el botón y **cuente lo que pasa** —que vuelve sola al entrar— en vez de llevar a un error | **Hecho** (necesita el directorio y Keycloak levantados) |
+| El camino de AD | Que una persona del directorio **entre sin que nadie le dé de alta nada** y que su cuenta aparezca con origen `ad` y sin contraseña local, que quien ya es del directorio vuelva a entrar, que la contraseña equivocada **la rechace el directorio** y que una cuenta local con el correo de alguien del directorio **se vincule** al entrar por su camino (y su contraseña local deje de servir) | **Hecho** (necesita el directorio de pruebas levantado) |
 
 **Y desde el 2026-09-25, las dos suites de los caminos de directorio ponen el método y lo devuelven.**
 Como la instalación entra por uno solo, probar el de AD o el de Keycloak exige elegirlo primero: cada

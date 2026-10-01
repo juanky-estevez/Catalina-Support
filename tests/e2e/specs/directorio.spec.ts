@@ -22,12 +22,13 @@ import {
  * nadie le pone una contraseña: entra con la de la empresa y la cuenta aparece —o se pone al día—
  * sola.
  *
- * **Estas pruebas necesitan el directorio levantado**, que en desarrollo vive detrás del perfil
- * `auth`:
+ * **Estas pruebas necesitan el directorio levantado**, que en desarrollo vive en su propio archivo
+ * (`active-directory.yml`) y entra en la red que crea `dev.yml`:
  *
  * ```bash
- * docker compose --profile auth -f dev.yml up -d
- * docker compose --profile auth -f dev.yml run --rm e2e
+ * docker compose -f dev.yml up -d
+ * docker compose -f active-directory.yml up -d
+ * docker compose -f dev.yml run --rm e2e
  * ```
  *
  * Sin él se saltan en vez de fallar: la suite entera tiene que poder correr sin el directorio, que es

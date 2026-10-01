@@ -1,7 +1,15 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-25
+> **Última actualización:** 2026-10-01
+>
+> **Enmendado el 2026-10-01**: **los dos servicios de pruebas dejan `dev.yml`**. OpenLDAP y Keycloak
+> viven ahora cada uno en **su propio archivo** —`active-directory.yml` y `keycloak.yml`—, con **su
+> propio comando**, y **el perfil `auth` desaparece**. Los dos entran en la red
+> **`catalina-support-dev`**, que **posee `dev.yml`** (nombre fijo, sin `external`), así que **primero
+> se levanta el entorno** y después el servicio; el backend los alcanza por su nombre de servicio
+> (`ldap`, `keycloak`). Se ponen al día la sección 11 y la decisión 1. Los puertos, los nombres de
+> contenedor y las credenciales de pruebas no cambian.
 >
 > **Enmendado el 2026-09-25**, al pedir el responsable que **el directorio y Keycloak se
 > configuren desde la pantalla** y que **la instalación entre por un método a la vez**: los datos de
@@ -605,11 +613,14 @@ llevar a la pantalla de entrada—, y separarlos sólo añadiría claves que no 
 
 ## 11. Con qué se prueba
 
-Con **dos servicios de pruebas** en `dev.yml`, detrás de un perfil para que no estorben en el día a
-día:
+Con **dos servicios de pruebas**, cada uno en **su propio archivo** y **opcional** —el entorno no los
+levanta—: `active-directory.yml` (OpenLDAP) y `keycloak.yml` (Keycloak). **Primero se levanta el
+entorno**, que es quien crea la red del desarrollo, y después el servicio que se quiera:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d
+docker compose -f dev.yml up -d                  # el entorno (crea la red `catalina-support-dev`)
+docker compose -f active-directory.yml up -d     # el directorio de pruebas (AD/LDAP)
+docker compose -f keycloak.yml up -d             # Keycloak
 ```
 
 | Servicio | Qué es | Qué se prueba con él |
@@ -634,7 +645,7 @@ y se anota lo que salga.
 como el directorio no guarda nada en un volumen, **vuelve al contenido del LDIF del repositorio**:
 
 ```bash
-docker compose -f dev.yml --profile auth up -d --force-recreate ldap
+docker compose -f active-directory.yml up -d --force-recreate ldap
 ```
 
 Eso es cómodo para probar (el directorio siempre está como dice el repositorio) y hay que tenerlo
@@ -676,7 +687,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 
 | # | Decisión | Quedó así |
 | --- | --- | --- |
-| 1 | **Los directorios de prueba** | OpenLDAP y Keycloak, como servicios de `dev.yml` detrás del perfil `auth` |
+| 1 | **Los directorios de prueba** | OpenLDAP y Keycloak, cada uno en su archivo (`active-directory.yml` y `keycloak.yml`), opcionales y con su propio comando. **Cambiado el 2026-10-01**: antes eran servicios de `dev.yml` detrás del perfil `auth`, que desaparece |
 | 2 | **La vuelta de Keycloak** | La recibe **el backend**, que entrega nuestro token al frontend |
 | 3 | **Los datos de la cuenta** | El directorio **actualiza nombre, apellidos y correo** en cada entrada |
 | 4 | **Intentos fallidos** | **Sin bloqueo de cuenta**: nginx limita y cada fallo va al log |

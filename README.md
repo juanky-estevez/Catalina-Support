@@ -124,8 +124,11 @@ primera vez baja su modelo, ~1,1 GB, al volumen). Sin él la mesa de ayuda funci
   | Desarrollador 3 | `dev3@demo.com` | `desarrollo` | `123123123` |
 
   **La cuenta de fábrica (`admin`) no es una de estas**: no está en la base, vive en la configuración
-  del entorno y su contraseña es `ADMIN_PASSWORD`, que **nunca se escribe en la documentación**
-  (`docs/usuarios-y-permisos.md`, sección 8).
+  del entorno. **En desarrollo su contraseña es `admin`**, la que trae `config/env/dev.env` —un
+  archivo versionado, porque es una credencial de contenedor local—, así que se entra con ella sin
+  buscar nada. **En producción la contraseña es `ADMIN_PASSWORD`** y **no se escribe en la
+  documentación**: vive sólo en `config/env/prod.env`, que no se versiona
+  (`docs/usuarios-y-permisos.md`, sección 8). **No copies la de desarrollo a un servidor**.
 - **El motor de IA, el directorio de pruebas y Keycloak son aparte y son opcionales**: los tres se
   levantan con su propio comando y **ninguno hace falta** para que la mesa de ayuda funcione. Están
   juntos, con lo que es cada uno y su comando, en **«Los tres elementos opcionales»**, justo abajo.
@@ -156,25 +159,27 @@ de IA, y lo que consume»**, está el detalle y cómo cambiarlo por otro modelo.
 **2. El directorio de pruebas (OpenLDAP)**, para probar el camino de entrada por **Active Directory**:
 
 ```bash
-docker compose -f dev.yml up -d ldap
+docker compose -f active-directory.yml up -d
 ```
 
 Trae **las personas de prueba del directorio** (`config/ldap/`) y publica el puerto `11005`. Con el
 método de entrada en `ad`, la aplicación entra contra él como entraría contra el directorio real de la
-institución.
+institución. **Va en su propio archivo** (`active-directory.yml`) y entra en la red del entorno de
+desarrollo, que la crea `dev.yml`: por eso **primero se levanta el entorno y después el servicio**.
 
 **3. Keycloak**, para probar el camino de entrada por **OIDC**:
 
 ```bash
-docker compose -f dev.yml up -d keycloak
+docker compose -f keycloak.yml up -d
 ```
 
 Trae **un reino de pruebas que vive en el repositorio** (`config/keycloak/`) y se importa al
-arrancar; se publica por `/sso/`, en el puerto `11006`.
+arrancar; se publica por `/sso/`, en el puerto `11006`. Como el directorio, **va en su propio archivo**
+(`keycloak.yml`) y entra en la red del entorno, así que se levanta **después de `dev.yml`**.
 
-**El directorio y Keycloak comparten el perfil `auth`**, así que el comando de siempre
-`docker compose -f dev.yml --profile auth up -d` levanta **los dos a la vez**. Nombrar el servicio
-—`up -d ldap` o `up -d keycloak`— levanta **sólo el que se quiera**, sin activar el perfil.
+**Cada uno se levanta con su comando y con su archivo**: el directorio y Keycloak **ya no viven en
+`dev.yml`** y ya no hay perfil `auth`. Para probar **los dos caminos de directorio** en la suite hay
+que levantar los dos y después correr las pruebas de siempre (ver **«Las pruebas»**).
 
 **En producción no se levanta ninguno de los dos**: se configura el directorio o el reino que ya
 exista —su servidor, sus credenciales— en la pantalla de **Configuración**, y la instalación entra
@@ -311,6 +316,12 @@ docker compose -f dev.yml exec backend  go test ./...            # el backend
 docker compose -f dev.yml exec frontend npm test -- --watch=false # la interfaz, unitaria
 docker compose -f dev.yml run --rm e2e                            # los recorridos, en un navegador
 ./scripts/dev-seed.sh                                             # reiniciar el entorno después
+
+# Los recorridos de los dos caminos de directorio, en dos pasos: se levanta cada servicio con su
+# archivo y se corre la suite de siempre. El directorio y Keycloak ya no viven en `dev.yml`
+docker compose -f active-directory.yml up -d
+docker compose -f keycloak.yml up -d
+docker compose -f dev.yml run --rm e2e
 ```
 
 La capa de interfaz (Playwright) prueba los recorridos de verdad —entrando como cada papel, leyendo
