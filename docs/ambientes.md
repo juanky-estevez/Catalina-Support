@@ -3,6 +3,54 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-01
 >
+> **Enmendado el 2026-10-01 (séptima vez)**: **los datos de ejemplo se siembran con un contenedor de
+> un solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows** —es lo
+> que deja fuera el guion de bash, que no se puede ejecutar en Windows, y con él la copia de los
+> adjuntos—. El servicio vive en `dev.yml` **con perfil propio**, así que **`up -d` no lo arranca**:
+> se pide a propósito, y **los ejemplos son opcionales** (el esquema sigue siendo obligatorio). El
+> contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad, y el guion sigue
+> valiendo en Linux y macOS fuera del contenedor—: el guion distingue con la marca `SEED_EN_CONTENEDOR`
+> si habla con la base por la red del entorno con el `psql` de la imagen o entrando al contenedor con
+> `docker compose exec`. Quedan al día las secciones 3.1, 3.3, 5 y 9.3. Comprobado el 2026-10-01 con
+> **dos pasadas seguidas** del comando («Listo: 11 cuentas, 25 tickets y 5 adjuntos» las dos veces),
+> con las once cuentas y los 25 tickets en la base, **los 5 adjuntos en `_files/`** y `up -d` sin
+> arrancar el servicio.
+>
+> **Enmendado el 2026-10-01 (sexta vez)**: **el servidor de desarrollo de Angular reenvía `/api` al
+> backend** (`frontend/proxy.conf.json`, declarado en `serve.options.proxyConfig` de
+> `frontend/angular.json`), con destino **`http://backend:11002`** —el nombre de servicio del backend
+> dentro de la red del entorno— y **sin reescribir la ruta**. Es una opción de `serve`: **el `build` de
+> producción no cambia** y **en producción sigue reenviando nginx**. La sección 3.1 lo dice: **con el
+> entorno levantado y el esquema aplicado se entra en `http://127.0.0.1:11001` con `admin`/`admin`**,
+> sin nginx delante. Comprobado el 2026-10-01 por la 11001 (`GET /api/auth/methods` y `GET /api/health`
+> → **200 JSON**; `POST /api/auth/login` con `admin`/`admin` → **200** con token) y con Playwright
+> contra `http://127.0.0.1:11001`: **el recorrido de entrar y salir, 14 casos en verde**.
+>
+> **Enmendado el 2026-10-01 (quinta vez)**: **el esquema y los ejemplos se pueden aplicar sin `bash`**,
+> con comandos de Docker que funcionan **igual en PowerShell, CMD y bash**: se copia el archivo al
+> contenedor con `docker compose -f dev.yml cp` y se le da a `psql` con `-f` y `-v ON_ERROR_STOP=1`
+> (sección 3.2, que era el único sitio que solo enseñaba la redirección `<`, de intérprete). El guion
+> `./scripts/dev-seed.sh` **queda dicho como lo que es: de Linux y macOS**, y quien no tenga `bash`
+> aplica sus dos archivos con esos dos comandos (secciones 3.1, 3.3 y 5). Los pasos del arranque en
+> local, con el porqué de cada uno, viven en el `README.md`. Comprobado el 2026-10-01: en una base
+> nueva (`catalina_support_prueba`) los dos comandos de la sección 3.2 dejan **18 tablas** y la
+> aplicación responde (`GET /api/auth/methods` y `POST /api/auth/login` con `admin`/`admin`, **200**);
+> el mismo archivo aplicado **dos veces seguidas** da `ERROR lines: 0` y termina en `COMMIT`, y la
+> base de desarrollo, tras reaplicarlo, sigue con `12 usuarios, 25 tickets y 22 plantillas`.
+>
+> **Enmendado el 2026-10-01 (cuarta vez)**: queda dicho **qué aplica el esquema en desarrollo y
+> cuándo**. La sección 3.3 dice ya lo que el guion siempre hizo y la documentación no contaba: **en
+> una base nueva `./scripts/dev-seed.sh` es lo que crea el esquema** —su paso 1, `Aplicando el
+> esquema…`, aplica `v1.0.0.sql`—, **no sólo los datos de ejemplo**, y se pasa **después de levantar
+> el entorno y antes de abrir la aplicación**: la aplicación **no crea tablas al arrancar** y las
+> migraciones no se aplican solas, así que abrirla antes deja `relación "installation_settings" does
+> not exist` y `relación "ai_insights" does not exist`. La 3.1 lo apunta en una línea, la 5 añade el
+> momento en su tabla y nombra el síntoma, y **los pasos del arranque en local no se repiten aquí**:
+> viven en el `README.md`, «Probarlo en local (desarrollo)». Comprobado en la base de desarrollo: el
+> seeder termina con `Listo: 11 cuentas, 25 tickets y 5 adjuntos` sobre una base que ya tiene el
+> esquema, y `v1.0.0.sql` aplicado **dos veces seguidas** no da ningún error (`ERROR lines: 0` en las
+> dos pasadas).
+>
 > **Enmendado el 2026-10-01 (tercera vez)**: el directorio de pruebas y Keycloak **dejan `dev.yml`** y
 > pasan a **`active-directory.yml`** y **`keycloak.yml`**, cada uno con **su propio comando**, y **el
 > perfil `auth` desaparece**. Los dos entran en la red **`catalina-support-dev`**, que **posee
@@ -169,14 +217,35 @@ docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down          # los volúmenes se conservan
 ```
 
-Se entra por `https://dev-catalina-support.calibyou.com`. Los puertos 11001 y 11002 siguen publicados
-para depurar sin pasar por nginx.
+Se entra por `https://dev-catalina-support.calibyou.com`. **Y también, sin nginx, por
+`http://127.0.0.1:11001`**: el servidor de desarrollo reenvía `/api` al backend
+(`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado y el esquema
+aplicado **se entra en la 11001 con `admin`/`admin`** (`README.md`, «Probarlo en local (desarrollo)»).
+Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
+
+**Levantar el entorno no deja la base lista**: la aplicación **no crea las tablas al arrancar**, así
+que en una base nueva hay que **aplicar el esquema** (sección 3.2) **antes de abrirla**. El comando de
+los datos de ejemplo también lo aplica en su primer paso —y, con ellos, copia los adjuntos—, pero
+**los ejemplos son opcionales**: con el esquema la aplicación ya funciona. Los pasos del arranque en
+local, con el síntoma exacto si se abre antes, están en el `README.md`, «Probarlo en local
+(desarrollo)».
 
 ### 3.2 La base de datos
 
 - El esquema se aplica **repetidas veces** sin miedo: `v1.0.0.sql` es transaccional e idempotente
   (`docs/arquitectura.md`, sección 7). **El archivo existe, está aplicado y crea 18 tablas.**
-- Aplicarlo, dentro del contenedor (comando probado el 2026-09-22):
+- Aplicarlo. **La forma que vale igual en Linux, macOS y Windows** —PowerShell, CMD y bash: ni guion
+  ni redirección del intérprete— copia el archivo al contenedor y se lo da a `psql` con `-f` (probado
+  el 2026-10-01: en una base nueva deja 18 tablas y `ERROR lines: 0`; aplicado dos veces seguidas,
+  también `0` errores y `COMMIT`):
+
+```bash
+docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
+docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
+```
+
+- En Linux y macOS, además, se puede hacer sin copiar, con la redirección del intérprete —que **no
+  existe en PowerShell** y por eso no es la forma de arriba—:
 
 ```bash
 docker compose -f dev.yml exec -T database \
@@ -196,15 +265,52 @@ Y volver a aplicar la migración. No hay nada que conservar: los datos de desarr
 
 ### 3.3 Los datos de ejemplo
 
-El entorno de desarrollo se puede dejar con contenido en un comando:
+**Los datos de ejemplo se aplican a propósito**, después de levantar el entorno y antes de abrir la
+aplicación. **No son un requisito para entrar** —con el esquema ya se entra con `admin`—, pero sí son
+lo que deja el entorno con contenido. La aplicación **no crea las tablas al arrancar** y las
+migraciones no se aplican solas, así que **en una base nueva el paso que la deja lista es el esquema**
+(sección 3.2): si se abre antes, el backend falla con `relación "installation_settings" does not
+exist` y `relación "ai_insights" does not exist`. Los pasos del arranque en local están en el
+`README.md`, «Probarlo en local (desarrollo)», y **aquí no se repiten**.
+
+**La forma de los tres sistemas —Linux, macOS y Windows— es un comando de Docker**: un contenedor de
+un solo uso que arranca, siembra y se va.
+
+```bash
+docker compose -f dev.yml run --rm seed
+```
+
+**No se levanta con `up -d`**, porque el servicio `seed` de `dev.yml` tiene **perfil propio**: se pide
+a propósito, y **quien quiera el proyecto vacío —sólo con el esquema— no ejecuta este comando**.
+**Los ejemplos son una elección; el esquema es obligatorio.**
+
+El contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad sobre cómo se
+siembra—: aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a
+`_files/`, que es el paso que un seeder SQL no puede hacer. Sus montajes son de **sólo lectura** salvo
+`_files/`, que es lo único que el guion escribe en la máquina.
+
+**En Linux y macOS el mismo guion sigue existiendo fuera del contenedor**, y hace lo mismo:
 
 ```bash
 ./scripts/dev-seed.sh
 ```
 
-Aplica `v1.0.0.sql` (por si la base está recién creada), aplica `v1.0.0_dev.sql` y **copia los
-archivos de los adjuntos** desde `config/seed/` a `_files/`, en la carpeta de su ticket: un seeder
-SQL no puede crear archivos, y un adjunto sin su archivo no se puede abrir.
+El guion habla con la base **entrando al contenedor con `docker compose exec`** cuando corre en la
+máquina, y **con el `psql` de la imagen por la red del entorno** cuando corre dentro del contenedor:
+lo distingue su marca `SEED_EN_CONTENEDOR`, y por eso no hay dos formas de sembrar que puedan
+separarse.
+
+Deja **once cuentas, 25 tickets y 5 adjuntos** —probado el 2026-10-01 con **dos pasadas seguidas** del
+comando de Docker («Listo: 11 cuentas, 25 tickets y 5 adjuntos» las dos veces), comprobando además en
+la base las once cuentas y los 25 tickets y en `_files/` los cinco archivos—. Los dos comandos de
+Docker de la sección 3.2 aplican el esquema igual, pero **no copian los adjuntos**: para eso está el
+contenedor, que es el paso 3 del guion.
+
+Su **paso 1** (`Aplicando el esquema…`) aplica `backend/migrations/v1.0.0.sql` —transaccional e
+idempotente, así que sobre una base que ya lo tiene se puede volver a pasar sin daño—, el **paso 2**
+aplica `v1.0.0_dev.sql` y el **paso 3** **copia los archivos de los adjuntos** desde `config/seed/` a
+`_files/`, en la carpeta de su ticket: un seeder SQL no puede crear archivos, y un adjunto sin su
+archivo no se puede abrir.
 
 Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en el
 `README.md`**, en «Probarlo en local (desarrollo)», y **aquí no se repite**— y **25 tickets**
@@ -407,6 +513,7 @@ nunca en producción**, y por eso lleva el sufijo bien visible.
 
 | Momento | Qué se aplica |
 | --- | --- |
+| **En desarrollo, al empezar** | El esquema de `v1.0.0.sql`, **antes de abrir la aplicación** (sección 3.2): no se aplica solo y la aplicación no crea tablas. Lo aplican los dos comandos de Docker de la sección 3.2, o su paso 1 de `docker compose -f dev.yml run --rm seed` (los tres sistemas) —y `./scripts/dev-seed.sh` en Linux y macOS—. Los ejemplos son **aparte** (sección 3.3) |
 | **Hasta la 1.0.0** | `backend/migrations/v1.0.0.sql`, todas las veces que haga falta en desarrollo |
 | **Al cerrar la 1.0.0** | El mismo archivo, **una sola vez** en producción |
 | **Después de la 1.0.0** | Un archivo por versión, aplicados **en orden**, sin saltarse ninguno |
@@ -420,7 +527,7 @@ despliegue y llena `migrations/` de retales.
 | Archivo | Qué lleva | Dónde se aplica |
 | --- | --- | --- |
 | `v1.0.0.sql` | Las tablas, los índices y sus restricciones **y lo que la aplicación necesita para funcionar**: las dos filas de configuración —la de la instalación y la de los tickets— y las veinte plantillas de correo. Sin la fila de configuración no se puede leer ni el idioma ni el nombre; sin plantilla no sale ningún correo | **Desarrollo y producción** |
-| `v1.0.0_dev.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `scripts/dev-seed.sh` |
+| `v1.0.0_dev.sql` | Los **datos de ejemplo**: once cuentas (cinco que piden, tres de Soporte y tres de Desarrollo), 25 tickets con su historia —asignaciones, reasignaciones, comentarios, escalados con su interno, adjuntos— y el contador de la numeración | **Sólo desarrollo**, con `docker compose -f dev.yml run --rm seed` (`scripts/dev-seed.sh` en Linux y macOS) |
 
 **El guion borra también los resúmenes del motor de IA** (`ai_insights`): la tabla se lleva **por número
 de ticket**, y los datos de ejemplo **vuelven a emitir los mismos números**, así que una fila vieja se
@@ -465,7 +572,8 @@ la versión publicada**, en orden, y los que ya estaban aplicados no hacen nada.
 
 Y para saber qué versión está publicada no hay que adivinar: lo dicen **la etiqueta de git y el
 `BUILD_INFO`** del despliegue (sección 4.2). Aplicar de más es inofensivo; aplicar de menos se ve
-enseguida, porque la aplicación pedirá una tabla que no existe.
+enseguida, porque la aplicación pedirá una tabla que no existe —`installation_settings`, `ai_insights`…—
+y la base responderá `relación "…" does not exist` (sección 3.3).
 
 Nunca `AutoMigrate`, nunca un `ALTER` a mano, nunca un paso que no esté en un archivo del
 repositorio.
@@ -673,16 +781,18 @@ docker compose -f dev.yml run --rm e2e           # instala lo que falte y ejecut
 - **Lee la contraseña de fábrica y el buzón de pruebas** del entorno de desarrollo: `BASE_URL`,
   `ADMIN_PASSWORD` y `MAILPIT_URL`, los tres por variables. Sin ellos, los casos que necesitan entrar
   o leer un correo se saltan en vez de fallar con un mensaje que no explica nada.
-- **Después de cada pasada se reinicia el entorno** (`./scripts/dev-seed.sh`, decisión del
-  responsable, 2026-09-28): los tickets de prueba que deja la suite **no se borran desde ella** —un
-  ticket no se borra—, así que el entorno se deja como nuevo con el seeder, **avisando antes** porque
-  el seeder borra también lo que haya a mano.
+- **`BASE_URL` decide la dirección** contra la que corre (por defecto, la de desarrollo por nginx):
+  apuntarla a `http://127.0.0.1:11001` prueba **el servidor de desarrollo y su proxy**, sin nginx.
+- **Después de cada pasada se reinicia el entorno** (`docker compose -f dev.yml run --rm seed`,
+  decisión del responsable, 2026-09-28): los tickets de prueba que deja la suite **no se borran desde
+  ella** —un ticket no se borra—, así que el entorno se deja como nuevo con el seeder, **avisando
+  antes** porque el seeder borra también lo que haya a mano.
 - **Cada caso monta sus datos y los deja apagados al terminar**: da de alta sus cuentas —lo que prueba
   el camino de verdad, con su correo y su enlace—, y **al acabar la pasada el cierre
   (`tests/e2e/limpiar.ts`) las apaga** por la API. No se borran: las cuentas no se borran en este
   producto. Y **los tickets que crea la pasada tampoco se borran** —un ticket no se borra—: si se
-  quiere el entorno como nuevo, `./scripts/dev-seed.sh` borra los tickets y las cuentas de prueba y
-  vuelve a poner las once de ejemplo.
+  quiere el entorno como nuevo, `docker compose -f dev.yml run --rm seed` borra los tickets y las
+  cuentas de prueba y vuelve a poner las once de ejemplo.
 - **Los correos se leen del buzón**, no se dan por hechos: el caso del enlace del correo saca el
   token de la pantalla de Mailpit y lo abre en el navegador, que es lo que haría una persona.
 - Cuando algo no se ve como debería, hay una herramienta que vuelca el HTML pintado, los errores de
@@ -710,7 +820,8 @@ hace que la historia de un ticket sobreviva a la baja de una cuenta.
 
 **Y después de limpiar, se vuelve a los datos de ejemplo con un comando**: esa limpieza se lleva por
 delante también los 25 tickets del seeder —borra **todos** los tickets, a propósito—, así que lo
-normal es terminar con `./scripts/dev-seed.sh`, que deja el entorno otra vez conocido (sección 3.3).
+normal es terminar con `docker compose -f dev.yml run --rm seed`, que deja el entorno otra vez
+conocido (sección 3.3).
 
 **Las cuentas de las personas del directorio y del reino de Keycloak se borran a propósito**, y no es
 por limpieza: los casos del alta automática de los dos caminos de directorio comprueban que la cuenta

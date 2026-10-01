@@ -22,6 +22,12 @@ El servidor de desarrollo **rechaza con 403** cualquier `Host` que no conozca: p
 de desarrollo está declarado en `serve.options.allowedHosts` de `angular.json`. Si se añade otro
 dominio o puerto de acceso, hay que añadirlo ahí también.
 
+El servidor de desarrollo **reenvía `/api` al backend** con `proxy.conf.json` (declarado en
+`serve.options.proxyConfig` de `angular.json`), con destino **`http://backend:11002`** —el servicio
+del backend dentro de la red del entorno, porque quien hace la petición es el contenedor del
+frontend, no el navegador— y sin reescribir la ruta. Así **abrir `http://127.0.0.1:11001` funciona
+sin nginx**. Es **sólo de desarrollo**: es una opción de `serve` y el `build` de producción no la ve.
+
 ## Estructura
 
 ```text

@@ -3,6 +3,35 @@
 > **Estado:** as-built
 > **Última actualización:** 2026-10-01
 >
+> **Enmendado el 2026-10-01 (quinta vez)**: **los datos de ejemplo se siembran con un contenedor de un
+> solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows**, y con
+> **perfil propio** para que **`up -d` no lo arranque**: los ejemplos son **opcionales** y se piden a
+> propósito. El contenedor corre **el guion de siempre, `scripts/dev-seed.sh`** (una sola verdad), que
+> también sigue valiendo en Linux y macOS fuera del contenedor. La sección 10.3 cambia su bloque de
+> ejemplos por ese comando (docs/ambientes.md, sección 3.3).
+>
+> **Enmendado el 2026-10-01 (cuarta vez)**: **el servidor de desarrollo reenvía `/api` al backend**, así
+> que **la 11001 basta para entrar sin nginx**. Se añade `frontend/proxy.conf.json` —una entrada para
+> `/api` con destino **`http://backend:11002`**, el servicio del backend **dentro de la red del
+> entorno**, porque quien hace la petición es el contenedor del frontend, no el navegador— y se declara
+> en `serve.options.proxyConfig` de `frontend/angular.json`. **Es sólo de desarrollo**: vive en
+> `serve`, el `build` no lo ve, y **en producción sigue reenviando nginx**. La entrada del frontend en
+> `http://127.0.0.1:11001` deja de depender de nginx; en la tabla de requisitos, nginx pasa a **no ser
+> necesario para entrar** (sí para probar el dominio y el certificado). Comprobado el 2026-10-01 por la
+> 11001: `GET /api/auth/methods` y `GET /api/health` → **200 JSON**, `POST /api/auth/login` con
+> `admin`/`admin` → **200** con token, y el recorrido de entrada y salida con Playwright, **14 casos en
+> verde** contra `http://127.0.0.1:11001`. La regla del frontend no cambia: sigue llamando a rutas
+> **relativas**.
+>
+> **Enmendado el 2026-10-01 (tercera vez)**: **la sección 10.3 («Comandos») estrena el paso del
+> esquema**. Su lista empezaba por `docker compose -f dev.yml up -d` y quien la siguiera caía en el
+> error de siempre: la aplicación **no crea las tablas al arrancar** y las migraciones **no se aplican
+> solas**, así que en una base nueva el backend responde `relación "installation_settings" does not
+> exist`. Quedan añadidos los **dos comandos de Docker que valen igual en PowerShell, CMD y bash**
+> —copiar `v1.0.0.sql` al contenedor y dárselo a `psql` con `-f`—, con los ejemplos (`_dev`) a
+> continuación y el aviso de que `./scripts/dev-seed.sh` **es de Linux y macOS** (los pasos completos,
+> en el `README.md`).
+>
 > **Enmendado el 2026-10-01 (segunda vez)**: **el directorio de pruebas y Keycloak salen de `dev.yml`**
 > y pasan a **`active-directory.yml`** y **`keycloak.yml`**, cada uno con **su propio comando**, y **el
 > perfil `auth` desaparece**. Los dos entran en la red **`catalina-support-dev`**, que **posee
@@ -545,6 +574,13 @@ sudo nginx -t && sudo systemctl reload nginx
 - El servidor de desarrollo de Angular **rechaza con 403** cualquier `Host` que no conozca: por
   eso `dev-catalina-support.calibyou.com` está declarado en `serve.options.allowedHosts` de
   `angular.json`. Sin esa línea, la página responde 403 aunque nginx esté bien.
+- **El servidor de desarrollo reenvía `/api` al backend** (`frontend/proxy.conf.json`, declarado en
+  `serve.options.proxyConfig` de `frontend/angular.json`), con destino **`http://backend:11002`** —el
+  nombre de servicio del backend **dentro de la red del entorno**, porque quien hace la petición es
+  **el contenedor del frontend**, no el navegador— y **sin reescribir la ruta** (las rutas del backend
+  ya llevan `/api`, igual que en nginx). Es **sólo de desarrollo**: es una opción de `serve`, el
+  `build` no la ve y **en producción reenvía nginx**. Es lo que permite entrar en
+  `http://127.0.0.1:11001` con sólo Docker y sin nginx delante.
 - La zona `limit_req` del login **ya está puesta**, como en Calibyou, porque `auth` está hecho y es
   el único endpoint público que recibe credenciales (unas líneas más arriba).
 
@@ -581,6 +617,18 @@ docker compose -f dev.yml ps                    # ver el estado
 docker compose -f dev.yml logs -f backend        # seguir los logs (salida de go-logs)
 docker compose -f dev.yml down                   # parar (los volúmenes se conservan)
 
+# **El esquema, si la base es nueva**: no se aplica solo y la aplicación no crea tablas al arrancar,
+# así que sin esto el backend responde `relación "installation_settings" does not exist` y la entrada
+# enseña «Something failed on our side». Estos dos comandos valen **igual en PowerShell, CMD y bash**
+docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
+docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
+# Los datos de ejemplo, que son **opcionales** y **un extra para tener contenido, no un requisito
+# para entrar**. **El comando de los tres sistemas** es un contenedor de un solo uso que corre el
+# guion `scripts/dev-seed.sh` (esquema, ejemplos y adjuntos); **no lo arranca `up -d`** (perfil
+# propio). En Linux y macOS el mismo guion se puede correr fuera del contenedor
+docker compose -f dev.yml run --rm seed
+# ./scripts/dev-seed.sh
+
 docker compose -f dev.yml exec backend go test ./...      # pruebas del backend
 docker compose -f dev.yml exec backend go vet ./...       # análisis estático
 docker compose -f dev.yml exec backend go mod tidy        # tras añadir dependencias
@@ -596,7 +644,9 @@ docker compose -f ai.yml up -d                  # el motor de IA (opcional)
 ```
 
 En desarrollo se entra por **https://dev-catalina-support.calibyou.com** (nginx → contenedores).
-Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
+Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx, y **la 11001 ya reenvía
+`/api` al backend** con el proxy de `serve` (`frontend/proxy.conf.json`), así que **también se entra
+en `http://127.0.0.1:11001` sin nginx**; la 11002 es el backend directo.
 
 ## 11. Entorno de desarrollo
 
@@ -606,13 +656,14 @@ Requisitos en la máquina de desarrollo (comprobados el 2026-09-22):
 | --- | --- | --- |
 | Docker | 29.5.2 instalado | **Sí**: todo corre en contenedores |
 | Docker Compose | incluido en Docker | **Sí** |
-| nginx en la máquina | 1.24 instalado, **con los dos vhosts instalados y certificados** | **Sí**, como puerta de entrada |
+| nginx en la máquina | 1.24 instalado, **con los dos vhosts instalados y certificados** | **No para entrar**: la 11001 reenvía `/api` con su proxy. **Sí**, para probar el dominio y el certificado |
 | Node.js | v24.19.0 instalado | No: el frontend compila en su contenedor (v24.21.0 en la imagen) |
 | Go | **no instalado** | No: el backend compila y corre en su contenedor (1.27.1 en la imagen) |
 | Cliente `psql` | 18.4 instalado | No: para consultar se entra al contenedor de base de datos |
 
-Que Go y Node no hagan falta en la máquina es deliberado: la máquina sólo necesita Docker y
-nginx, y las versiones quedan fijadas en las imágenes (Go 1.27, Node 24), no en lo que cada
+Que Go y Node no hagan falta en la máquina es deliberado: **para entrar basta Docker** —nginx sólo
+hace falta para probar el dominio y el certificado—, y las versiones quedan fijadas en las imágenes
+(Go 1.27, Node 24), no en lo que cada
 máquina tenga instalado.
 
 ## 12. Decidido, pendiente y fuera de alcance
@@ -674,7 +725,7 @@ producción**.
 | `GET /api/health` | `200 {"database":"ok","status":"ok"}`, y 503 si la base no responde |
 | `go-logs` | Escribe `_logs/catalina-support_dev_20260922.log` con `TIMEZONE` aplicado (`UTC-5`) |
 | `go mod tidy` | Genera `go.sum`; el `go.mod` sólo lleva las dependencias reales |
-| Frontend Angular 22 | El servidor de desarrollo sirve `index.html` y el bundle en 11001 |
+| Frontend Angular 22 | El servidor de desarrollo sirve `index.html` y el bundle en 11001, y **reenvía `/api` al backend** (`frontend/proxy.conf.json` → `http://backend:11002`): `GET /api/auth/methods`, `GET /api/health` y `POST /api/auth/login` con `admin`/`admin` responden **200 por la 11001** (sin nginx), y el recorrido de entrar y salir pasa **en un navegador de verdad** |
 | El armazón de la sesión en el navegador | Las seis rutas se sirven por nginx (200) y el CSS de Tailwind llega compilado. Y **probado en un navegador de verdad** con Playwright, en PC y en móvil: se entra con la cuenta de fábrica, se la reconoce, se cambia de pantalla y se sale |
 | Pruebas de interfaz con Playwright | `docker compose -f dev.yml run --rm e2e` —con el directorio y Keycloak levantados con su archivo— → **214 casos: 196 en verde, 18 saltados y 0 rojos** (los saltados son las herramientas de diagnóstico, lo que es de un dispositivo concreto y **los de los caminos de directorio que se prueban una sola vez**, porque no dependen del ancho, más alguna prueba que necesita un servicio que no esté levantado): la aplicación abre, el CSS se aplica, los campos tienen nombre accesible, el idioma, los ocho temas con su contraste medido, entrar y salir, el enlace del correo leído del buzón, el armazón con su menú, los permisos del menú, la pantalla de Configuración —**con el método de entrada y las dos pruebas de conexión**—, **las tres pantallas de usuarios** —la lista con sus filtros, el alta con su correo, desactivar y reactivar, la edición en línea de Soporte, el perfil propio y que nadie se desactive a sí mismo—, **las de tickets** —el recorrido entero de un ticket con su adjunto, Soporte preguntando y escalando, Desarrollo devolviendo, el aspecto medido y el Administrador leyendo sin botones—, **el camino de AD** —una persona del directorio **entra sin que nadie le dé de alta nada** y su cuenta aparece con origen `ad`, quien ya es del directorio vuelve a entrar, la contraseña equivocada la rechaza el directorio, y una cuenta local **se vincula** al entrar por su camino y su contraseña local deja de servir— y **el de Keycloak**: el botón está en la pantalla de entrada y lleva a Keycloak, una persona entra por el reino **sin que nadie le dé de alta nada**, quien ya es de Keycloak vuelve a entrar, una cuenta local **se vincula** al entrar por allí, y **el fragmento con el token se borra de la dirección** en cuanto se usa. Y **las tres acciones del directorio en `users`**: la ficha de una cuenta de AD desactivada ofrece reactivarla y la reactivación pregunta al directorio, y la de una cuenta de Keycloak no ofrece el botón y cuenta que vuelve sola al entrar. Y **las listas de tickets** (2026-09-26): que «Mis tickets» sea **lo mío** —el que no lo tiene asignado no lo ve, y el que lo tiene sí—, que las dos listas del «todo» enseñen lo que hay, que **la reasignación se haga dentro del ticket** y mueva el ticket de una bandeja a la otra (un técnico se lo pasa a otro, que es el ejemplo del responsable), que el chip de tipo lleve a los internos, que desde las listas del «todo» no se cree un ticket, y que **el desplegable del idioma mida lo mismo que el del tema** (medido). Y **los adjuntos con tope y con visor** (2026-09-26): que una captura de **900 × 700** se pinte **dentro de 480 × 360 sin deformarse** —se mide, y con la captura de las otras pruebas, que mide justo 480 × 300, la comprobación pasaría sin que hubiera tope—, que al pulsarla se abra el visor con la imagen entera, que **el vídeo se vea como miniatura sin controles** y que al pulsarlo se abra el visor **con su reproductor y Descargar**, y que **un `.sql` se adjunte, se guarde y se descargue** mientras el `.svg` **se sigue rechazando**. Y **la vista de primer arranque** (el candado: una instalación ya terminada no la enseña y `/setup` lleva a la entrada) y **la tarjeta del motor de IA en Configuración, con su prueba de conexión** |
 | Pruebas del frontend | `npm test` → **215 pruebas en verde, en 20 ficheros**: el idioma de arranque (incluidas las variantes como `es-MX` y el caso de un idioma que no es ninguno de los dos), el servicio de sesión, el interceptor (cabecera, 401 con y sin sesión, servidor caído), **el tema** (los ocho, el sistema en vivo, lo elegido manda), el armazón, las entradas del menú por papel, **el módulo `users`** —su servicio y sus etiquetas— y **el módulo `tickets`**: su servicio (cada acción a su ruta, la lista de responsables pedida a su propia API) y sus etiquetas (los estados del usuario sin jerga, lo que se previsualiza, las frases del historial). Y **los caminos de entrada**: que la sesión pregunte cuáles hay, que sin respuesta se quede con el local —y no ofrezca un botón que no puede comprobar— y que adopte el token que trae la vuelta de Keycloak. Y de las pantallas de usuarios, **cuáles se reactivan solas**: una cuenta de Keycloak desactivada no ofrece el botón y las demás sí. Y **la marca**: que el nombre de la instalación sea el configurado, que sin backend quede el de fábrica —y la pestaña no se quede sin nombre—, que **la versión del sistema se enseñe con su `v`** y que **sin versión no se enseñe ningún número** —inventarse uno sería peor que no decir ninguno—, y que el título de la pestaña cambie al guardarlo. Y **las listas de tickets**, desde el 2026-09-26: que cada papel tenga **sus entradas del menú** —Mis tickets para el usuario, y las dos del «todo» sólo para Soporte y Desarrollo—, que **crear un ticket no esté en el menú para nadie** y que «lo mío» viaje como `mine=1` y sólo cuando se pide. Y **el editor con adjuntos** (`shared/components/editor-con-adjuntos.spec.ts`, **24 pruebas**): los cinco botones de formato sobre lo seleccionado, **la lista cerrada de lo que se puede guardar** —el saneador del editor quita `src`, `class`, `style` y `on…`, y no deja etiquetas vacías— y **qué extensiones se admiten**: el texto y el código que entraron el 2026-09-26 —`sql`, `json`, `xml`, `yml`, `sh`, `py`, `htaccess`, `tar`…—, y que lo que no se admite sigue sin admitirse (`svg`, `exe`, `html`). Y **la configuración y el primer arranque**, desde el 2026-09-30: el servicio de `settings` y **la guarda de instalación** (sin sellar lleva a `/setup`; sellada, no) |

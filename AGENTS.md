@@ -131,8 +131,9 @@ el frontend Angular 22 se sirve en desarrollo y pasa sus pruebas.
 La migración **`v1.0.0.sql`** está aplicada —`mail_templates` y sus veintidós plantillas, `users`,
 `password_tokens`, **las cuatro tablas de configuración de una fila** (la instalación con **el nombre
 y el método de entrada**, el directorio, Keycloak y los tickets) y **las diez tablas de los
-tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, con su guion
-(`./scripts/dev-seed.sh`). Hay **cuatro módulos en marcha**:
+tickets**—, y en desarrollo se le suma **`v1.0.0_dev.sql`**, los datos de ejemplo, **opcionales**, con
+su guion (`./scripts/dev-seed.sh`, y `docker compose -f dev.yml run --rm seed` en Linux, macOS y
+Windows). Hay **cuatro módulos en marcha**:
 
 - **`mail` entero**: tabla, marcadores, renderizado, envío, sus cinco endpoints **y el editor** —los once correos en sus dos idiomas, con vista previa y prueba—.
 - **`auth` entero**: los **tres caminos de entrada**, con **la instalación entrando por uno a la
@@ -349,12 +350,12 @@ corregidos con su prueba.
 El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 `docs/arquitectura.md`, sección 13. En resumen:
 
-- `docs/arquitectura.md` (**as-built**, **3 enmiendas**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado). Enmendado el 2026-10-01: la fila del **motor de IA medido** se corrige con lo medido —**1500 MiB de tope**, **~1,44 GiB en marcha (el 98% del tope)** y **sin tope de CPU**— y se quita el «1,09 GB con una entrada de 2 034 piezas». Enmendado el 2026-10-01 (segunda vez): **el directorio de pruebas y Keycloak salen de `dev.yml`** a sus archivos `active-directory.yml` y `keycloak.yml`, con la red `catalina-support-dev` que posee `dev.yml`, y sus tablas y comandos se ponen al día.
+- `docs/arquitectura.md` (**as-built**, **6 enmiendas**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado). Enmendado el 2026-10-01: la fila del **motor de IA medido** se corrige con lo medido —**1500 MiB de tope**, **~1,44 GiB en marcha (el 98% del tope)** y **sin tope de CPU**— y se quita el «1,09 GB con una entrada de 2 034 piezas». Enmendado el 2026-10-01 (segunda vez): **el directorio de pruebas y Keycloak salen de `dev.yml`** a sus archivos `active-directory.yml` y `keycloak.yml`, con la red `catalina-support-dev` que posee `dev.yml`, y sus tablas y comandos se ponen al día. Enmendado el 2026-10-01 (tercera vez): **la sección 10.3 estrena el paso del esquema** con los dos comandos de Docker que valen igual en PowerShell, CMD y bash, los de los ejemplos detrás y el aviso de que `./scripts/dev-seed.sh` es de Linux y macOS. Enmendado el 2026-10-01 (cuarta vez): **el servidor de desarrollo reenvía `/api` al backend** con `frontend/proxy.conf.json` declarado en `serve.options.proxyConfig`, con destino `http://backend:11002` y sólo de desarrollo (**el `build` no cambia**; en producción reenvía nginx), y nginx pasa a **no ser necesario para entrar** (sí para el dominio y el certificado). Enmendado el 2026-10-01 (quinta vez): **los datos de ejemplo se siembran con `docker compose -f dev.yml run --rm seed`** —contenedor de un solo uso, con perfil propio para que `up -d` no lo arranque, corriendo el guion `scripts/dev-seed.sh`—, y su sección 10.3 cambia su bloque de ejemplos por ese comando.
 - `docs/propósito-y-alcance.md` (**as-built**, **3 enmiendas**): producto, los dos equipos y el modelo de tickets.
 - `docs/usuarios-y-permisos.md` (**as-built**, **10 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
 - `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
-- `docs/ambientes.md` (**as-built**, **14 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome. Y el 2026-10-01: los **tres elementos opcionales** se levantan cada uno con su comando (sección 9.3), y la sección 3.3 **apunta a la tabla de las once cuentas de ejemplo del `README.md`** en vez de repetirla. Enmendado el 2026-10-01 (segunda vez): el directorio de pruebas y Keycloak **dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, cada uno con su comando, y **el perfil `auth` desaparece** (secciones 3.3 y 9.3, con sus tablas y sus comandos).
+- `docs/ambientes.md` (**as-built**, **18 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome. Y el 2026-10-01: los **tres elementos opcionales** se levantan cada uno con su comando (sección 9.3), y la sección 3.3 **apunta a la tabla de las once cuentas de ejemplo del `README.md`** en vez de repetirla. Enmendado el 2026-10-01 (segunda vez): el directorio de pruebas y Keycloak **dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, cada uno con su comando, y **el perfil `auth` desaparece** (secciones 3.3 y 9.3, con sus tablas y sus comandos). Enmendado el 2026-10-01 (tercera vez): las secciones 3.1, 3.3 y 5 dicen que **en una base nueva es `./scripts/dev-seed.sh` lo que crea el esquema** —su paso 1 aplica `v1.0.0.sql`—, **no sólo los ejemplos**, y que se pasa **después del entorno y antes de abrir la aplicación**, porque la aplicación **no crea tablas al arrancar**; los pasos del arranque y el síntoma (`relación "installation_settings" does not exist`, `relación "ai_insights" does not exist`) viven en el `README.md` y aquí se apunta a él sin repetirlo. Enmendado el 2026-10-01 (cuarta vez): la sección 3.2, que sólo enseñaba la redirección `<` del intérprete, estrena los **dos comandos de Docker que valen igual en PowerShell, CMD y bash** (`docker compose cp` + `psql -f`), y las secciones 3.1, 3.3 y 5 separan **las dos vías**: el guion, **de Linux y macOS**, y los comandos de Docker, **para Windows**. Enmendado el 2026-10-01 (quinta vez): la sección 3.1 dice que **también se entra por `http://127.0.0.1:11001` sin nginx** (el servidor de desarrollo reenvía `/api`) y la 9.3 que `BASE_URL` puede apuntar ahí para probar el proxy. Enmendado el 2026-10-01 (sexta vez): **los datos de ejemplo se siembran con `docker compose -f dev.yml run --rm seed`** —contenedor de un solo uso, con perfil propio para que `up -d` no lo arranque, corriendo el guion `scripts/dev-seed.sh`—, igual en los tres sistemas; los ejemplos son **opcionales** (el esquema no) y las secciones 3.1, 3.3, 5 y 9.3 quedan al día.
 - `docs/interfaz-y-experiencia.md` (**as-built**, **36 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
 - `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
 - `docs/modules/settings.md` (**as-built**, **8 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con **el motor de IA**. Enmendado el 2026-09-30: declara **`ProberDeCorreo`**, que **reutiliza el asistente** para el paso 4.
@@ -420,6 +421,13 @@ docker compose -f dev.yml ps
 docker compose -f dev.yml logs -f backend
 docker compose -f dev.yml down
 
+# **El esquema de una base nueva**: no se aplica solo y la aplicación no crea tablas al arrancar, así
+# que sin esto el backend responde con `relación "installation_settings" does not exist`. Estos dos
+# comandos de Docker **valen igual en PowerShell, CMD y bash** (docs/ambientes.md, secciones 3.2 y 3.3;
+# los pasos del arranque, en el README)
+docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
+docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
+
 # Backend (Go 1.27 dentro del contenedor, con air recargando al guardar)
 docker compose -f dev.yml exec backend go test ./...
 docker compose -f dev.yml exec backend go vet ./...
@@ -441,7 +449,7 @@ open http://127.0.0.1:11004
 # once cuentas y los 25 tickets de ejemplo (decisión del responsable, 2026-09-28). **Se avisa antes**:
 # el seeder borra también lo que haya a mano en desarrollo
 docker compose -f dev.yml run --rm e2e
-./scripts/dev-seed.sh
+docker compose -f dev.yml run --rm seed   # reiniciar el entorno, igual en los tres sistemas
 # Los dos caminos de directorio, en dos pasos: se levanta cada servicio con su archivo y se corre
 # después la suite de siempre
 docker compose -f active-directory.yml up -d
@@ -463,7 +471,13 @@ docker compose -f keycloak.yml up -d                    # Keycloak
 docker compose -f ai.yml up -d                          # el motor de IA (opcional)
 
 # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
-# Borra los tickets que hubiera y deja el entorno en un estado conocido (docs/ambientes.md, sección 3.3)
+# **Son opcionales** y **no se levantan con `up -d`** (perfil propio): se piden a propósito. Es un
+# contenedor de un solo uso que corre **el guion de siempre, `scripts/dev-seed.sh`** —una sola verdad—
+# y vale igual en Linux, macOS y Windows. Borra los tickets que hubiera y deja el entorno en un estado
+# conocido (docs/ambientes.md, sección 3.3). **Los ejemplos son para tener contenido, no para poder
+# entrar**: con el esquema ya se entra con `admin`/`admin`.
+docker compose -f dev.yml run --rm seed
+# En Linux y macOS, el mismo guion también se puede correr fuera del contenedor
 ./scripts/dev-seed.sh
 
 # El despliegue a producción: construye y publica los artefactos en /root/prod/catalina-support y
@@ -481,8 +495,11 @@ docker compose -f ai.yml up -d                          # el motor de IA (opcion
 ```
 
 En desarrollo se entra por **https://dev-catalina-support.calibyou.com**, que es nginx (en la
-máquina) delante de los contenedores. Los puertos 11001 y 11002 siguen publicados para depurar sin
-pasar por nginx.
+máquina) delante de los contenedores, **y también por `http://127.0.0.1:11001` sin nginx**: el
+servidor de desarrollo reenvía `/api` al backend con su proxy (`frontend/proxy.conf.json`, declarado
+en `serve.options.proxyConfig` de `frontend/angular.json`), así que con el entorno levantado y el
+esquema aplicado **se entra en la 11001 con `admin`/`admin`** —es el recorrido de quien se descarga el
+proyecto—. Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
 
 Los dos vhosts son **copias** de `config/nginx/` en `/etc/nginx/conf.d/` (no enlaces), igual que
 en Calibyou. Si se cambia un vhost en el repositorio, hay que volver a copiarlo y recargar:

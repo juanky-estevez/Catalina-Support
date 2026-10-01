@@ -53,7 +53,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "allowedHosts": ["dev-catalina-support.calibyou.com"]
+            "allowedHosts": ["dev-catalina-support.calibyou.com"],
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {
