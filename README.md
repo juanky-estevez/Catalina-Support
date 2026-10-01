@@ -107,24 +107,59 @@ primera vez baja su modelo, ~1,1 GB, al volumen). Sin él la mesa de ayuda funci
   Deja **once cuentas** (`user1@demo.com` … `dev3@demo.com`), **25 tickets** con su historia y sus
   adjuntos. Todas las cuentas entran con la contraseña **`123123123`**. **Cuidado: el guion borra
   los tickets que hubiera** y deja la base en un estado conocido.
-- **El motor de IA se levanta aparte** —como el directorio y Keycloak— y **es opcional**: sin él la
-  mesa de ayuda funciona, sin los dos resúmenes. Abajo se explica **cómo levantarlo, lo que consume** y
-  cómo cambiarlo por otro modelo.
-
-**El directorio y Keycloak son aparte, y son opcionales** (decisión del responsable): la instalación
-entra por **uno de los tres métodos**, y el que se use puede ser **el que ya tiene la institución**.
-Para **probarlos** en desarrollo hay dos servicios de pruebas detrás de un perfil —un directorio
-(OpenLDAP) y un Keycloak— que **no se levantan con el entorno**:
-
-```bash
-docker compose -f dev.yml --profile auth up -d   # sólo para probar esos dos caminos
-```
-
-**En producción, el directorio y Keycloak no se levantan aquí**: se configura el que ya exista —su
-servidor, su reino, sus credenciales— en la pantalla de **Configuración**, y la instalación entra
-contra él. Lo que trae el proyecto es el camino para hablar con ellos, no el servidor.
+- **El motor de IA, el directorio de pruebas y Keycloak son aparte y son opcionales**: los tres se
+  levantan con su propio comando y **ninguno hace falta** para que la mesa de ayuda funcione. Están
+  juntos, con lo que es cada uno y su comando, en **«Los tres elementos opcionales»**, justo abajo.
 
 En desarrollo también hay **nginx delante**, para probar con el dominio y el certificado de verdad.
+
+### Los tres elementos opcionales
+
+El comando de arriba (`docker compose -f dev.yml up -d`) levanta todo lo que hace falta para usar la
+mesa de ayuda. Estos tres van aparte, **son opcionales** y **cada uno tiene su propio comando**: se
+puede levantar cualquiera de ellos sin levantar los otros, y **sin ninguno la aplicación funciona
+entera**.
+
+**1. El motor de IA**, que redacta los dos resúmenes del ticket —**«Motivo»** y **«Última acción»**—
+en español y en inglés:
+
+```bash
+docker compose -f ai.yml up -d
+```
+
+Es **llama.cpp** sirviendo un modelo **Qwen2.5-1.5B-Instruct** en cuantización **Q4_K_M**
+(`qwen2.5-1.5b-instruct-q4_k_m.gguf`). La primera vez **descarga el modelo (~1,1 GB)** al volumen; el
+contenedor **reserva 1,5 GB de memoria** (`mem_limit: 1500m` en `ai.yml`) y, medido en marcha, gasta
+**~1,44 GiB**. **Va por CPU** —no hace falta GPU— y **tarda entre 12 y 24 segundos por campo**. Sin
+él, los dos resúmenes se quedan sin texto y todo lo demás funciona igual. Más abajo, en **«El motor
+de IA, y lo que consume»**, está el detalle y cómo cambiarlo por otro modelo.
+
+**2. El directorio de pruebas (OpenLDAP)**, para probar el camino de entrada por **Active Directory**:
+
+```bash
+docker compose -f dev.yml up -d ldap
+```
+
+Trae **las personas de prueba del directorio** (`config/ldap/`) y publica el puerto `11005`. Con el
+método de entrada en `ad`, la aplicación entra contra él como entraría contra el directorio real de la
+institución.
+
+**3. Keycloak**, para probar el camino de entrada por **OIDC**:
+
+```bash
+docker compose -f dev.yml up -d keycloak
+```
+
+Trae **un reino de pruebas que vive en el repositorio** (`config/keycloak/`) y se importa al
+arrancar; se publica por `/sso/`, en el puerto `11006`.
+
+**El directorio y Keycloak comparten el perfil `auth`**, así que el comando de siempre
+`docker compose -f dev.yml --profile auth up -d` levanta **los dos a la vez**. Nombrar el servicio
+—`up -d ldap` o `up -d keycloak`— levanta **sólo el que se quiera**, sin activar el perfil.
+
+**En producción no se levanta ninguno de los dos**: se configura el directorio o el reino que ya
+exista —su servidor, sus credenciales— en la pantalla de **Configuración**, y la instalación entra
+contra él. Lo que trae el proyecto es el camino para hablar con ellos, no el servidor.
 
 ### Ponerlo a funcionar de verdad (producción)
 
@@ -232,12 +267,13 @@ cambiarlos vale sin reiniciar nada. Las variables `AI_URL` y `AI_MODEL` del arch
 **como respaldo** para una instalación que ya las tuviera puestas; `AI_PALABRAS` y
 `AI_ESPERA_SEGUNDOS` siguen siendo ajuste del entorno.
 
-**El modelo por defecto** es `qwen2.5-1.5b-instruct`, en cuantización `q4_k_m`:
+**El modelo por defecto** es `qwen2.5-1.5b-instruct`, en cuantización `q4_k_m` —el archivo
+`qwen2.5-1.5b-instruct-q4_k_m.gguf`—:
 
 | | |
 | --- | --- |
-| **Descarga la primera vez** | **1,07 GB**, al volumen del modelo (no está en el repositorio) |
-| **Memoria que reserva el contenedor** | **1,5 GB** —el modelo, su caché y el servidor—. Medido en marcha: **1,44 GB** |
+| **Descarga la primera vez** | **1,1 GB** (1.117.320.736 bytes), al volumen del modelo (no está en el repositorio). Sale del repositorio **`Qwen/Qwen2.5-1.5B-Instruct-GGUF`** de Hugging Face, con el nombre exacto del archivo (`config/ai/01-descargar-modelo.sh`) |
+| **Memoria que reserva el contenedor** | **1,5 GB** (`mem_limit: 1500m` en `ai.yml`) —el modelo, su caché y el servidor—. Medido en marcha: **~1,44 GiB** |
 | **Tiempo por resumen** | **entre 12 y 24 segundos** por campo, en CPU |
 | **Procesador** | **no hace falta GPU**: va por CPU |
 

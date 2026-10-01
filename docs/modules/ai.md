@@ -1,7 +1,17 @@
 # ai
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-01
+>
+> **Enmendado el 2026-10-01**: **se corrigen los recursos del motor** para que digan lo que de verdad
+> tiene `ai.yml`, que es la fuente: el **tope de memoria son 1500m** (`mem_limit: 1500m`) y **no hay
+> tope de CPU** —la afirmación de «2 CPU» que arrastraban la sección 2 y la decisión 11 no salía de
+> ningún sitio del compose—; y **lo medido es ~1,44 GiB en marcha** —`docker stats` da 1.441-1.448 GiB
+> y el `VmRSS` del proceso 1,51 GB—, no los «~950 MB en reposo y 1,09 GB con una entrada larga» que se
+> habían anotado antes. Los dos números viejos se quedan corregidos en la sección 2 y en la decisión 11,
+> y en la sección 2 se explica además el **aviso esperado del volumen del modelo** al levantar el motor
+> (que el volumen `ai_modelos` figure con otro nombre de proyecto: no rompe nada y no hay que
+> «arreglarlo»).
 >
 > **Enmendado el 2026-09-30**: el motor **se levanta aparte** (`ai.yml`, como el directorio de pruebas y
 > Keycloak) y **es opcional** —decisión y corrección del responsable—: sin él la mesa de ayuda
@@ -52,12 +62,18 @@ siendo el ticket, y ninguna decisión del sistema se toma a partir de estos camp
 | --- | --- |
 | **Dónde** | Un contenedor **`catalina_support_ai`**, aparte del backend, con **llama.cpp** sirviendo un modelo por HTTP |
 | **Modelo** | **Qwen2.5-1.5B-Instruct**, cuantizado **Q4_K_M** (unos 1,1 GB), elegido porque **cabe en la memoria de esta máquina**: no hay GPU y quedaban unos 1,8 GB libres |
-| **Imagen** | `ghcr.io/ggml-org/llama.cpp:server-b11206`, **con la compilación fijada** (y no la etiqueta móvil `:server`): un `pull` no puede cambiar el motor por debajo sin que nadie lo haya decidido. Lo que gasta: **~950 MB en reposo y 1,09 GB con una entrada larga**, con un techo de **1500m de memoria y 2 CPU** que es lo que impide que se coma la máquina |
+| **Imagen** | `ghcr.io/ggml-org/llama.cpp:server-b11206`, **con la compilación fijada** (y no la etiqueta móvil `:server`): un `pull` no puede cambiar el motor por debajo sin que nadie lo haya decidido. El tope de memoria son **1500m** (`mem_limit: 1500m` en `ai.yml`) —**`ai.yml` no limita las CPU**— y es lo que impide que se coma la máquina. Lo que gasta, medido en marcha: **~1,44 GiB** —`docker stats` da 1.441-1.448 GiB, el **98% del tope**, y el `VmRSS` del proceso 1,51 GB—, justo por debajo de él |
 | **Arranque** | `ai.yml` con un guion (`config/ai/01-descargar-modelo.sh`) que **descarga el modelo sólo si falta** —a un archivo temporal, y comprobando la cabecera `GGUF` antes de renombrarlo— y después hace `exec` al servidor. El `.gguf` vive en un volumen con nombre, así que sobrevive a `down`/`up` y **no se vuelve a descargar** |
 | **Red** | Una red propia, **`catalina-support-ai`**, a la que entran los backends de desarrollo y de producción. **Un solo contenedor sirve a los dos**: no caben dos (decisión 1) |
 | **Puerto** | **Ninguno publicado en la máquina**: el motor no se alcanza desde fuera, sólo por la red interna de docker |
 | **Internet** | El modelo **se descarga una vez** al levantar el contenedor, y a partir de ahí **el motor funciona sin salida a internet** |
 | **Datos** | El texto del ticket **no sale del servidor**. Es la razón de que el motor sea local y no una API de terceros (decisión 1) |
+
+**Y un aviso esperado al levantar el motor**: `docker compose -f ai.yml up -d` puede avisar de que el
+volumen `ai_modelos` «was created for project "catalina-support-ai" (expected "catalina-support")».
+**No rompe nada y no hay que «arreglarlo»**: el volumen tiene **nombre fijo** (`name: ai_modelos` en
+`ai.yml`), así que es el mismo aunque cambie el nombre del proyecto con el que se creó; por eso el motor
+entra en él y **el modelo no se vuelve a descargar**.
 
 **Y tarda, y eso se dice**: sin GPU, el motor lee el mensaje a ~24 piezas por segundo y redacta a
 5-9, así que **cada campo tarda entre 12 y 24 segundos** y un ticket largo —6 000 caracteres— ronda el
@@ -262,7 +278,7 @@ aiService.SetConfiguracion(instalacionesDeLaConfiguracion{settings: settingsServ
 | 7 | **Dos peticiones, no una** | «Motivo» y «Última acción» se piden por separado, porque son encargos distintos: de qué va el ticket, y qué fue lo último. Un solo texto para las dos cosas saldría peor en las dos |
 | 8 | **Qué pasa si el motor contesta mal** | Un reintento, y después el campo queda en **`error`** con su clave: **no hay bucle**. Los reintentos automáticos de la cola (tres, con espera creciente) son para el motor caído o lento, no para una respuesta que no vale |
 | 9 | **Cómo se leen para la lista** | **En bloque** (`De(numeros)`), una consulta por página y no una por fila: la lista de tickets se pinta con una sola pregunta, como las cuentas de las personas |
-| 11 | **La compilación del motor se fija** | `server-b11206` y no la etiqueta móvil: subir de motor es una decisión, no algo que pase un día al hacer `pull`. Y sus argumentos quedan escritos: 4096 de contexto, dos hilos, una conversación a la vez, 512 piezas de respuesta, sin interfaz web, **1500m de memoria y 2 CPU de techo** y una comprobación de salud con quince minutos de margen por la primera descarga |
+| 11 | **La compilación del motor se fija** | `server-b11206` y no la etiqueta móvil: subir de motor es una decisión, no algo que pase un día al hacer `pull`. Y sus argumentos quedan escritos: 4096 de contexto, dos hilos, una conversación a la vez, 512 piezas de respuesta, sin interfaz web, **1500m de memoria de techo** —`ai.yml` no limita las CPU, corregido el 2026-10-01— y una comprobación de salud con quince minutos de margen por la primera descarga |
 | 12 | **El tope de palabras son 40** | Una columna de una tabla no es un párrafo: con 60 palabras el «Motivo» llenaba la celda. La pantalla, además, recorta a dos líneas en la lista y lo enseña entero en la ficha |
 | 13 | **El tiempo de espera del motor son 240 segundos** | Medido, un ticket largo tarda ~95 s en los dos campos. Con 30 s —lo de fábrica del cliente HTTP— fallarían justo los tickets largos. Está en `AI_ESPERA_SEGUNDOS` |
 | 14 | **Se le exige el JSON por dos vías** | `response_format` en el cuerpo **y** la exigencia escrita al final del mensaje del usuario. Con una sola, el modelo envuelve la respuesta, se inventa las claves o contesta en un solo idioma. El rescate del primer objeto JSON y el reintento se quedan como red |

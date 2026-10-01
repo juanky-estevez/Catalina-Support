@@ -26,7 +26,7 @@ services:
     entrypoint: ["/bin/sh", "/config/ai/01-descargar-modelo.sh"]
     volumes:
       - ./config/ai:/config/ai:ro
-      # El modelo (~1,07 GB) **no está en el repositorio**: vive en este volumen, con nombre
+      # El modelo (1.117.320.736 bytes, ~1,1 GB) **no está en el repositorio**: vive en este volumen, con nombre
       # exacto para que no se vuelva a descargar.
       - ai_modelos:/modelos
 
@@ -51,8 +51,8 @@ services:
       - "512"
       - --no-webui
 
-    # El tope de memoria es lo que pide el modelo de por defecto: ~1,07 GB del modelo + su caché
-    # KV + buffers y servidor. Con otro modelo, se ajusta.
+    # El tope de memoria es lo que pide el modelo de por defecto: ~1,1 GB del modelo + su caché
+    # KV + buffers y servidor (medido en marcha: ~1,44 GiB, el 98% del tope). Con otro modelo, se ajusta.
     mem_limit: 1500m
 
     healthcheck:
