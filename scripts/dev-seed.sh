@@ -2,7 +2,11 @@
 #
 # Deja el entorno de desarrollo con los datos de ejemplo de Catalina-Support.
 #
-#   ./scripts/dev-seed.sh
+#   ./scripts/dev-seed.sh                          # Linux y macOS
+#   docker compose -f dev.yml run --rm seed        # Linux, macOS y Windows (es el comando de siempre)
+#
+# El segundo **es el mismo guion, dentro de un contenedor**: `dev.yml` monta lo que necesita y corre
+# este archivo, así que no hay dos formas de sembrar que puedan separarse (docs/ambientes.md, 3.3).
 #
 # Qué hace:
 #
@@ -40,17 +44,37 @@ if [ -z "$USUARIO" ] || [ -z "$BASE" ] || [ -z "$PUERTO" ]; then
     exit 1
 fi
 
-if ! docker compose -f "$COMPOSE" ps --status running --format '{{.Service}}' | grep -qx database; then
-    echo "La base no está levantada: levántala con «docker compose -f dev.yml up -d»." >&2
-    exit 1
-fi
+# Cómo se habla con la base. **Es el único punto que cambia entre los dos caminos**, y la siembra es
+# la misma en los dos: esquema, ejemplos y adjuntos.
+#
+#   - **Dentro del contenedor del seeder** (`docker compose -f dev.yml run --rm seed`), que es la
+#     forma que vale igual en Linux, macOS y Windows: el `psql` de la propia imagen habla con la base
+#     por la red del entorno. No hay docker dentro y no hace falta; la espera a la base la hace el
+#     `depends_on` con su comprobación de salud. El contenedor avisa de que es este camino con la
+#     marca `SEED_EN_CONTENEDOR=1` (dev.yml).
+#   - **Fuera de los contenedores** (Linux y macOS, `./scripts/dev-seed.sh`): no se da por hecho que
+#     la máquina tenga `psql` —el proyecto no lo pide, y la máquina de este proyecto lo tiene y no se
+#     usa—, así que se entra al contenedor de la base con `docker compose exec`.
+if [ "${SEED_EN_CONTENEDOR:-}" = "1" ]; then
+    psql() {
+        # `command` salta la función: sin él, esta llamada se llamaría a sí misma.
+        PGPASSWORD="${POSTGRES_PASSWORD:-}" PGOPTIONS='-c client_min_messages=warning' \
+            command psql -v ON_ERROR_STOP=1 -h "${POSTGRES_HOST:-database}" \
+            -U "$USUARIO" -d "$BASE" -p "$PUERTO" "$@"
+    }
+else
+    if ! docker compose -f "$COMPOSE" ps --status running --format '{{.Service}}' | grep -qx database; then
+        echo "La base no está levantada: levántala con «docker compose -f dev.yml up -d»." >&2
+        exit 1
+    fi
 
-# Los avisos de «la tabla ya existe» son lo normal al volver a aplicar el esquema, así que se callan;
-# **los errores no**: `ON_ERROR_STOP` corta en el primero y el guion se para con él.
-psql() {
-    docker compose -f "$COMPOSE" exec -T -e PGOPTIONS='-c client_min_messages=warning' database \
-        psql -v ON_ERROR_STOP=1 -U "$USUARIO" -d "$BASE" -p "$PUERTO" "$@"
-}
+    # Los avisos de «la tabla ya existe» son lo normal al volver a aplicar el esquema, así que se
+    # callan; **los errores no**: `ON_ERROR_STOP` corta en el primero y el guion se para con él.
+    psql() {
+        docker compose -f "$COMPOSE" exec -T -e PGOPTIONS='-c client_min_messages=warning' database \
+            psql -v ON_ERROR_STOP=1 -U "$USUARIO" -d "$BASE" -p "$PUERTO" "$@"
+    }
+fi
 
 echo "1/3  Aplicando el esquema…"
 psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0.sql"

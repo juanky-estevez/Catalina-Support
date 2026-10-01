@@ -126,6 +126,44 @@ services:
       timeout: 5s
       retries: 12
 
+  # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
+  # **Es opcional** —quien quiera probar el proyecto vacío, sólo con el esquema, no lo ejecuta— y
+  # **no se levanta con `up -d`**: tiene perfil propio y se pide a propósito:
+  #
+  #   docker compose -f dev.yml run --rm seed
+  #
+  # Es **un contenedor que se ejecuta y se va**, con la misma imagen que la base —`psql` y `bash` ya
+  # vienen dentro—, y corre **el guion de siempre, `scripts/dev-seed.sh`**: una sola verdad sobre
+  # cómo se siembra, y el mismo comando en Linux, macOS y Windows (docs/ambientes.md, sección 3.3).
+  # El guion aplica el esquema (idempotente), los ejemplos y copia los adjuntos de `config/seed/` a
+  # `_files/`, en la carpeta de su ticket.
+  #
+  # Los montajes son exactamente lo que el guion necesita: el guion, las migraciones y `config/`
+  # (la semilla y el entorno) **de sólo lectura**, y `_files/` **de escritura**, que es lo único que
+  # el guion modifica en la máquina. El `entrypoint` se sustituye para correr el guion, y con él el
+  # contenedor no pasa por el arranque de PostgreSQL (no levanta ninguna base: la siembra es la de
+  # `database`).
+  seed:
+    image: postgres:18-alpine
+    container_name: catalina_support_dev_seed
+    profiles: ["seed"]
+    working_dir: /app
+    entrypoint: ["bash", "scripts/dev-seed.sh"]
+    environment:
+      # La marca con la que el guion sabe que corre dentro del contenedor: habla con la base por la
+      # red del entorno con el `psql` de la imagen, sin necesitar docker dentro.
+      SEED_EN_CONTENEDOR: "1"
+    env_file:
+      - ./config/env/dev.env
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./backend/migrations:/app/backend/migrations:ro
+      - ./config:/app/config:ro
+      - ./_files:/app/_files
+
 networks:
   # **La red del entorno de desarrollo, con nombre fijo.** La crea este archivo (sin `external`) y
   # los elementos que viven aparte —`active-directory.yml` y `keycloak.yml`— la declaran **externa**
