@@ -345,12 +345,12 @@ corregidos con su prueba.
 El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 `docs/arquitectura.md`, sección 13. En resumen:
 
-- `docs/arquitectura.md` (**as-built**, **1 enmienda**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado).
+- `docs/arquitectura.md` (**as-built**, **2 enmiendas**): stack, contenedores, dominios y regla de modularidad. Su sección 13, puesta al día el 2026-09-30 (el despliegue a producción queda aparcado). Enmendado el 2026-10-01: la fila del **motor de IA medido** se corrige con lo medido —**1500 MiB de tope**, **~1,44 GiB en marcha (el 98% del tope)** y **sin tope de CPU**— y se quita el «1,09 GB con una entrada de 2 034 piezas».
 - `docs/propósito-y-alcance.md` (**as-built**, **3 enmiendas**): producto, los dos equipos y el modelo de tickets.
 - `docs/usuarios-y-permisos.md` (**as-built**, **10 enmiendas**): permisos, acceso —**un método a la vez**— y cuentas.
 - `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
-- `docs/ambientes.md` (**as-built**, **11 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome.
+- `docs/ambientes.md` (**as-built**, **12 enmiendas**): despliegue, migraciones, **copias de seguridad** y pruebas. **El despliegue está hecho y verificado por dentro**; el correo de producción y abrir el dominio quedan **aparcados**. La última, el 2026-09-30: **el despliegue queda aparcado** y la sección 4 lleva una **nota** de que su flujo cambió (rutas relativas, publicación del compose y puertos sin `127.0.0.1`), a la espera de ponerse al día cuando se retome. Y el 2026-10-01: los **tres elementos opcionales** se levantan cada uno con su comando (sección 9.3), y el directorio y Keycloak **comparten perfil pero pueden levantarse por separado** —comprobado— sin romper el comando de siempre `--profile auth up -d`.
 - `docs/interfaz-y-experiencia.md` (**as-built**, **36 enmiendas**): la parte visual y de experiencia, con **la tarjeta de cómo se entra**, **la versión del sistema** y **el editor con los adjuntos dentro**. **Las pantallas de usuarios (3.6), de tickets (3.7) y el editor de los correos (3.8) están hechos**.
 - `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
 - `docs/modules/settings.md` (**as-built**, **8 enmiendas**): la configuración de la instalación y la marca. **Terminado**: la pantalla de Configuración está entera, con el nombre de la instalación, con cómo se entra y con **el motor de IA**. Enmendado el 2026-09-30: declara **`ProberDeCorreo`**, que **reutiliza el asistente** para el paso 4.
@@ -359,7 +359,7 @@ El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 - `docs/README.md`: índice de documentación.
 
 - `docs/primer-arranque.md` (**as-built**, **1 enmienda**): la vista de primer arranque y su sello. Enmendado el 2026-09-30: **el asistente prueba lo que pide** —los dos endpoints públicos `/entry/test` y `/mail/test`, con el candado del sello, y los botones de los pasos 2 y 4—, y la prueba del correo **conecta y autentica sin mandar ningún correo**.
-- `docs/modules/ai.md` (**as-built**, **1 enmienda**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia: su motor se configura desde Configuración.
+- `docs/modules/ai.md` (**as-built**, **2 enmiendas**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia: su motor se configura desde Configuración. Enmendado el 2026-10-01: **los recursos del motor se corrigen** —tope de **1500m de memoria**, **sin tope de CPU** (`ai.yml` no limita CPU; el «2 CPU» anterior no salía del compose) y **~1,44 GiB medidos en marcha**—, y se explica el **aviso esperado del volumen `ai_modelos`** (nombre fijo, no hay que arreglarlo).
 
 La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo
 antes de implementarlo. El orden es **`mail` → `auth` → `users` → `tickets`**, porque `auth` no
@@ -446,8 +446,13 @@ docker compose -f ai.yml up -d
 docker compose -f ai.yml ps
 docker compose -f ai.yml logs -f ai
 
-# Los dos servicios de pruebas de los caminos de directorio (OpenLDAP y Keycloak), con sus personas
-docker compose -f dev.yml --profile auth up -d
+# Los tres elementos opcionales, cada uno con su comando. El directorio de pruebas y Keycloak comparten
+# el perfil `auth`, pero **cada uno se levanta por separado** nombrándolo (sin activar el perfil); el
+# motor de IA tiene su propio compose. El de siempre levanta el directorio y Keycloak de una vez
+docker compose -f dev.yml --profile auth up -d          # el directorio y Keycloak, a la vez
+docker compose -f dev.yml up -d ldap                    # sólo el directorio de pruebas (AD/LDAP)
+docker compose -f dev.yml up -d keycloak                # sólo Keycloak
+docker compose -f ai.yml up -d                          # el motor de IA (opcional)
 
 # Los datos de ejemplo de desarrollo: once cuentas, 25 tickets con su historia y sus adjuntos.
 # Borra los tickets que hubiera y deja el entorno en un estado conocido (docs/ambientes.md, sección 3.3)

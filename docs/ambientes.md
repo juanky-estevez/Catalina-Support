@@ -1,7 +1,16 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-01
+>
+> **Enmendado el 2026-10-01**: los **tres elementos opcionales** se levantan cada uno con su propio
+> comando y así queda dicho (sección 9.3): el motor de IA (`docker compose -f ai.yml up -d`, sección
+> 3.4), el directorio de pruebas (`docker compose -f dev.yml up -d ldap`) y Keycloak
+> (`docker compose -f dev.yml up -d keycloak`). El directorio y Keycloak **comparten el perfil `auth`**
+> pero **pueden levantarse por separado** nombrando el servicio, **sin activar el perfil** —comprobado
+> levantando sólo uno y viendo en `docker compose -f dev.yml ps` que el otro no aparece—; el comando de
+> siempre `docker compose -f dev.yml --profile auth up -d` **sigue levantando los dos a la vez** y es el
+> que usan la suite con el método en AD o Keycloak y las pruebas de interfaz. Los tres son opcionales.
 >
 > **Enmendado el 2026-09-30 (sexta vez)**: **el despliegue a producción queda aparcado** hasta que el
 > producto esté terminado, así que **este runbook no se reescribe ahora**: la sección 4 lleva una **nota**
@@ -700,6 +709,20 @@ desarrollo viven detrás del perfil `auth`:
 docker compose -f dev.yml --profile auth up -d          # el directorio y Keycloak, con sus personas
 docker compose -f dev.yml --profile auth run --rm e2e   # la suite entera, con los dos caminos
 ```
+
+**Los dos comparten el perfil `auth`, pero se pueden levantar por separado** (comprobado): nombrar el
+servicio lo levanta **sin activar el perfil**, así que cada uno tiene su propio comando y quien quiera
+sólo el directorio no levanta Keycloak —ni al revés—. El motor de IA, el tercer elemento opcional,
+tiene su propio compose (sección 3.4). Los **tres comandos** son:
+
+```bash
+docker compose -f ai.yml up -d               # el motor de IA (opcional; sección 3.4)
+docker compose -f dev.yml up -d ldap         # sólo el directorio de pruebas (AD/LDAP)
+docker compose -f dev.yml up -d keycloak     # sólo Keycloak
+```
+
+Y el de siempre —`docker compose -f dev.yml --profile auth up -d`— levanta **el directorio y Keycloak
+de una vez**, que es lo que necesitan estos casos.
 
 Sin él, esos casos **se saltan** en vez de fallar: la suite tiene que poder correr en una instalación
 que no tenga AD (`docs/modules/auth.md`, decisión 28).
