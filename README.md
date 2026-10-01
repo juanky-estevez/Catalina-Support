@@ -104,9 +104,28 @@ primera vez baja su modelo, ~1,1 GB, al volumen). Sin él la mesa de ayuda funci
   ./scripts/dev-seed.sh
   ```
 
-  Deja **once cuentas** (`user1@demo.com` … `dev3@demo.com`), **25 tickets** con su historia y sus
-  adjuntos. Todas las cuentas entran con la contraseña **`123123123`**. **Cuidado: el guion borra
-  los tickets que hubiera** y deja la base en un estado conocido.
+  Deja **once cuentas de ejemplo de desarrollo** y **25 tickets** con su historia y sus adjuntos.
+  Todas entran con la misma contraseña, **`123123123`**, y **no se usan en producción**: el archivo
+  `_dev` no se aplica allí. **Cuidado: el guion borra los tickets que hubiera** y deja la base en un
+  estado conocido.
+
+  | Nombre | Correo | Rol | Contraseña |
+  | --- | --- | --- | --- |
+  | Usuario Uno | `user1@demo.com` | `usuario` | `123123123` |
+  | Usuario Dos | `user2@demo.com` | `usuario` | `123123123` |
+  | Usuario Tres | `user3@demo.com` | `usuario` | `123123123` |
+  | Usuario Cuatro | `user4@demo.com` | `usuario` | `123123123` |
+  | Usuario Cinco | `user5@demo.com` | `usuario` | `123123123` |
+  | Soporte Uno | `support1@demo.com` | `soporte` | `123123123` |
+  | Soporte Dos | `support2@demo.com` | `soporte` | `123123123` |
+  | Soporte Tres | `support3@demo.com` | `soporte` | `123123123` |
+  | Desarrollador 1 | `dev1@demo.com` | `desarrollo` | `123123123` |
+  | Desarrollador 2 | `dev2@demo.com` | `desarrollo` | `123123123` |
+  | Desarrollador 3 | `dev3@demo.com` | `desarrollo` | `123123123` |
+
+  **La cuenta de fábrica (`admin`) no es una de estas**: no está en la base, vive en la configuración
+  del entorno y su contraseña es `ADMIN_PASSWORD`, que **nunca se escribe en la documentación**
+  (`docs/usuarios-y-permisos.md`, sección 8).
 - **El motor de IA, el directorio de pruebas y Keycloak son aparte y son opcionales**: los tres se
   levantan con su propio comando y **ninguno hace falta** para que la mesa de ayuda funcione. Están
   juntos, con lo que es cada uno y su comando, en **«Los tres elementos opcionales»**, justo abajo.
