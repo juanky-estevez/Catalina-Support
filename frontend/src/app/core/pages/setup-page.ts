@@ -120,6 +120,7 @@ export class SetupPage {
   protected readonly dirApellidos = signal('');
   protected readonly dirId = signal('');
   protected readonly kcEmisor = signal('');
+  protected readonly kcInterno = signal('');
   protected readonly kcCliente = signal('');
   protected readonly kcSecreto = signal('');
   protected readonly kcVuelta = signal('');
@@ -452,6 +453,7 @@ export class SetupPage {
   private keycloakEscrito(): Partial<KeycloakDeInstalacion> & { clientSecret?: string } {
     return {
       issuer: this.kcEmisor().trim(),
+      internalIssuer: this.kcInterno().trim(),
       clientId: this.kcCliente().trim(),
       redirectUri: this.kcVuelta().trim(),
       clientSecret: this.kcSecreto(),
@@ -500,6 +502,7 @@ export class SetupPage {
     this.dirApellidos.set(estado.directory.attrLastName);
     this.dirId.set(estado.directory.attrId);
     this.kcEmisor.set(estado.keycloak.issuer);
+    this.kcInterno.set(estado.keycloak.internalIssuer ?? '');
     this.kcCliente.set(estado.keycloak.clientId);
     this.kcSecreto.set('');
     this.kcVuelta.set(estado.keycloak.redirectUri);

@@ -70,10 +70,11 @@ type DirectoryDto struct {
 
 // KeycloakDto es la configuración de Keycloak, **sin el secreto**.
 type KeycloakDto struct {
-	Issuer      string `json:"issuer"`
-	ClientID    string `json:"clientId"`
-	RedirectURI string `json:"redirectUri"`
-	SecretSet   bool   `json:"secretSet"`
+	Issuer         string `json:"issuer"`
+	InternalIssuer string `json:"internalIssuer"`
+	ClientID       string `json:"clientId"`
+	RedirectURI    string `json:"redirectUri"`
+	SecretSet      bool   `json:"secretSet"`
 	// ClientSecret sólo va de entrada, con la misma regla que la contraseña del directorio.
 	ClientSecret string `json:"clientSecret,omitempty"`
 }
@@ -157,10 +158,11 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 			PasswordSet:  config.Directory.PasswordSet,
 		},
 		Keycloak: KeycloakDto{
-			Issuer:      config.Keycloak.Issuer,
-			ClientID:    config.Keycloak.ClientID,
-			RedirectURI: config.Keycloak.RedirectURI,
-			SecretSet:   config.Keycloak.SecretSet,
+			Issuer:         config.Keycloak.Issuer,
+			InternalIssuer: config.Keycloak.InternalIssuer,
+			ClientID:       config.Keycloak.ClientID,
+			RedirectURI:    config.Keycloak.RedirectURI,
+			SecretSet:      config.Keycloak.SecretSet,
 		},
 		Language:             config.Language,
 		PrimaryColor:         config.PrimaryColor,
@@ -237,9 +239,10 @@ func NewDirectoryInput(dto DirectoryDto) services.DirectoryInput {
 // NewKeycloakInput traduce lo que llega de la pantalla a lo que entiende el servicio.
 func NewKeycloakInput(dto KeycloakDto) services.KeycloakInput {
 	return services.KeycloakInput{
-		Issuer:       dto.Issuer,
-		ClientID:     dto.ClientID,
-		ClientSecret: dto.ClientSecret,
-		RedirectURI:  dto.RedirectURI,
+		Issuer:         dto.Issuer,
+		InternalIssuer: dto.InternalIssuer,
+		ClientID:       dto.ClientID,
+		ClientSecret:   dto.ClientSecret,
+		RedirectURI:    dto.RedirectURI,
 	}
 }

@@ -17,17 +17,168 @@ contenedores** y **la configuración se hace desde la propia interfaz**: no hay 
 en el servidor para poner el nombre de la instalación, el método con el que entra la gente, su
 región horaria o su dirección pública.
 
-## Donaciones y cómo participar
+## Probar en local: instalación vacía
 
-> **Hueco pendiente.** Aquí van la invitación a participar y las vías para donar. El responsable del
-> proyecto rellenará este apartado con los datos que quiera publicar (una página del proyecto, un
-> enlace de donación, un correo de contacto, un repositorio…). **No se ha inventado ninguna
-> dirección ni ninguna cuenta.** Cuando estén, se escriben aquí y se quitan estas dos líneas.
+Este es el recorrido recomendado: configurar una instalación vacía y crear tus propias cuentas.
+Los datos de ejemplo son opcionales y se explican después. Si ya ejecutaste `seed`, la instalación está sellada
+y `/setup` no volverá a aparecer.
 
-Mientras tanto, si quieres **participar**: el proyecto se desarrolla con documentación antes que
-código (`AGENTS.md`, **Regla 0**), así que la mejor puerta es leer `docs/` —empieza por
-`docs/README.md`— y proponer el cambio en el documento del área que toque antes de escribir una
-línea de código.
+Necesitas **Docker con Docker Compose**, Git y un navegador. No necesitas instalar Go, Node,
+PostgreSQL ni nginx. Docker debe estar en marcha y la primera ejecución necesita internet para
+descargar imágenes y dependencias; puede tardar varios minutos.
+
+Los siguientes comandos sirven en PowerShell, CMD y bash. Trae el código:
+
+```bash
+git clone https://github.com/juanky-estevez/Catalina-Support.git catalina-support
+cd catalina-support
+```
+
+Levanta el entorno:
+
+```bash
+docker compose -f dev.yml up -d --build
+docker compose -f dev.yml ps
+```
+
+Después prepara sólo el esquema, sin datos de ejemplo:
+
+```bash
+docker compose -f dev.yml run --rm migrate
+```
+
+El comando espera a que la base esté saludable y aplica una migración transaccional e idempotente.
+Puedes repetirlo: no borra tus datos, no carga ejemplos y no vuelve a abrir el asistente.
+Si el SQL falla, el comando termina con error. Al completarlo aparece «Esquema aplicado».
+La aplicación no crea las tablas al arrancar. Espera también a que frontend y backend terminen
+de compilar; puedes seguir sus registros con:
+
+```bash
+docker compose -f dev.yml logs -f frontend backend
+```
+
+`Ctrl+C` deja de mostrar los registros y los servicios siguen funcionando.
+
+Abre [http://127.0.0.1:11001](http://127.0.0.1:11001): **aparece `/setup`, todavía no el login**.
+Completa sus pasos:
+
+| Paso | Valores para probar en local |
+| --- | --- |
+| Instalación | El nombre que quieras e idioma español o inglés |
+| Cómo se entra | **Local**; no necesita un directorio externo |
+| Dónde está | Tu zona horaria y **`http://127.0.0.1:11001`** como dirección pública |
+| Correo saliente | Servidor **`mail`**, puerto **`1025`**, sin TLS ni credenciales; nombre de remitente a elección y correo **`no-responder@catalina-support.local`** |
+
+En el paso del correo pulsa **Probar la conexión**. Comprueba conexión y autenticación; no envía un
+mensaje. El aviso de motor de IA ausente no impide terminar. Al finalizar queda sellada la instalación:
+entra con **`admin` / `admin`**, crea cuentas desde Usuarios y abre sus enlaces en
+[Mailpit](http://127.0.0.1:11004). Para atender y escalar tickets necesitarás cuentas de Soporte y Desarrollo.
+
+**Cuenta de fábrica:** en local es **`admin` / `admin`**, definida en `config/env/dev.env`.
+En producción, su contraseña es el valor de **`ADMIN_PASSWORD`** en el entorno, no `admin`.
+El asistente no cambia ni pide esa contraseña. Después de terminar el asistente, esa cuenta permite
+configurar la aplicación; entra siempre, incluso si eliges AD o Keycloak.
+
+| Qué abrir | Dirección |
+| --- | --- |
+| Aplicación | [http://127.0.0.1:11001](http://127.0.0.1:11001) |
+| Buzón de pruebas | [http://127.0.0.1:11004](http://127.0.0.1:11004) |
+| Salud del backend | [http://127.0.0.1:11002/api/health](http://127.0.0.1:11002/api/health) |
+
+## Datos de ejemplo (opcionales)
+
+Si quieres contenido y cuentas listas para probar los cuatro papeles, desde la carpeta del proyecto:
+
+```bash
+docker compose -f dev.yml run --rm seed
+```
+
+**Este comando prepara el esquema y los ejemplos**: 11 cuentas, 25 tickets y 5 adjuntos.
+No hace falta aplicar la migración por separado para esta demo.
+**Este comando borra todos los tickets, categorías, etiquetas, cuentas `@demo.com` y adjuntos
+de desarrollo (excepto la marca)**. Úsalo sólo cuando quieras volver a los ejemplos.
+
+Si ya terminaste el asistente, **conserva la configuración**: nombre, marca, idioma, dirección,
+correo, método de entrada, directorios, IA, prefijo y reparto. También conserva el sello.
+Si todavía no lo terminaste, **completa y sella una demo local**: reemplaza los ajustes incompletos
+con los de la demo y configura Mailpit y `http://127.0.0.1:11001`.
+
+La cuenta de fábrica sigue siendo `admin` / `admin`. Si conservaste AD o Keycloak como método de
+entrada, las cuentas locales de ejemplo no entran: usa `admin` para volver a **Local** si quieres
+probarlas. Si tu dirección pública conservada apunta a otro sitio, ajústala desde Configuración.
+
+### Cuentas y recorrido para probarlo
+
+Todas estas cuentas usan la contraseña **`123123123`**. `admin` usa **`admin`** y no está en esta tabla.
+Son credenciales para pruebas locales; no las uses en producción.
+
+| Nombre | Correo | Rol | Contraseña |
+| --- | --- | --- | --- |
+| Usuario Uno | `user1@demo.com` | `usuario` | `123123123` |
+| Usuario Dos | `user2@demo.com` | `usuario` | `123123123` |
+| Usuario Tres | `user3@demo.com` | `usuario` | `123123123` |
+| Usuario Cuatro | `user4@demo.com` | `usuario` | `123123123` |
+| Usuario Cinco | `user5@demo.com` | `usuario` | `123123123` |
+| Soporte Uno | `support1@demo.com` | `soporte` | `123123123` |
+| Soporte Dos | `support2@demo.com` | `soporte` | `123123123` |
+| Soporte Tres | `support3@demo.com` | `soporte` | `123123123` |
+| Desarrollador 1 | `dev1@demo.com` | `desarrollo` | `123123123` |
+| Desarrollador 2 | `dev2@demo.com` | `desarrollo` | `123123123` |
+| Desarrollador 3 | `dev3@demo.com` | `desarrollo` | `123123123` |
+
+1. Entra como `user1@demo.com`, abre **Mis tickets** y crea un ticket con categoría y descripción.
+2. Sal y entra como `support1@demo.com`. Busca el ticket en **Tickets principales**, comenta y
+   prueba sus cambios de estado. Puedes resolverlo o escalarlo indicando el contexto.
+3. Si lo escalas, entra como `dev1@demo.com` y busca el interno en **Tickets internos**.
+   Prueba la conversación interna y la resolución; el usuario sólo ve el principal.
+4. Abre el buzón de pruebas para leer los avisos. Con `admin` puedes crear otra cuenta local:
+   abre su correo de alta en el buzón y sigue el enlace para establecer su contraseña.
+
+No hace falta levantar el motor de IA, AD ni Keycloak para completar este recorrido.
+
+### Parar y volver a arrancar
+
+Desde la carpeta del repositorio:
+
+```bash
+docker compose -f dev.yml stop
+docker compose -f dev.yml up -d
+```
+
+La base y los adjuntos se conservan. **No ejecutes `seed` para arrancar de nuevo**: ese comando
+reinicia los datos de prueba. `docker compose -f dev.yml down` elimina los contenedores y la red,
+pero conserva los volúmenes; añadir `-v` elimina también los volúmenes, incluida la base.
+
+## Si algo falla
+
+| Síntoma | Qué comprobar |
+| --- | --- |
+| `docker compose` no existe o Docker no responde | Docker debe estar instalado y en marcha; en Linux tu usuario necesita acceso al daemon. Comprueba `docker compose version`. |
+| Un puerto está ocupado | El entorno usa 11001–11004. Detén el servicio que los ocupa antes de arrancar; una segunda copia del repositorio comparte nombres de contenedores y volúmenes. |
+| La web aún no abre | Mira `docker compose -f dev.yml logs -f frontend backend`: `up -d` no espera a que Angular y Go terminen de compilar. |
+| Error de tablas inexistentes | Falta preparar la base: ejecuta `docker compose -f dev.yml run --rm migrate`. |
+| Aparece el asistente en vez del login | Es normal en una base nueva sin ejemplos: completa los cuatro pasos. |
+| El enlace del correo abre el dominio del proyecto | Corrige la dirección pública en Configuración a `http://127.0.0.1:11001`. El seeder conserva esta dirección si la instalación ya está sellada. |
+| Las cuentas de ejemplo no entran | Comprueba que cargaste los ejemplos y que el método de entrada es **Local**. `admin` entra siempre y permite cambiarlo. |
+| No llegan correos al buzón | Comprueba que `mail` está en marcha y que el SMTP de la instalación apunta a `mail:1025`, sin TLS ni credenciales. |
+| No hay resúmenes de IA | Son opcionales. Levanta y configura el motor si quieres probarlos. |
+
+Los datos persisten en volúmenes de Docker y los adjuntos en `_files/`. No borres los volúmenes
+si quieres conservar el trabajo.
+
+## Requisitos y alcance de la prueba local
+
+Linux, macOS o Windows con Docker Compose. En macOS y Windows, Docker Desktop debe estar arrancado.
+Los comandos anteriores no necesitan Bash. Los scripts `./scripts/*.sh` sí lo necesitan.
+
+Como orientación, asigna **4 GB de RAM o más** a Docker para construir y probar con margen.
+No hay un mínimo de memoria o disco validado para todos los sistemas. Las imágenes, dependencias,
+cachés y datos necesitan espacio adicional; el modelo de IA añade unos **1,1 GB** de descarga y su
+contenedor tiene un **tope de 1500 MiB**, con unos **1,44 GiB medidos** en esta máquina.
+No requiere GPU. Los tiempos dependen del procesador y de la conexión.
+
+`dev.yml` publica sus puertos en todas las interfaces. Usa este entorno para pruebas en una máquina
+y red de confianza; no lo publiques como instalación de producción.
 
 ## Qué hace
 
@@ -61,351 +212,161 @@ y las dos conversaciones no se mezclan.
 Lo que existe, lo que está verificado y lo que falta están en `docs/README.md` y en la sección 13 de
 `docs/arquitectura.md`.
 
-## Cómo levantarlo
+## Servicios opcionales
 
-La máquina **sólo necesita Docker** (con el plugin `docker compose`). No hay que instalar Go ni Node
-—todo se construye y se ejecuta dentro de contenedores— y **no hacen falta imágenes previas**: los
-contenedores se compilan **desde el código del repositorio**.
+Arranca primero el entorno local. Cada servicio tiene su compose y se puede levantar por separado.
 
-**Lo que necesita la máquina**, para elegir dónde probarlo:
-
-| | |
-| --- | --- |
-| **Docker** con `docker compose` | Es lo único que hay que tener instalado |
-| **Memoria** | **1 GB** para probar en local **sin** el motor de IA; **2 GB** con él, y **4 GB** para ir cómodo. El motor es lo que más pide: **reserva 1,5 GB** |
-| **Disco** | Unos **2 GB** para las imágenes y la base de datos, **más 1,1 GB** si se levanta el motor de IA (el modelo, en su volumen) |
-| **Procesador** | Cualquiera. **No hace falta GPU**: el modelo va por CPU |
-| **Sistema** | Linux, macOS o Windows con Docker; en Linux, el usuario tiene que poder ejecutar `docker` |
-
-### Probarlo en local (desarrollo)
-
-Este es el recorrido mínimo para **ver la mesa de ayuda funcionando**: clonar, levantar, aplicar el
-esquema y entrar. Son cuatro pasos, y **los mismos comandos valen en Linux, macOS y Windows**
-—PowerShell, CMD o bash: todo es `docker compose`, sin guiones de shell ni redirecciones del
-intérprete—.
-
-**1. Traer el código y entrar en la carpeta** (sólo la primera vez):
-
-```bash
-git clone <el-repositorio> catalina-support
-cd catalina-support
-```
-
-**2. Levantar el entorno** —frontend, backend, PostgreSQL y el buzón de pruebas—:
-
-```bash
-docker compose -f dev.yml up -d
-docker compose -f dev.yml ps
-```
-
-**Es un solo comando de Docker, igual en Linux, macOS y Windows**: la red del entorno la crea
-`dev.yml`, así que no hay que crear nada a mano. El directorio de pruebas, Keycloak y el motor de IA
-**no se levantan aquí**: son opcionales y van aparte, en **«Los tres elementos opcionales»**, más
-abajo. Para este recorrido **no hace falta ninguno de los tres**.
-
-**3. Aplicar el esquema de la base.** Este paso hace falta porque **la aplicación no crea las tablas
-al arrancar** y **las migraciones no se aplican solas**: el esquema vive en `backend/migrations/` y
-se aplica a propósito. **Si se salta**, la aplicación contesta **«Something failed on our side.
-Please try again in a moment»** al abrirla, y en los registros del backend (`docker compose -f dev.yml
-logs backend`) se lee esto:
-
-```text
-ERROR: relación "installation_settings" does not exist
-ERROR: relación "ai_insights" does not exist
-```
-
-Estos dos comandos de Docker, **iguales en los tres sistemas**, copian el archivo al contenedor y se
-lo dan a `psql` con `-f`. La migración es **transaccional e idempotente**, así que se puede volver a
-pasar sin miedo (en una base que ya la tenga, avisa de lo que ya existe y termina en `COMMIT`):
-
-```bash
-docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
-docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
-```
-
-**En Linux y macOS, además, se puede hacer sin copiar**, con la redirección del intérprete —que **no
-existe en PowerShell**, y por eso no es la forma de arriba—:
-
-```bash
-docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 < backend/migrations/v1.0.0.sql
-```
-
-**4. Abrir la aplicación y entrar.** La interfaz queda en **`http://127.0.0.1:11001`** y el backend en
-`http://127.0.0.1:11002` (`GET /api/health` responde). **El servidor de desarrollo reenvía `/api` al
-backend**: su configuración de proxy (`frontend/proxy.conf.json`, declarada en `serve.options` de
-`frontend/angular.json`) manda las peticiones del SPA a **`http://backend:11002`**, el servicio del
-backend **dentro de la red del entorno** —quien hace la petición es el contenedor del frontend, no el
-navegador—. Como el frontend llama a `/api/**` **en relativo**, abrir `http://127.0.0.1:11001` deja la
-pantalla funcionando y hablando con la API **sin nginx y sin nada más**: es el recorrido de quien se
-descarga el proyecto y sólo tiene Docker. Y **con el esquema ya aplicado se entra con la cuenta de
-fábrica**: usuario **`admin`** y contraseña **`admin`** —la de `config/env/dev.env`, que es un archivo
-versionado porque es una credencial de contenedor local—.
-
-**El proxy es sólo de desarrollo**: vive en `serve.options`, no toca el `build`, y **en producción
-sigue siendo nginx quien reenvía `/api`** (`docs/arquitectura.md`, sección 9). La regla no cambia: el
-frontend llama a rutas **relativas** y nunca a un host.
-
-**La contraseña de la cuenta de fábrica no está en la base y no hace falta ninguna cuenta más**: vive
-en la configuración del entorno (`ADMIN_PASSWORD`) y se comprueba en cada entrada. En desarrollo el
-valor es `admin`; **en producción es el que ponga `config/env/prod.env`** —que no se versiona y **no
-se escribe en la documentación**—, y **no hay que copiar el de desarrollo a un servidor**
-(`docs/usuarios-y-permisos.md`, sección 8).
-
-**Los datos de ejemplo son un extra, no un requisito para entrar.** Dejan **once cuentas** y **25
-tickets** con su historia y sus adjuntos, para no entrar a un sistema vacío. Se aplican **después**
-del esquema, **con un comando de Docker igual en Linux, macOS y Windows** —es un contenedor de un solo
-uso, que arranca, siembra y se va—:
-
-```bash
-docker compose -f dev.yml run --rm seed
-```
-
-**Quien quiera probar el proyecto vacío no ejecuta este comando**: el esquema es **obligatorio** y los
-ejemplos son **una elección**. El comando tiene **perfil propio** (`seed`), así que **no se levanta con
-`docker compose -f dev.yml up -d`**: se pide a propósito.
-
-**Ese comando corre el guion de siempre, `scripts/dev-seed.sh`, dentro de un contenedor**: por eso vale
-en los tres sistemas y hace los tres pasos, incluida **la copia de los adjuntos**. Aplica el esquema
-—por si la base está recién creada—, aplica `v1.0.0_dev.sql` y copia los archivos de los adjuntos de
-ejemplo desde `config/seed/` a `_files/`. **En Linux y macOS sigue existiendo `./scripts/dev-seed.sh`**
-y hace lo mismo fuera del contenedor; el comando de Docker es la forma de los tres sistemas.
-
-**Cuidado: los ejemplos borran los tickets que hubiera en desarrollo** —también los creados probando—
-y dejan la base en un estado conocido. **No se usan en producción** (el archivo `_dev` no se aplica
-allí).
-
-Las **once cuentas de ejemplo** entran todas con la misma contraseña, **`123123123`**, que **no se usa
-en producción**:
-
-| Nombre | Correo | Rol | Contraseña |
-| --- | --- | --- | --- |
-| Usuario Uno | `user1@demo.com` | `usuario` | `123123123` |
-| Usuario Dos | `user2@demo.com` | `usuario` | `123123123` |
-| Usuario Tres | `user3@demo.com` | `usuario` | `123123123` |
-| Usuario Cuatro | `user4@demo.com` | `usuario` | `123123123` |
-| Usuario Cinco | `user5@demo.com` | `usuario` | `123123123` |
-| Soporte Uno | `support1@demo.com` | `soporte` | `123123123` |
-| Soporte Dos | `support2@demo.com` | `soporte` | `123123123` |
-| Soporte Tres | `support3@demo.com` | `soporte` | `123123123` |
-| Desarrollador 1 | `dev1@demo.com` | `desarrollo` | `123123123` |
-| Desarrollador 2 | `dev2@demo.com` | `desarrollo` | `123123123` |
-| Desarrollador 3 | `dev3@demo.com` | `desarrollo` | `123123123` |
-
-**La cuenta de fábrica (`admin`) no es una de estas** y entra sin los ejemplos: **los ejemplos son
-para tener contenido, no para poder entrar**.
-
-- **El correo de desarrollo no sale a internet**: va a un buzón de pruebas (Mailpit) que se lee en
-  `http://127.0.0.1:11004`. Ahí se ve el enlace de alta de una cuenta sin configurar ningún SMTP.
-- **El motor de IA, el directorio de pruebas y Keycloak son aparte y son opcionales**: los tres se
-  levantan con su propio comando y **ninguno hace falta** para que la mesa de ayuda funcione. Están
-  juntos, con lo que es cada uno y su comando, en **«Los tres elementos opcionales»**, justo abajo.
-
-En desarrollo también hay **nginx delante**, para probar con el dominio y el certificado de verdad;
-**no hace falta para el primer contacto**, porque la 11001 ya reenvía `/api`.
-
-### Los tres elementos opcionales
-
-El comando de arriba (`docker compose -f dev.yml up -d`), **con la base ya preparada** (arriba), levanta
-todo lo que hace falta para usar la mesa de ayuda. Estos tres van aparte, **son opcionales** y **cada
-uno tiene su propio comando**: se
-puede levantar cualquiera de ellos sin levantar los otros, y **sin ninguno la aplicación funciona
-entera**.
-
-**1. El motor de IA**, que redacta los dos resúmenes del ticket —**«Motivo»** y **«Última acción»**—
-en español y en inglés:
+### Resúmenes con IA
 
 ```bash
 docker compose -f ai.yml up -d
+docker compose -f ai.yml logs -f ai
 ```
 
-Es **llama.cpp** sirviendo un modelo **Qwen2.5-1.5B-Instruct** en cuantización **Q4_K_M**
-(`qwen2.5-1.5b-instruct-q4_k_m.gguf`). La primera vez **descarga el modelo (~1,1 GB)** al volumen; el
-contenedor **reserva 1,5 GB de memoria** (`mem_limit: 1500m` en `ai.yml`) y, medido en marcha, gasta
-**~1,44 GiB**. **Va por CPU** —no hace falta GPU— y **tarda entre 12 y 24 segundos por campo**. Sin
-él, los dos resúmenes se quedan sin texto y todo lo demás funciona igual. Más abajo, en **«El motor
-de IA, y lo que consume»**, está el detalle y cómo cambiarlo por otro modelo.
+La primera vez descarga **Qwen2.5-1.5B-Instruct Q4_K_M** (~1,1 GB) y después carga el modelo.
+En **Configuración → motor de IA**, usa la dirección **`http://catalina_support_ai:8080`** y el modelo
+**`qwen2.5-1.5b-instruct`**. Prueba la conexión y guarda. La dirección es la que alcanza el backend
+por la red de Docker; no es una dirección que tengas que abrir en el navegador.
 
-**2. El directorio de pruebas (OpenLDAP)**, para probar el camino de entrada por **Active Directory**:
+Los resúmenes se generan en segundo plano. En esta máquina se midieron 12–24 segundos por campo;
+no es un tiempo garantizado. Sin motor, el resto del producto funciona.
+Para detenerlo: `docker compose -f ai.yml stop`.
+Más detalles en [el documento del módulo](docs/modules/ai.md).
+
+### Active Directory de pruebas
 
 ```bash
 docker compose -f active-directory.yml up -d
 ```
 
-Trae **las personas de prueba del directorio** (`config/ldap/`) y publica el puerto `11005`. Con el
-método de entrada en `ad`, la aplicación entra contra él como entraría contra el directorio real de la
-institución. **Va en su propio archivo** (`active-directory.yml`) y entra en la red del entorno de
-desarrollo, que la crea `dev.yml`: por eso **primero se levanta el entorno y después el servicio**.
+Es OpenLDAP con personas de ejemplo, no un Active Directory de una organización.
+Los ejemplos dejan su configuración preparada. Desde `admin`, prueba la conexión del directorio
+y elige **AD** como método de entrada. Si partiste de una instalación vacía, configura:
 
-**3. Keycloak**, para probar el camino de entrada por **OIDC**:
-
-```bash
-docker compose -f keycloak.yml up -d
-```
-
-Trae **un reino de pruebas que vive en el repositorio** (`config/keycloak/`) y se importa al
-arrancar; se publica por `/sso/`, en el puerto `11006`. Como el directorio, **va en su propio archivo**
-(`keycloak.yml`) y entra en la red del entorno, así que se levanta **después de `dev.yml`**.
-
-**Cada uno se levanta con su comando y con su archivo**: el directorio y Keycloak **ya no viven en
-`dev.yml`** y ya no hay perfil `auth`. Para probar **los dos caminos de directorio** en la suite hay
-que levantar los dos y después correr las pruebas de siempre (ver **«Las pruebas»**).
-
-**En producción no se levanta ninguno de los dos**: se configura el directorio o el reino que ya
-exista —su servidor, sus credenciales— en la pantalla de **Configuración**, y la instalación entra
-contra él. Lo que trae el proyecto es el camino para hablar con ellos, no el servidor.
-
-### Ponerlo a funcionar de verdad (producción)
-
-1. **Traer el código** a la máquina, con Docker ya instalado:
-
-   ```bash
-   git clone <el-repositorio> catalina-support
-   cd catalina-support
-   ```
-
-2. **La configuración de la instalación**, en `config/env/prod.env`, partiendo del ejemplo
-   `config/env/prod.env.example`. **Ese archivo no se versiona** y lo que se ponga ahí no aparece en
-   la interfaz. Lo que hay que tocar:
-
-   | Variable | Qué es |
-   | --- | --- |
-   | `ADMIN_PASSWORD` | La contraseña de **la cuenta de fábrica** (`admin`): la puerta para entrar la primera vez, y la única que entra **siempre**, sea cual sea el método configurado |
-   | `TOKEN_SECRET` | El secreto con el que se firman las sesiones. **Largo y distinto en cada instalación** |
-   | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Los datos de la base. La contraseña, puesta aquí, es la que se le da al contenedor al crearla |
-   | `AI_URL`, `AI_MODEL` | **Opcional**: dónde está el motor de IA y con qué modelo. **La fuente es Configuración** —con su botón de «Probar la conexión»—, y esto queda como respaldo para una instalación que ya lo tuviera puesto aquí |
-   | `TIMEZONE` | La zona del **contenedor** (sus registros). **No** es la región de la instalación: esa se elige en la pantalla, y es la que decide cómo se leen las fechas |
-   | `PUBLIC_APP_URL` | **Opcional**: la dirección pública se configura en la pantalla y esto queda como respaldo |
-
-   **Las demás vienen puestas** y no hace falta tocarlas: los puertos internos, las carpetas de
-   registros y adjuntos, y el idioma de los contenedores.
-
-3. **Construir, publicar y levantar**:
-
-   ```bash
-   ./scripts/prod-build.sh                 # construye, publica y levanta los contenedores
-   ./scripts/prod-build.sh --no-deploy     # sólo construir y publicar
-   ./scripts/prod-build.sh --only backend  # un solo componente
-   ```
-
-4. **El esquema de la base**, aplicado en orden hasta la versión que se despliegue. Es
-   **transaccional e idempotente** (se puede volver a aplicar sin miedo):
-
-   ```bash
-   docker compose -f prod.yml exec -T database \
-     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d catalina_support < backend/migrations/v1.0.0.sql
-   ```
-
-   Y las versiones siguientes, en orden (`v1.1.0.sql`, `v1.2.0.sql`…). **Los archivos `_dev` no se
-   aplican nunca en producción**: son los datos de ejemplo.
-5. **nginx y el certificado**, con el vhost de `config/nginx/`. Los vhosts del repositorio son
-   **copias** de `/etc/nginx/conf.d/` (no enlaces): si se cambia uno, hay que copiarlo y recargar.
-   ```bash
-   sudo cp config/nginx/catalina-support-prod.conf /etc/nginx/conf.d/
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-
-   **Lo que hay que abrir en el cortafuegos es nginx**: el 80 y el 443. Los puertos de los
-   contenedores se publican **sólo en `127.0.0.1`**, para depurar desde la propia máquina; no se
-   exponen a internet.
-6. **Abrir la instalación y recorrer sus cuatro pasos.** Con el esquema aplicado, al entrar la
-   aplicación lleva a **`/setup`**: el nombre y el idioma, cómo se entra (con su prueba de conexión),
-   la región horaria y la dirección pública, y el correo saliente. Al terminar, **la instalación queda
-   sellada** y se entra con **la cuenta de fábrica** (`admin`, con la contraseña del archivo de
-   entorno), que es la puerta que entra siempre. Lo demás se cambia después en **Configuración**:
-   - **el nombre y el logo** de la institución, y su **color**;
-   - **el método de autenticación** —local, Active Directory o Keycloak—, con sus datos y su botón
-     de «Probar la conexión»;
-   - **la región horaria**: la zona en la que se leen todas las fechas, aquí y en los correos. Se
-     guardan en UTC, así que cambiarla no mueve ningún ticket;
-   - **la dirección pública**: la base de los enlaces que van en los correos y de la vuelta de
-     Keycloak. Sirve http o https, con puerto si hace falta, y también `localhost`. **Si no es https,
-     la pantalla lo avisa** —la contraseña y la sesión viajan sin cifrar— y no bloquea nada: para
-     probarlo en local está bien, y para usarlo en serio conviene un certificado;
-   - **el idioma de la instalación**, el prefijo de los tickets y su reparto;
-   - **el motor de IA**: su dirección y su modelo, con su botón de «Probar la conexión». Es opcional:
-     sin él la mesa de ayuda funciona entera, sin los dos resúmenes del ticket.
-> **La primera vez, la aplicación te lleva a su vista de instalación.** Al abrirla en una instalación
-> nueva —la base recién creada, sin el sello de instalación— aparece **`/setup`**: cuatro pasos que
-> piden **el nombre y el idioma, cómo se entra, la región y la dirección, y el correo saliente**, con
-> un resumen al final. **Al terminar queda sellada**: esa vista no vuelve a aparecer y la API rechaza
-> reconfigurarla (`docs/primer-arranque.md`). Lo que se ponga después se cambia en **Configuración**,
-> y **la contraseña de la cuenta de fábrica sigue viniendo del archivo de entorno** (`ADMIN_PASSWORD`):
-> el asistente no la pide, sólo dice dónde está.
-
-7. **Las copias de la base**, que es lo que va en el `cron` del servidor:
-
-   ```bash
-   ./scripts/backup-db.sh          # el entorno de desarrollo
-   ./scripts/backup-db.sh prod     # producción
-   ```
-
-### El motor de IA, y lo que consume
-
-**Va aparte y es opcional**, como el directorio y Keycloak: se levanta con su propio comando y **un solo
-motor sirve a desarrollo y a producción** (el modelo ocupa ~1,1 GB, en un volumen). **La primera vez baja
-su modelo**, y se ve en sus registros:
-
-```bash
-docker compose -f ai.yml up -d         # la primera vez descarga el modelo (~1,1 GB)
-docker compose -f ai.yml logs -f ai    # la descarga y, después, el servidor
-```
-
-**Sin él, la mesa de ayuda funciona entera**: los dos campos que redacta se quedan sin texto y la
-pantalla lo dice, para que nadie se quede sin trabajar mientras se arregla. Y se **añade cuando se
-quiera**, sin reinstalar nada.
-
-**Su dirección y su modelo se configuran en Configuración**, con el botón de «Probar la conexión», que
-pregunta a la comprobación de salud del motor. La instalación los lee **en cada petición**, así que
-cambiarlos vale sin reiniciar nada. Las variables `AI_URL` y `AI_MODEL` del archivo de entorno quedan
-**como respaldo** para una instalación que ya las tuviera puestas; `AI_PALABRAS` y
-`AI_ESPERA_SEGUNDOS` siguen siendo ajuste del entorno.
-
-**El modelo por defecto** es `qwen2.5-1.5b-instruct`, en cuantización `q4_k_m` —el archivo
-`qwen2.5-1.5b-instruct-q4_k_m.gguf`—:
-
-| | |
+| Campo | Valor |
 | --- | --- |
-| **Descarga la primera vez** | **1,1 GB** (1.117.320.736 bytes), al volumen del modelo (no está en el repositorio). Sale del repositorio **`Qwen/Qwen2.5-1.5B-Instruct-GGUF`** de Hugging Face, con el nombre exacto del archivo (`config/ai/01-descargar-modelo.sh`) |
-| **Memoria que reserva el contenedor** | **1,5 GB** (`mem_limit: 1500m` en `ai.yml`) —el modelo, su caché y el servidor—. Medido en marcha: **~1,44 GiB** |
-| **Tiempo por resumen** | **entre 12 y 24 segundos** por campo, en CPU |
-| **Procesador** | **no hace falta GPU**: va por CPU |
+| Servidor / puerto | `ldap` / `389`, sin TLS |
+| Cuenta de servicio / contraseña | `cn=admin,dc=ejemplo,dc=com` / `admin-directorio` |
+| Base de búsqueda / filtro | `ou=personas,dc=ejemplo,dc=com` / `(mail=%s)` |
+| Atributos de correo, nombre, apellido e identificador | `mail`, `givenName`, `sn`, `uid` |
 
-**Cambiarlo por otro modelo** es dejar su `.gguf` en el volumen y poner su nombre en el servicio `ai`
-de `ai.yml` (`--model /modelos/<archivo>.gguf`), **ajustando el tope de memoria** del contenedor a lo
-que pida el nuevo: **un modelo más grande pide más memoria y responde más rápido**, y el tope está
-puesto justo por encima de lo que ocupa el de por defecto. El nombre del modelo que se le pide al
-motor se elige en **Configuración**, y la instalación **comprueba** que responde.
+Puedes entrar como **`ana.directorio@demo.com`**, contraseña **`una-contraseña-larga`**.
+La cuenta se crea en su primer acceso. Mientras AD sea el método elegido, las cuentas locales de
+ejemplo no entran; `admin` sí, y permite volver a **Local**.
+Para apagarlo: `docker compose -f active-directory.yml down`. Más detalles en
+[autenticación](docs/modules/auth.md).
 
-## Las pruebas
-
-Las tres capas están montadas y se ejecutan **en contenedores**:
+### Keycloak de pruebas
 
 ```bash
-docker compose -f dev.yml exec backend  go test ./...            # el backend
-docker compose -f dev.yml exec frontend npm test -- --watch=false # la interfaz, unitaria
-docker compose -f dev.yml run --rm e2e                            # los recorridos, en un navegador
-docker compose -f dev.yml run --rm seed                           # reiniciar el entorno después
-
-# Los recorridos de los dos caminos de directorio, en dos pasos: se levanta cada servicio con su
-# archivo y se corre la suite de siempre. El directorio y Keycloak ya no viven en `dev.yml`
-docker compose -f active-directory.yml up -d
 docker compose -f keycloak.yml up -d
-docker compose -f dev.yml run --rm e2e
 ```
 
-La capa de interfaz (Playwright) prueba los recorridos de verdad —entrando como cada papel, leyendo
-los correos del buzón de pruebas— **en PC y en móvil**.
+Espera a que termine de importar el reino; puedes verlo con
+`docker compose -f keycloak.yml logs -f keycloak`. Entra con `admin` y, en Configuración, elige
+Keycloak y completa:
 
-**Para reiniciar el entorno después de una pasada**, el comando es el mismo en los tres sistemas:
-`docker compose -f dev.yml run --rm seed`, en **«Probarlo en local (desarrollo)»**. En Linux y macOS
-también se puede correr el guion directamente, con `./scripts/dev-seed.sh`.
+| Campo | Valor local |
+| --- | --- |
+| Emisor del reino | `http://127.0.0.1:11006/sso/realms/catalina-support` |
+| Dirección interna del reino | `http://keycloak:8080/sso/realms/catalina-support` |
+| Cliente | `catalina-support` |
+| Secreto del cliente de pruebas | `el-secreto-de-desarrollo` |
+| Dirección de vuelta | `http://127.0.0.1:11001/api/auth/keycloak/callback` |
 
-## Antes de tocar el código
+Mantén `http://127.0.0.1:11001` como dirección pública de la aplicación. **Prueba la conexión**
+y guarda el método. Sal y pulsa **Entrar con Keycloak**: usa `sara.keycloak@demo.com`, contraseña
+`la-de-keycloak-larga`. Su cuenta se crea en el primer acceso. No necesitas nginx, TLS ni editar
+el archivo de hosts. El navegador usa la dirección pública y el backend la interna; las dos
+identifican el mismo reino.
 
-Leer `AGENTS.md`. La **Regla 0** es obligatoria: **primero el documento aprobado, después el
-código.** El mapa de qué documento cubre qué está en `AGENTS.md`, y el índice con el estado de cada
-documento en `docs/README.md`.
+Mientras Keycloak sea el método elegido, las cuentas locales de ejemplo no entran. La pantalla
+ofrece la puerta de `admin`, que permite volver a **Local**. Para apagar el servicio:
+`docker compose -f keycloak.yml down`. Los datos del reino son de prueba; al recrearlo se importa
+el archivo del repositorio. Las credenciales anteriores no se usan en producción.
+
+## Usarlo en producción
+
+**La versión 1.0.0 sigue abierta.** La prueba local anterior es el recorrido disponible para evaluar
+el producto. El despliegue público de este proyecto sigue aparcado por decisión del responsable.
+
+La configuración habitual se hace desde el asistente y después desde Configuración, pero el
+despliegue actual todavía requiere trabajo del servidor:
+
+- Docker Compose, Bash, nginx y un certificado TLS para tu dominio.
+- Crear `config/env/prod.env` a partir de [prod.env.example](config/env/prod.env.example), con valores
+  propios de `ADMIN_PASSWORD`, `TOKEN_SECRET` y PostgreSQL. Ese archivo no se versiona.
+- Construir los artefactos, aplicar las migraciones de versión (nunca los archivos `_dev`) y
+  completar el asistente antes de exponer la instalación.
+- Configurar el SMTP real y crear las cuentas; mantener copias de la base **y de los adjuntos**.
+  El script de copias sólo incluye la base y conserva 14 días.
+
+**Limitaciones detectadas en la revisión del 2026-10-02:**
+
+- `scripts/prod-build.sh` publica en **`/srv/catalina-support`**. Construye desde esa carpeta,
+  pero sus Dockerfiles necesitan fuentes que están en el repositorio: el recorrido necesita corregirse
+  antes de presentarlo como un despliegue reproducible desde cero.
+- El vhost incluido usa el dominio y los certificados de esta máquina, un snippet externo de nginx
+  y un aviso **503**. Copiarlo no publica automáticamente tu instalación.
+- `prod.yml` publica 21001–21003 en todas las interfaces, no sólo en localhost. La exposición debe
+  resolverse antes de abrir el servidor.
+
+El [runbook](docs/ambientes.md) conserva los detalles del despliegue realizado y sus pendientes.
+La revisión del README no modifica scripts ni abre producción.
+
+## Pruebas para quienes desarrollan
+
+Las pruebas de unidad se ejecutan en contenedores:
+
+```bash
+docker compose -f dev.yml exec backend go test ./...
+docker compose -f dev.yml exec backend go vet ./...
+docker compose -f dev.yml exec frontend npm test -- --watch=false
+```
+
+**Playwright usa su propia instalación desechable**, sin puertos publicados, sin nginx ni dominio.
+No usa la base, los correos, los adjuntos ni la configuración de tu instalación local. No necesita
+que hayas levantado `dev.yml` ni cargado ejemplos.
+
+Antes de cada pasada, elimina sólo los datos de la instancia de pruebas:
+
+```bash
+docker compose -f tests.yml --profile directory down -v
+docker compose -f tests.yml up -d --build database backend frontend mail
+docker compose -f tests.yml run --rm e2e
+```
+
+El runner instala sus dependencias, recorre el asistente vacío en PC y móvil y prepara sus propios
+fixtures por la API. Después ejecuta la suite. Un fallo devuelve un código de salida distinto de
+cero; no lo ignores. Los casos de directorio se omiten si sus servicios no están presentes.
+
+Para incluir **AD y Keycloak**, el segundo comando es:
+
+```bash
+docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
+```
+
+Después usa el mismo `run --rm e2e`. Sus directorios también son exclusivos de pruebas.
+
+Al terminar, incluso si falla una prueba, retira la instancia:
+
+```bash
+docker compose -f tests.yml --profile directory down -v
+```
+
+Los informes y capturas quedan en **`tests/e2e/resultados/`** y se conservan al retirar los
+contenedores. Si interrumpes una pasada, ejecuta la limpieza antes de comenzar otra. No ejecutes
+`seed` para limpiar las pruebas: ese comando modifica tu instalación de desarrollo.
+Las pasadas no se ejecutan simultáneamente y la instancia de pruebas debe empezar sin sello.
+
+## Participar y donar
+
+El proyecto sigue **documentación antes que código**: lee [AGENTS.md](AGENTS.md) y
+[el índice de documentos](docs/README.md). Propón el cambio en el documento del área y espera su
+aprobación antes de programarlo.
+
+> **Pendiente del responsable:** vías de contacto, invitación a participar y donaciones.
 
 ## Licencia
 
-**MIT** (`LICENSE`). Úsalo, estúdialo, modifícalo y distribúyelo.
+[MIT](LICENSE). Puedes usarlo, estudiarlo, modificarlo y distribuirlo.

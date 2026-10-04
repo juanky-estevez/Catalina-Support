@@ -1,7 +1,13 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Los formularios de
+> Keycloak en Configuración y primer arranque incorporan la dirección interna opcional, separada del
+> emisor público, con ayuda ES/EN. El selector de Configuración permite elegir métodos todavía
+> vacíos para mostrar sus campos; la selección es un borrador hasta guardar con éxito (enmienda
+> §5.1.b aprobada).
 >
 > **Enmendado el 2026-09-30 (novena vez)**: **las tarjetas de Configuración se ordenaron y cada una
 > lleva lo que su título dice**. Estaban descolocadas desde el cambio anterior: «La numeración y el

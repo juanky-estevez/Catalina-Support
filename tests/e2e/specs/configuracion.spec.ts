@@ -198,7 +198,7 @@ test.describe('Configuración', () => {
     await expect(page.getByLabel('Servidor')).toHaveCount(0);
     await expect(page.getByLabel('Emisor del reino')).toHaveCount(0);
 
-    // Se elige AD y aparece **su** configuración —la deja puesta el seeder—, sin su secreto.
+    // Se elige AD y aparece **su** configuración —la prepara la suite aislada—, sin su secreto.
     await metodo.selectOption('ad');
     await expect(page.getByLabel('Servidor')).toHaveValue('ldap');
     // **El secreto no llega nunca**: el campo está vacío y lo que se cuenta es que hay uno guardado.
@@ -209,8 +209,15 @@ test.describe('Configuración', () => {
 
     // Con Keycloak, al revés: sale su panel y se va el del directorio.
     await metodo.selectOption('keycloak');
+    const token = await tokenDeFabrica(request);
+    const ajustes = await (
+      await request.get('/api/settings', { headers: { Authorization: `Bearer ${token}` } })
+    ).json();
     await expect(page.getByLabel('Emisor del reino')).toHaveValue(
-      'https://dev.catalina-support.example.com/sso/realms/catalina-support',
+      ajustes.keycloak.issuer,
+    );
+    await expect(page.getByLabel('Dirección interna del reino (opcional)')).toHaveValue(
+      ajustes.keycloak.internalIssuer,
     );
     await expect(page.getByLabel('Servidor')).toHaveCount(0);
 
@@ -333,10 +340,10 @@ test.describe('Configuración', () => {
     await expect(page.getByText(/Ahora son las .*GMT-5/)).toBeVisible();
 
     // Se devuelve la dirección que había. Va aquí, y no en un `finally`, porque al final de una prueba
-    // fallida el contexto ya está cerrado y el `PUT` no llega: entonces la deja el seeder.
+    // fallida el contexto ya está cerrado y el `PUT` no llega: una nueva pasada crea una instalación desechable.
     await request.put('/api/settings', {
       headers: { Authorization: `Bearer ${peticion}` },
-      data: { ...antes, publicAppUrl: 'https://dev.catalina-support.example.com' },
+      data: { ...antes, publicAppUrl: antes.publicAppUrl },
     });
   });
   /**

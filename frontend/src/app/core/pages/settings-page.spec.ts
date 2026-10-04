@@ -142,6 +142,42 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     fixture.detectChanges();
   }
 
+  it('permite configurar métodos vacíos y conserva local si el guardado es rechazado', async () => {
+    const fixture = await montar();
+    const selector = fixture.nativeElement.querySelector('#metodo-entrada') as HTMLSelectElement;
+    for (const metodo of ['ad', 'keycloak']) {
+      const opcion = selector.querySelector(`option[value="${metodo}"]`) as HTMLOptionElement;
+      expect(opcion.disabled).toBe(false);
+      selector.value = metodo;
+      selector.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector(metodo === 'ad' ? '#dir-servidor' : '#kc-emisor'),
+      ).not.toBeNull();
+    }
+    http.expectNone((peticion) => peticion.method === 'PUT');
+    const guardar = Array.from(fixture.nativeElement.querySelectorAll('button')).find((boton) =>
+      (boton as HTMLButtonElement).textContent?.includes('Guardar cómo se entra'),
+    ) as HTMLButtonElement;
+    expect(guardar).toBeTruthy();
+    guardar.click();
+    await esperar();
+    const peticion = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/settings');
+    expect(peticion.request.body.entryMethod).toBe('keycloak');
+    peticion.flush(
+      { error: 'settings.keycloak.incomplete' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await esperar();
+    fixture.detectChanges();
+    http.expectNone((r) => r.method === 'PUT');
+    fixture.destroy();
+    const recargada = await montar();
+    expect(
+      (recargada.nativeElement.querySelector('#metodo-entrada') as HTMLSelectElement).value,
+    ).toBe('local');
+  });
+
   it('el buscador filtra la lista de zonas', async () => {
     const fixture = await montar();
     expect(opciones(fixture).length).toBeGreaterThan(1);

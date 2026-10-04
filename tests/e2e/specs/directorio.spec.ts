@@ -22,13 +22,13 @@ import {
  * nadie le pone una contraseña: entra con la de la empresa y la cuenta aparece —o se pone al día—
  * sola.
  *
- * **Estas pruebas necesitan el directorio levantado**, que en desarrollo vive en su propio archivo
- * (`active-directory.yml`) y entra en la red que crea `dev.yml`:
+ * **Estas pruebas necesitan el directorio levantado**, que la instancia aislada levanta con
+ * el perfil `directory` de `tests.yml`:
  *
  * ```bash
- * docker compose -f dev.yml up -d
- * docker compose -f active-directory.yml up -d
- * docker compose -f dev.yml run --rm e2e
+ * docker compose -f tests.yml --profile directory down -v
+ * docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
+ * docker compose -f tests.yml run --rm e2e
  * ```
  *
  * Sin él se saltan en vez de fallar: la suite entera tiene que poder correr sin el directorio, que es
@@ -80,6 +80,10 @@ test.describe('El camino de AD', () => {
    * la cuenta de fábrica, que entra siempre.
    */
   test.beforeAll(async ({ request }) => {
+    test.skip(
+      !(await respondeElDirectorio(request)),
+      'LDAP no responde: incluye el perfil directory de tests.yml para probar AD',
+    );
     await ponerElMetodo(request, 'ad');
   });
 

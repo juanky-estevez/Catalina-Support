@@ -22,12 +22,12 @@ import {
  * viaja al servidor.
  *
  * **Estas pruebas necesitan Keycloak levantado**, que en desarrollo vive en su propio archivo
- * (`keycloak.yml`) y entra en la red que crea `dev.yml`:
+ * con el perfil `directory` de la instancia aislada (`tests.yml`):
  *
  * ```bash
- * docker compose -f dev.yml up -d
- * docker compose -f keycloak.yml up -d
- * docker compose -f dev.yml run --rm e2e
+ * docker compose -f tests.yml --profile directory down -v
+ * docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
+ * docker compose -f tests.yml run --rm e2e
  * ```
  *
  * Sin él se saltan en vez de fallar: la suite entera tiene que poder correr en una instalación que no
@@ -109,7 +109,7 @@ test.describe('El camino de Keycloak', () => {
   test.beforeAll(async ({ request }) => {
     test.skip(
       !(await hayKeycloak(request)),
-      'Keycloak no responde: levántalo con `docker compose -f keycloak.yml up -d`',
+      'Keycloak no responde: incluye el perfil directory de tests.yml',
     );
 
     await ponerElMetodo(request, 'keycloak');

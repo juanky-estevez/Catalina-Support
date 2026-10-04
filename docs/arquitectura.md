@@ -1,7 +1,20 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-01
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Arranque local aprobado
+> en `prueba-local.md`: `dev.yml` incorpora `migrate` de un solo uso y retira el runner e2e.
+> `tests.yml` posee una instancia desechable sin puertos publicados ni datos compartidos; Angular
+> admite el host `frontend`. Keycloak anuncia localhost y conecta por una dirección interna
+> independiente.
+>
+> **Enmendado el 2026-10-02**: revisión del recorrido del README. Se retira de §13 el pendiente
+> de los botones del asistente: existen las pruebas públicas de entrada y correo, protegidas por el
+> sello; la disponibilidad de IA se consulta automáticamente. El recorrido completo del asistente
+> vacío sigue sin estar automatizado en Playwright. Se reporta además un hallazgo por lectura del
+> despliegue actual: `prod-build.sh` construye desde la carpeta de artefactos, pero los Dockerfiles
+> requieren las fuentes del repositorio. No se modifica código ni se retoma producción.
 >
 > **Enmendado el 2026-10-01 (quinta vez)**: **los datos de ejemplo se siembran con un contenedor de un
 > solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows**, y con
@@ -475,7 +488,8 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 | `ldap` (**en `active-directory.yml`**, no en `dev.yml`) | `osixia/openldap:1.5.0` | El directorio, con las personas de `config/ldap/01-personas.ldif` sembradas al arrancar | `11005` (LDAP en claro: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f active-directory.yml up -d` |
 | `keycloak` (**en `keycloak.yml`**, no en `dev.yml`) | `quay.io/keycloak/keycloak:26.0` | `start-dev --import-realm`, con el reino de `config/keycloak/realm-catalina-support.json` | `11006` (HTTP: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f keycloak.yml up -d` |
 | `ai` (**en `ai.yml`**, no en `dev.yml`) | llama.cpp con servidor HTTP | Sirve el modelo **Qwen2.5-1.5B-Instruct Q4_K_M**, que se descarga una vez al volumen la primera vez | **Ninguno**: el motor no se publica en la máquina, sólo se habla por la red `catalina-support-ai`. Lo comparten **desarrollo y producción** (`docs/modules/ai.md`, decisión 1) |
-| `e2e` | `mcr.microsoft.com/playwright:v1.63.0-noble` | `npx playwright test` | Ninguno: abre un navegador contra la dirección de desarrollo. **No se levanta con `up -d`** (`profiles: ["e2e"]`) |
+| `migrate` | `postgres:18-alpine` | Aplica sólo `v1.0.0.sql`, con `ON_ERROR_STOP=1` | Ninguno; perfil propio, ejecución explícita `run --rm migrate` |
+| `seed` | `postgres:18-alpine` | Ejecuta `scripts/dev-seed.sh` | Ninguno; ejemplos opcionales, ejecución explícita `run --rm seed` |
 
 **El motor de IA no está en la tabla de arriba a propósito**: vive en `ai.yml`, **compartido por los dos
 entornos** —no caben dos modelos en esta máquina— y los dos backends entran en su red
@@ -619,9 +633,8 @@ docker compose -f dev.yml down                   # parar (los volúmenes se cons
 
 # **El esquema, si la base es nueva**: no se aplica solo y la aplicación no crea tablas al arrancar,
 # así que sin esto el backend responde `relación "installation_settings" does not exist` y la entrada
-# enseña «Something failed on our side». Estos dos comandos valen **igual en PowerShell, CMD y bash**
-docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
-docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
+# enseña «Something failed on our side». Este comando sirve en PowerShell, CMD y bash; verificado en Linux
+docker compose -f dev.yml run --rm migrate
 # Los datos de ejemplo, que son **opcionales** y **un extra para tener contenido, no un requisito
 # para entrar**. **El comando de los tres sistemas** es un contenedor de un solo uso que corre el
 # guion `scripts/dev-seed.sh` (esquema, ejemplos y adjuntos); **no lo arranca `up -d`** (perfil
@@ -727,7 +740,7 @@ producción**.
 | `go mod tidy` | Genera `go.sum`; el `go.mod` sólo lleva las dependencias reales |
 | Frontend Angular 22 | El servidor de desarrollo sirve `index.html` y el bundle en 11001, y **reenvía `/api` al backend** (`frontend/proxy.conf.json` → `http://backend:11002`): `GET /api/auth/methods`, `GET /api/health` y `POST /api/auth/login` con `admin`/`admin` responden **200 por la 11001** (sin nginx), y el recorrido de entrar y salir pasa **en un navegador de verdad** |
 | El armazón de la sesión en el navegador | Las seis rutas se sirven por nginx (200) y el CSS de Tailwind llega compilado. Y **probado en un navegador de verdad** con Playwright, en PC y en móvil: se entra con la cuenta de fábrica, se la reconoce, se cambia de pantalla y se sale |
-| Pruebas de interfaz con Playwright | `docker compose -f dev.yml run --rm e2e` —con el directorio y Keycloak levantados con su archivo— → **214 casos: 196 en verde, 18 saltados y 0 rojos** (los saltados son las herramientas de diagnóstico, lo que es de un dispositivo concreto y **los de los caminos de directorio que se prueban una sola vez**, porque no dependen del ancho, más alguna prueba que necesita un servicio que no esté levantado): la aplicación abre, el CSS se aplica, los campos tienen nombre accesible, el idioma, los ocho temas con su contraste medido, entrar y salir, el enlace del correo leído del buzón, el armazón con su menú, los permisos del menú, la pantalla de Configuración —**con el método de entrada y las dos pruebas de conexión**—, **las tres pantallas de usuarios** —la lista con sus filtros, el alta con su correo, desactivar y reactivar, la edición en línea de Soporte, el perfil propio y que nadie se desactive a sí mismo—, **las de tickets** —el recorrido entero de un ticket con su adjunto, Soporte preguntando y escalando, Desarrollo devolviendo, el aspecto medido y el Administrador leyendo sin botones—, **el camino de AD** —una persona del directorio **entra sin que nadie le dé de alta nada** y su cuenta aparece con origen `ad`, quien ya es del directorio vuelve a entrar, la contraseña equivocada la rechaza el directorio, y una cuenta local **se vincula** al entrar por su camino y su contraseña local deja de servir— y **el de Keycloak**: el botón está en la pantalla de entrada y lleva a Keycloak, una persona entra por el reino **sin que nadie le dé de alta nada**, quien ya es de Keycloak vuelve a entrar, una cuenta local **se vincula** al entrar por allí, y **el fragmento con el token se borra de la dirección** en cuanto se usa. Y **las tres acciones del directorio en `users`**: la ficha de una cuenta de AD desactivada ofrece reactivarla y la reactivación pregunta al directorio, y la de una cuenta de Keycloak no ofrece el botón y cuenta que vuelve sola al entrar. Y **las listas de tickets** (2026-09-26): que «Mis tickets» sea **lo mío** —el que no lo tiene asignado no lo ve, y el que lo tiene sí—, que las dos listas del «todo» enseñen lo que hay, que **la reasignación se haga dentro del ticket** y mueva el ticket de una bandeja a la otra (un técnico se lo pasa a otro, que es el ejemplo del responsable), que el chip de tipo lleve a los internos, que desde las listas del «todo» no se cree un ticket, y que **el desplegable del idioma mida lo mismo que el del tema** (medido). Y **los adjuntos con tope y con visor** (2026-09-26): que una captura de **900 × 700** se pinte **dentro de 480 × 360 sin deformarse** —se mide, y con la captura de las otras pruebas, que mide justo 480 × 300, la comprobación pasaría sin que hubiera tope—, que al pulsarla se abra el visor con la imagen entera, que **el vídeo se vea como miniatura sin controles** y que al pulsarlo se abra el visor **con su reproductor y Descargar**, y que **un `.sql` se adjunte, se guarde y se descargue** mientras el `.svg` **se sigue rechazando**. Y **la vista de primer arranque** (el candado: una instalación ya terminada no la enseña y `/setup` lleva a la entrada) y **la tarjeta del motor de IA en Configuración, con su prueba de conexión** |
+| Pruebas de interfaz con Playwright | `docker compose -f tests.yml run --rm e2e` —con el perfil `directory`, en la instancia desechable— → **214 casos: 194 verificados y 20 omitidos**; un acceso de PC cancelado durante una recarga se verificó después en una instalación nueva, en PC y móvil (los saltados son las herramientas de diagnóstico, lo que es de un dispositivo concreto y **los de los caminos de directorio que se prueban una sola vez**, porque no dependen del ancho, más alguna prueba que necesita un servicio que no esté levantado): la aplicación abre, el CSS se aplica, los campos tienen nombre accesible, el idioma, los ocho temas con su contraste medido, entrar y salir, el enlace del correo leído del buzón, el armazón con su menú, los permisos del menú, la pantalla de Configuración —**con el método de entrada y las dos pruebas de conexión**—, **las tres pantallas de usuarios** —la lista con sus filtros, el alta con su correo, desactivar y reactivar, la edición en línea de Soporte, el perfil propio y que nadie se desactive a sí mismo—, **las de tickets** —el recorrido entero de un ticket con su adjunto, Soporte preguntando y escalando, Desarrollo devolviendo, el aspecto medido y el Administrador leyendo sin botones—, **el camino de AD** —una persona del directorio **entra sin que nadie le dé de alta nada** y su cuenta aparece con origen `ad`, quien ya es del directorio vuelve a entrar, la contraseña equivocada la rechaza el directorio, y una cuenta local **se vincula** al entrar por su camino y su contraseña local deja de servir— y **el de Keycloak**: el botón está en la pantalla de entrada y lleva a Keycloak, una persona entra por el reino **sin que nadie le dé de alta nada**, quien ya es de Keycloak vuelve a entrar, una cuenta local **se vincula** al entrar por allí, y **el fragmento con el token se borra de la dirección** en cuanto se usa. Y **las tres acciones del directorio en `users`**: la ficha de una cuenta de AD desactivada ofrece reactivarla y la reactivación pregunta al directorio, y la de una cuenta de Keycloak no ofrece el botón y cuenta que vuelve sola al entrar. Y **las listas de tickets** (2026-09-26): que «Mis tickets» sea **lo mío** —el que no lo tiene asignado no lo ve, y el que lo tiene sí—, que las dos listas del «todo» enseñen lo que hay, que **la reasignación se haga dentro del ticket** y mueva el ticket de una bandeja a la otra (un técnico se lo pasa a otro, que es el ejemplo del responsable), que el chip de tipo lleve a los internos, que desde las listas del «todo» no se cree un ticket, y que **el desplegable del idioma mida lo mismo que el del tema** (medido). Y **los adjuntos con tope y con visor** (2026-09-26): que una captura de **900 × 700** se pinte **dentro de 480 × 360 sin deformarse** —se mide, y con la captura de las otras pruebas, que mide justo 480 × 300, la comprobación pasaría sin que hubiera tope—, que al pulsarla se abra el visor con la imagen entera, que **el vídeo se vea como miniatura sin controles** y que al pulsarlo se abra el visor **con su reproductor y Descargar**, y que **un `.sql` se adjunte, se guarde y se descargue** mientras el `.svg` **se sigue rechazando**. Y **la vista de primer arranque** (el candado: una instalación ya terminada no la enseña y `/setup` lleva a la entrada) y **la tarjeta del motor de IA en Configuración, con su prueba de conexión** |
 | Pruebas del frontend | `npm test` → **215 pruebas en verde, en 20 ficheros**: el idioma de arranque (incluidas las variantes como `es-MX` y el caso de un idioma que no es ninguno de los dos), el servicio de sesión, el interceptor (cabecera, 401 con y sin sesión, servidor caído), **el tema** (los ocho, el sistema en vivo, lo elegido manda), el armazón, las entradas del menú por papel, **el módulo `users`** —su servicio y sus etiquetas— y **el módulo `tickets`**: su servicio (cada acción a su ruta, la lista de responsables pedida a su propia API) y sus etiquetas (los estados del usuario sin jerga, lo que se previsualiza, las frases del historial). Y **los caminos de entrada**: que la sesión pregunte cuáles hay, que sin respuesta se quede con el local —y no ofrezca un botón que no puede comprobar— y que adopte el token que trae la vuelta de Keycloak. Y de las pantallas de usuarios, **cuáles se reactivan solas**: una cuenta de Keycloak desactivada no ofrece el botón y las demás sí. Y **la marca**: que el nombre de la instalación sea el configurado, que sin backend quede el de fábrica —y la pestaña no se quede sin nombre—, que **la versión del sistema se enseñe con su `v`** y que **sin versión no se enseñe ningún número** —inventarse uno sería peor que no decir ninguno—, y que el título de la pestaña cambie al guardarlo. Y **las listas de tickets**, desde el 2026-09-26: que cada papel tenga **sus entradas del menú** —Mis tickets para el usuario, y las dos del «todo» sólo para Soporte y Desarrollo—, que **crear un ticket no esté en el menú para nadie** y que «lo mío» viaje como `mine=1` y sólo cuando se pide. Y **el editor con adjuntos** (`shared/components/editor-con-adjuntos.spec.ts`, **24 pruebas**): los cinco botones de formato sobre lo seleccionado, **la lista cerrada de lo que se puede guardar** —el saneador del editor quita `src`, `class`, `style` y `on…`, y no deja etiquetas vacías— y **qué extensiones se admiten**: el texto y el código que entraron el 2026-09-26 —`sql`, `json`, `xml`, `yml`, `sh`, `py`, `htaccess`, `tar`…—, y que lo que no se admite sigue sin admitirse (`svg`, `exe`, `html`). Y **la configuración y el primer arranque**, desde el 2026-09-30: el servicio de `settings` y **la guarda de instalación** (sin sellar lleva a `/setup`; sellada, no) |
 | Tailwind v4 y los temas | Instalado y compilando: el CSS servido lleva **las utilidades generadas** y las variables del tema, y **ningún componente escribe un color a mano**. Las fuentes se declaran a mano en `styles.css` (`@source './app'`), y hay un caso de Playwright que **falla si la hoja llega sin utilidades** |
 | El tema | **Ocho temas** (dos de fábrica con `light-dark()` y el color institucional, y seis fijos con su paleta y su acento), elegidos con un atributo en `html` y el tema elegido con un atributo en `html`. **De fábrica sigue al sistema** —que es no haber elegido, y por eso **«automático» no se muestra ni se elige**—, el sistema manda en vivo mientras nadie haya elegido, la elección se recuerda en el navegador y se aplica **antes de arrancar** desde `main.ts` (no con un script incrustado: la CSP de producción no lo admite). Probado en un navegador **midiendo el color de fondo**, en claro, en oscuro y con la elección ganando al sistema |
@@ -799,6 +812,16 @@ producción**.
 
 ### Existe pero NO está verificado
 
+- **El asistente completo desde una base vacía no está automatizado en Playwright**: hay pruebas
+  unitarias de sus endpoints y cobertura de la instalación sellada. Las pruebas de conexión del
+  paso 2 y del paso 4 sí existen; el resumen consulta la disponibilidad de IA automáticamente.
+- **La reproducción del despliegue actual desde cero queda bloqueada**: el script publica el
+  compose en `/srv/catalina-support` y usa esa carpeta como contexto de construcción, pero
+  los Dockerfiles necesitan `frontend/package*.json`, las fuentes del frontend y las del backend.
+  El script no publica esas fuentes. Hallazgo por lectura el 2026-10-02; no se ha ejecutado contra
+  producción. Se requiere propuesta y aprobación antes de corregir su comportamiento.
+
+
 - **El camino público de producción, aparcado**: el contenedor de frontend está levantado con su nginx,
   pero **el dominio sigue respondiendo 503 a propósito** y **el despliegue no se retoma hasta que el
   producto esté terminado** (decisión del responsable, 2026-09-30), así que el vhost público y
@@ -814,10 +837,6 @@ producción**.
   esta máquina), y lo que no está probado de este último es su rama de producción
   (`docs/ambientes.md`, sección 6).
 - **Lo que falta**, sólo flecos técnicos:
-  - **Los botones de prueba del asistente**: la API `/api/setup/**` **no tiene endpoints de prueba** —y
-    todavía no hay sesión con la que probar—, así que el asistente **guarda y valida** pero no prueba el
-    directorio, el reino, el correo ni el motor; eso se hace después desde Configuración
-    (`docs/primer-arranque.md`).
   - **Un repaso de formato en el frontend**, pendiente.
 - **Aparcado a propósito** (decisión del responsable, 2026-09-30): **el despliegue a producción y abrir el
   dominio no se retoman hasta que el producto esté terminado**. El despliegue del 2026-09-25 está hecho y
@@ -835,3 +854,13 @@ producción**.
 ### Pendiente de decidir
 
 La lista vive en un solo sitio: **sección 12**, para que no haya dos listas que puedan divergir.
+
+## Instancia desechable de pruebas (`tests.yml`, 2026-10-03)
+
+Proyecto `catalina-support-tests`, con PostgreSQL, migración de un solo uso, backend, frontend y
+Mailpit propios. El backend espera a la migración completada; el runner espera salud del backend.
+Todos los datos, adjuntos, logs y dependencias tienen volúmenes del proyecto; el código entra
+en sólo lectura. No hay puertos publicados ni red de IA compartida. LDAP y Keycloak entran sólo
+con el perfil `directory`. Los informes de Playwright se escriben en `tests/e2e/resultados/`,
+que se conserva después de `docker compose -f tests.yml --profile directory down -v`.
+El recorrido de preparación, ejecución y limpieza está en `docs/ambientes.md`, sección 9.3.

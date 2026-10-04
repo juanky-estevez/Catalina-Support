@@ -318,6 +318,13 @@
                 [valor]="kcEmisor()"
                 (valorChange)="kcEmisor.set($event)"
               />
+              <app-campo
+                identificador="kc-interno"
+                [etiqueta]="t().configuracion.kcInterno"
+                [ayuda]="t().configuracion.kcInternoAyuda"
+                [valor]="kcInterno()"
+                (valorChange)="kcInterno.set($event)"
+              />
 
               <app-campo
                 identificador="kc-cliente"

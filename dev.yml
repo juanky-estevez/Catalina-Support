@@ -74,41 +74,7 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
-  # Pruebas de interfaz. No se levanta con el resto (`up -d` no lo arranca): se pide a propósito,
-  # porque abre un navegador de verdad contra desarrollo.
-  #
-  #   docker compose -f dev.yml run --rm e2e
-  #
-  # La imagen trae los navegadores instalados: es lo que permite cumplir la regla de que en la
-  # máquina no se instala nada (docs/ambientes.md, sección 8.3).
-
-  e2e:
-    image: mcr.microsoft.com/playwright:v1.63.0-noble
-    container_name: catalina_support_dev_e2e
-    profiles: ["e2e"]
-    working_dir: /e2e
-    # **El comando va aquí y no se pasa a mano**, y esto es un arreglo del 2026-09-26: sin él,
-    # `docker compose -f dev.yml run --rm e2e` —que es lo que dicen los documentos— **arrancaba el
-    # contenedor, no ejecutaba ni un caso y salía con código 0**. Un verde sin pruebas es lo peor que
-    # puede hacer una capa de pruebas, y estuvo así desde el principio del proyecto.
-    #
-    # Se sigue pudiendo pedir otra cosa: `... run --rm e2e npx playwright test tickets`, o
-    # `... run --rm e2e sh -c "npx playwright test --reporter=line"`.
-    command: ["npx", "playwright", "test"]
-    # El entorno de desarrollo, para poder entrar con la cuenta de fábrica y para leer el buzón.
-    env_file:
-      - ./config/env/dev.env
-    environment:
-      BASE_URL: https://dev.catalina-support.example.com
-      # El buzón, por dentro de la red de los contenedores: es donde acaban los correos que manda
-      # la aplicación, y es lo que permite probar el enlace del correo de verdad.
-      MAILPIT_URL: http://mail:8025
-      # Para volcar lo que hay en pantalla cuando algo no se ve como debería, se ejecuta la
-      # herramienta de diagnóstico: `docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e`.
-
-    volumes:
-      - ./tests/e2e:/e2e
-      - e2e_node_modules:/e2e/node_modules
+  # Las pruebas de navegador viven en tests.yml y no usan esta instalación.
 
   database:
     image: postgres:18-alpine
@@ -143,6 +109,23 @@ services:
   # el guion modifica en la máquina. El `entrypoint` se sustituye para correr el guion, y con él el
   # contenedor no pasa por el arranque de PostgreSQL (no levanta ninguna base: la siembra es la de
   # `database`).
+  # Sólo el esquema: no borra, no carga ejemplos y no sella una base nueva.
+  migrate:
+    image: postgres:18-alpine
+    profiles: ["migrate"]
+    env_file: [./config/env/dev.env]
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    entrypoint: ["sh", "-ec"]
+    command:
+      - |
+        export PGPASSWORD="$$POSTGRES_PASSWORD"
+        psql -h "$$POSTGRES_HOST" -p "$$PGPORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /migrations/v1.0.0.sql
+        echo "Esquema aplicado; los ejemplos siguen siendo opcionales."
+
   seed:
     image: postgres:18-alpine
     container_name: catalina_support_dev_seed
@@ -188,5 +171,3 @@ volumes:
     name: catalina_support_dev_backend_go_build
   database:
     name: catalina_support_dev_database
-  e2e_node_modules:
-    name: catalina_support_dev_e2e_node_modules

@@ -113,10 +113,11 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 			PasswordSet:  estado.Directory.PasswordSet,
 		},
 		Keycloak: KeycloakDto{
-			Issuer:      estado.Keycloak.Issuer,
-			ClientID:    estado.Keycloak.ClientID,
-			RedirectURI: estado.Keycloak.RedirectURI,
-			SecretSet:   estado.Keycloak.SecretSet,
+			Issuer:         estado.Keycloak.Issuer,
+			InternalIssuer: estado.Keycloak.InternalIssuer,
+			ClientID:       estado.Keycloak.ClientID,
+			RedirectURI:    estado.Keycloak.RedirectURI,
+			SecretSet:      estado.Keycloak.SecretSet,
 		},
 		Mail: MailViewDto{
 			Host:        estado.MailHost,

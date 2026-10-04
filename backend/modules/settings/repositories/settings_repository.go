@@ -100,13 +100,14 @@ func (DirectorySettings) TableName() string { return "directory_settings" }
 // KeycloakSettings es la fila única de la configuración del camino de Keycloak. El secreto del
 // cliente se guarda aquí y no sale nunca por la API.
 type KeycloakSettings struct {
-	ID           int64     `gorm:"primaryKey"`
-	Issuer       string    `gorm:"column:issuer"`
-	ClientID     string    `gorm:"column:client_id"`
-	ClientSecret string    `gorm:"column:client_secret"`
-	RedirectURI  string    `gorm:"column:redirect_uri"`
-	UpdatedAt    time.Time `gorm:"column:updated_at"`
-	UpdatedByID  *int64    `gorm:"column:updated_by_id"`
+	ID             int64     `gorm:"primaryKey"`
+	Issuer         string    `gorm:"column:issuer"`
+	InternalIssuer string    `gorm:"column:internal_issuer"`
+	ClientID       string    `gorm:"column:client_id"`
+	ClientSecret   string    `gorm:"column:client_secret"`
+	RedirectURI    string    `gorm:"column:redirect_uri"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
+	UpdatedByID    *int64    `gorm:"column:updated_by_id"`
 }
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.

@@ -31,6 +31,7 @@ export interface Directorio {
 /** La configuración de Keycloak, con la misma regla para el secreto. */
 export interface Keycloak {
   readonly issuer: string;
+  readonly internalIssuer?: string;
   readonly clientId: string;
   readonly redirectUri: string;
   readonly secretSet: boolean;

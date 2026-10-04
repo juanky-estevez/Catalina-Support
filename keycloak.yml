@@ -20,11 +20,9 @@
 #  personas del directorio: no hay nada que configurar a mano ni que se pierda entre reinicios. Con
 #  `--import-realm`, si el reino ya existe no se toca.
 #
-#  **El navegador llega a Keycloak por el mismo dominio que a la aplicación, y por un camino**
-#  (`/sso/`, que nginx manda a este contenedor). Así el emisor es uno solo —el que ve el
-#  navegador— y no hay dos direcciones que puedan discrepar: el backend usa el mismo
-#  `OIDC_ISSUER`, y por eso la vuelta se firma y se comprueba siempre contra el mismo sitio
-#  (docs/modules/auth.md, sección 5.3).
+#  El navegador llega a localhost:11006/sso. KEYCLOAK_PUBLIC_URL permite otro origen exacto.
+#  Configuración guarda el emisor público y, opcionalmente, http://keycloak:8080/sso/realms/...
+#  como dirección interna del mismo reino. No se necesita nginx para las pruebas locales.
 # =====================================================================================
 # Nombre de proyecto propio, para que no comparta «proyecto» con los otros archivos sueltos
 # (`ai.yml`, `active-directory.yml`) y no los tome por contenedores huérfanos.
@@ -45,7 +43,7 @@ services:
       KC_HTTP_PORT: "8080"
       # El camino por el que nginx lo publica, y el nombre con el que firma lo que devuelve.
       KC_HTTP_RELATIVE_PATH: /sso
-      KC_HOSTNAME: https://dev.catalina-support.example.com/sso
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://127.0.0.1:11006/sso}
       # Detrás de nginx: las cabeceras `X-Forwarded-*` que pone el vhost son de fiar.
       KC_PROXY_HEADERS: xforwarded
       KC_HEALTH_ENABLED: "true"

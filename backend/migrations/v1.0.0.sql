@@ -382,6 +382,7 @@ COMMENT ON TABLE directory_settings IS
 CREATE TABLE IF NOT EXISTS keycloak_settings (
     id            integer     PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     issuer        text        NOT NULL DEFAULT '',
+    internal_issuer text NOT NULL DEFAULT '',
     client_id     text        NOT NULL DEFAULT '',
     client_secret text        NOT NULL DEFAULT '',
     redirect_uri  text        NOT NULL DEFAULT '',
@@ -428,6 +429,8 @@ COMMENT ON TABLE ticket_settings IS
 -- día una que ya estaba. `CREATE TABLE IF NOT EXISTS` no toca una tabla que existe, así que las
 -- columnas y las restricciones que se han añadido **después** de crear la tabla hay que decirlas
 -- aparte, con `IF NOT EXISTS`. En una base nueva son un no-op; en una que ya existía, son el cambio.
+
+ALTER TABLE keycloak_settings ADD COLUMN IF NOT EXISTS internal_issuer text NOT NULL DEFAULT '';
 
 ALTER TABLE installation_settings
     ADD COLUMN IF NOT EXISTS installation_name text NOT NULL DEFAULT 'Catalina Support';

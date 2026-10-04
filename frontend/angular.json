@@ -53,7 +53,11 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "allowedHosts": ["dev.catalina-support.example.com"],
+            "allowedHosts": [
+              "dev.catalina-support.example.com",
+              "frontend",
+              "frontend.localhost"
+            ],
             "proxyConfig": "proxy.conf.json"
           },
           "configurations": {

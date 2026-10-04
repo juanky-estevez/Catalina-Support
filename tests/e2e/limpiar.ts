@@ -21,7 +21,7 @@ import { FABRICA } from './ayudas';
  * vuelve a poner las once de ejemplo (`docs/ambientes.md`, sección 9).
  */
 export default async function limpiar(): Promise<void> {
-  const base = process.env['BASE_URL'] ?? 'http://127.0.0.1:11001';
+  const base = process.env['BASE_URL'] ?? 'http://frontend.localhost:11001';
   const peticion = await request.newContext({ baseURL: base });
 
   try {

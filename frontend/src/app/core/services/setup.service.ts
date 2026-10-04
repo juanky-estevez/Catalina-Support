@@ -23,6 +23,7 @@ export interface DirectorioDeInstalacion {
 /** Lo mismo con Keycloak: el secreto no sale de aquí, sólo si hay uno puesto. */
 export interface KeycloakDeInstalacion {
   readonly issuer: string;
+  readonly internalIssuer?: string;
   readonly clientId: string;
   readonly redirectUri: string;
   readonly secretSet: boolean;

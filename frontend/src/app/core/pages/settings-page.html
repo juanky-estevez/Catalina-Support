@@ -206,7 +206,10 @@
           <!-- Qué quiere decir el método elegido, que es lo que hace falta saber antes de guardarlo. -->
           <p class="text-sm text-apagado">{{ ayudaDelMetodo() }}</p>
 
-          @if (!directorioConfigurado()) {
+          @if (
+            (metodo() === 'ad' && !directorioConfigurado()) ||
+            (metodo() === 'keycloak' && !keycloakConfigurado())
+          ) {
             <p class="text-sm text-apagado">{{ t().configuracion.metodoSinConfigurar }}</p>
           }
         </div>
@@ -364,6 +367,13 @@
               [ayuda]="t().configuracion.kcEmisorAyuda"
               [valor]="kcEmisor()"
               (valorChange)="kcEmisor.set($event)"
+            />
+            <app-campo
+              identificador="kc-interno"
+              [etiqueta]="t().configuracion.kcInterno"
+              [ayuda]="t().configuracion.kcInternoAyuda"
+              [valor]="kcInterno()"
+              (valorChange)="kcInterno.set($event)"
             />
 
             <app-campo

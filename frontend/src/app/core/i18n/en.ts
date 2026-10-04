@@ -102,7 +102,7 @@ export const EN: Textos = {
     metodoKeycloak: 'Keycloak',
     metodoKeycloakAyuda:
       'People sign in from the Keycloak screen, with their account. There is no email and password form here.',
-    metodoSinConfigurar: 'Configure it below before you can choose it.',
+    metodoSinConfigurar: 'Complete the fields below before saving the sign-in method.',
     guardarEntrada: 'Save the sign-in method',
     entradaGuardada: 'Saved. It applies from the next sign-in, with no restart.',
     directorio: 'The organization directory',
@@ -138,6 +138,8 @@ export const EN: Textos = {
     keycloak: 'Keycloak',
     keycloakAyuda:
       'What is needed to sign in through Keycloak. The client secret is stored and never shown again.',
+    kcInterno: 'Internal realm address (optional)',
+    kcInternoAyuda: 'The address reachable by the server. Leave empty to use the public issuer. In Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Realm issuer',
     kcEmisorAyuda:
       'The realm address, the one the browser sees. For example: https://sso.company.com/realms/company.',

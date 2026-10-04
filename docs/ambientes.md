@@ -1,7 +1,28 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-01
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El recorrido vigente es
+> instalación vacía con `docker compose -f dev.yml up -d --build` y `docker compose -f dev.yml run
+> --rm migrate`, asistente y admin/admin. El seeder es opcional: conserva las cuatro tablas de
+> ajustes de una instalación sellada; una instalación sin sellar recibe la demo local y queda
+> sellada. Las pruebas usan exclusivamente `tests.yml`; los comandos anteriores sobre el entorno de
+> desarrollo quedan sustituidos por el procedimiento de abajo.
+>
+> **Enmendado el 2026-10-02**: el README prioriza la instalación vacía, por corrección del
+> responsable, con los ejemplos opcionales. Sólo el esquema no sella una base nueva: primero se
+> completa `/setup` y después se entra con `admin`/`admin` en local; en producción la contraseña es
+> `ADMIN_PASSWORD`. Los ejemplos restauran la dirección pública del dominio de desarrollo, que
+> debe ajustarse para usar los enlaces en localhost. Se reporta el contexto de construcción del
+> script de producción como bloqueo para reproducirlo desde cero; no se cambia código ni se despliega.
+> Comprobado en una copia aislada de Linux: esquema sobre base nueva (0 cuentas y 0 tickets),
+> los cuatro pasos del asistente en navegador, prueba SMTP con Mailpit, entrada con `admin`/`admin`,
+> bloqueo 409 tras sellar, alta de cuenta y apertura del enlace del buzón. Después, el seeder dejó
+> 11 cuentas de ejemplo, 25 tickets y 5 adjuntos; las entradas en navegador de fábrica, Usuario,
+> Soporte y Desarrollo funcionaron. No se han ejecutado estas comprobaciones en
+> Windows o macOS. Para el navegador del contenedor se usó la IP interna del frontend: el host
+> `frontend` es rechazado por Angular. La suite predeterminada sigue usando el dominio de desarrollo.
 >
 > **Enmendado el 2026-10-01 (séptima vez)**: **los datos de ejemplo se siembran con un contenedor de
 > un solo uso**, `docker compose -f dev.yml run --rm seed`, **igual en Linux, macOS y Windows** —es lo
@@ -46,7 +67,7 @@
 > migraciones no se aplican solas, así que abrirla antes deja `relación "installation_settings" does
 > not exist` y `relación "ai_insights" does not exist`. La 3.1 lo apunta en una línea, la 5 añade el
 > momento en su tabla y nombra el síntoma, y **los pasos del arranque en local no se repiten aquí**:
-> viven en el `README.md`, «Probarlo en local (desarrollo)». Comprobado en la base de desarrollo: el
+> viven en el `README.md`, «Probar en local: instalación vacía». Comprobado en la base de desarrollo: el
 > seeder termina con `Listo: 11 cuentas, 25 tickets y 5 adjuntos` sobre una base que ya tiene el
 > esquema, y `v1.0.0.sql` aplicado **dos veces seguidas** no da ningún error (`ERROR lines: 0` en las
 > dos pasadas).
@@ -61,7 +82,7 @@
 >
 > **Enmendado el 2026-10-01 (segunda vez)**: la sección 3.3 **deja de enumerar las once cuentas de
 > ejemplo** —y de repetir su contraseña— y **apunta a la tabla del `README.md`**, que es donde se
-> detallan con su **nombre, su correo, su rol y su contraseña** («Probarlo en local (desarrollo)»):
+> detallan con su **nombre, su correo, su rol y su contraseña** («Probar en local: instalación vacía»):
 > el mismo dato en dos documentos se separa solo con el tiempo, así que vive en uno y el otro lo
 > referencia en vez de copiarlo.
 >
@@ -220,7 +241,9 @@ docker compose -f dev.yml down          # los volúmenes se conservan
 Se entra por `https://dev.catalina-support.example.com`. **Y también, sin nginx, por
 `http://127.0.0.1:11001`**: el servidor de desarrollo reenvía `/api` al backend
 (`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado y el esquema
-aplicado **se entra en la 11001 con `admin`/`admin`** (`README.md`, «Probarlo en local (desarrollo)»).
+aplicado **se abre la 11001**. En una base nueva aparece `/setup`; después de completar el
+asistente se entra con **`admin`/`admin`**. Los ejemplos son opcionales y sellan la instalación
+(`README.md`, «Probar en local: instalación vacía»).
 Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
 
 **Levantar el entorno no deja la base lista**: la aplicación **no crea las tablas al arrancar**, así
@@ -234,14 +257,11 @@ local, con el síntoma exacto si se abre antes, están en el `README.md`, «Prob
 
 - El esquema se aplica **repetidas veces** sin miedo: `v1.0.0.sql` es transaccional e idempotente
   (`docs/arquitectura.md`, sección 7). **El archivo existe, está aplicado y crea 18 tablas.**
-- Aplicarlo. **La forma que vale igual en Linux, macOS y Windows** —PowerShell, CMD y bash: ni guion
-  ni redirección del intérprete— copia el archivo al contenedor y se lo da a `psql` con `-f` (probado
-  el 2026-10-01: en una base nueva deja 18 tablas y `ERROR lines: 0`; aplicado dos veces seguidas,
-  también `0` errores y `COMMIT`):
+- Aplicarlo con un servicio de un solo uso: espera la salud de PostgreSQL, usa su cliente
+  en Docker y termina con error si falla el SQL. No instala dependencias en la máquina.
 
 ```bash
-docker compose -f dev.yml cp backend/migrations/v1.0.0.sql database:/tmp/esquema.sql
-docker compose -f dev.yml exec -T database psql -U catalina_support -d catalina_support -p 11003 -v ON_ERROR_STOP=1 -f /tmp/esquema.sql
+docker compose -f dev.yml run --rm migrate
 ```
 
 - En Linux y macOS, además, se puede hacer sin copiar, con la redirección del intérprete —que **no
@@ -261,17 +281,17 @@ docker volume rm catalina_support_dev_database
 docker compose -f dev.yml up -d
 ```
 
-Y volver a aplicar la migración. No hay nada que conservar: los datos de desarrollo son de prueba.
+Y volver a aplicar la migración. Esto borra los datos y la configuración local: hacerlo sólo si se quiere empezar otra instalación.
 
 ### 3.3 Los datos de ejemplo
 
 **Los datos de ejemplo se aplican a propósito**, después de levantar el entorno y antes de abrir la
-aplicación. **No son un requisito para entrar** —con el esquema ya se entra con `admin`—, pero sí son
+aplicación. **No son un requisito para entrar** —con el esquema se completa el asistente y después se entra con `admin`—, pero sí son
 lo que deja el entorno con contenido. La aplicación **no crea las tablas al arrancar** y las
 migraciones no se aplican solas, así que **en una base nueva el paso que la deja lista es el esquema**
 (sección 3.2): si se abre antes, el backend falla con `relación "installation_settings" does not
 exist` y `relación "ai_insights" does not exist`. Los pasos del arranque en local están en el
-`README.md`, «Probarlo en local (desarrollo)», y **aquí no se repiten**.
+`README.md`, «Probar en local: instalación vacía», y **aquí no se repiten**.
 
 **La forma de los tres sistemas —Linux, macOS y Windows— es un comando de Docker**: un contenedor de
 un solo uso que arranca, siembra y se va.
@@ -302,8 +322,8 @@ separarse.
 
 Deja **once cuentas, 25 tickets y 5 adjuntos** —probado el 2026-10-01 con **dos pasadas seguidas** del
 comando de Docker («Listo: 11 cuentas, 25 tickets y 5 adjuntos» las dos veces), comprobando además en
-la base las once cuentas y los 25 tickets y en `_files/` los cinco archivos—. Los dos comandos de
-Docker de la sección 3.2 aplican el esquema igual, pero **no copian los adjuntos**: para eso está el
+la base las once cuentas y los 25 tickets y en `_files/` los cinco archivos—. El servicio `migrate` de
+la sección 3.2 aplica el esquema, pero **no copian los adjuntos**: para eso está el
 contenedor, que es el paso 3 del guion.
 
 Su **paso 1** (`Aplicando el esquema…`) aplica `backend/migrations/v1.0.0.sql` —transaccional e
@@ -313,7 +333,7 @@ aplica `v1.0.0_dev.sql` y el **paso 3** **copia los archivos de los adjuntos** d
 archivo no se puede abrir.
 
 Deja **once cuentas** —**la tabla con su nombre, su correo, su rol y su contraseña está en el
-`README.md`**, en «Probarlo en local (desarrollo)», y **aquí no se repite**— y **25 tickets**
+`README.md`**, en «Probar en local: instalación vacía», y **aquí no se repite**— y **25 tickets**
 repartidos por todos los estados, con asignaciones, reasignaciones, comentarios de los tres papeles,
 **siete con ticket interno** (uno esperando a Desarrollo, otro devuelto a Soporte, otros resueltos o
 cerrados), adjuntos de verdad y **las fechas repartidas en los últimos tres meses**, para que la
@@ -338,9 +358,9 @@ se escribe con una mano es lo que hace que probar no dé pereza.
 probando—, las cuentas `@demo.com` y los adjuntos que no sean la marca. Es un seeder de
 desarrollo, no una migración, y por eso se aplica cuando se quiere y no al arrancar.
 
-**Y deja configurados los dos caminos de directorio, con el método de entrada en `local`**
-(enmienda del 2026-09-25): escribe la configuración del directorio apuntando al `ldap` que levanta
-`active-directory.yml` y la de Keycloak apuntando al reino de pruebas, **sin cambiar el método**. Así
+**Sólo cuando la instalación no está sellada**, deja configurados los dos caminos de directorio
+y activa el método `local` (enmienda aprobada del 2026-10-03): escribe la configuración del directorio apuntando al `ldap` que levanta
+`active-directory.yml` y la de Keycloak apuntando al reino de pruebas, **dejando el método local**. Una instalación sellada conserva sus ajustes. Así
 el entorno arranca entrando con las once cuentas de ejemplo y **cambiar de método es un clic en
 Configuración**, que es justo lo que hay que poder probar a mano. Los dos servicios de pruebas viven
 cada uno en su archivo (`active-directory.yml` y `keycloak.yml`): con ellos levantados, «Probar la
@@ -408,6 +428,13 @@ Contenedores «finos»: el runtime vive en imágenes base y **el código son art
 existen para construir y publicar, y **no se levantan con `up`**: están bajo el perfil `build`.
 
 ### 4.2 El despliegue, paso a paso
+
+> **Hallazgo del 2026-10-02:** los pasos siguientes conservan el registro del despliegue histórico;
+> no son hoy un recorrido reproducible desde cero. `prod-build.sh` usa el compose publicado en la
+> carpeta de artefactos para construir, pero allí no copia las fuentes que piden los Dockerfiles.
+> La ruta de salida sigue fija en `/srv/catalina-support`. La corrección de comportamiento
+> requiere una propuesta aprobada y producción sigue aparcada.
+
 
 Un script, `scripts/prod-build.sh`, con el mismo guion que el de Calibyou. **Está escrito y probado**
 (el 2026-09-25 se construyeron y publicaron los dos artefactos con él). Lo que hace:
@@ -762,203 +789,44 @@ componentes que calculan algo. **No se prueba el aspecto**: para eso están las 
 docker compose -f dev.yml exec frontend npm test -- --watch=false
 ```
 
-### 9.3 Interfaz: Playwright contra desarrollo
+### 9.3 Interfaz: Playwright en una instalación desechable
 
-Como en Calibyou: `tests/e2e/` con Playwright, **contra el entorno de desarrollo**, con un caso por
-flujo crítico. Un recorrido completo vale más que veinte pruebas de detalle.
+Desde la raíz, sin arrancar ni modificar el entorno de desarrollo:
 
-**Se ejecutan en un contenedor**, no en la máquina: la imagen de Playwright ya trae los navegadores
-instalados, y en la máquina no se instala Node ni nada (AGENTS.md). El servicio es `e2e` en
-`dev.yml`, detrás de un perfil, así que **no se levanta con el resto**:
-
-```bash
-docker compose -f dev.yml up -d                  # el entorno tiene que estar arriba
-docker compose -f dev.yml run --rm e2e           # instala lo que falte y ejecuta las pruebas
+```text
+docker compose -f tests.yml --profile directory down -v
+docker compose -f tests.yml up -d --build database backend frontend mail
+docker compose -f tests.yml run --rm e2e
+docker compose -f tests.yml --profile directory down -v
 ```
 
-- **Por defecto corre en PC y en móvil** (`pc` y `movil`, con un Pixel 7): la interfaz tiene que
-  funcionar en los tres anchos, no sólo caber (`docs/interfaz-y-experiencia.md`, sección 7).
-- **Lee la contraseña de fábrica y el buzón de pruebas** del entorno de desarrollo: `BASE_URL`,
-  `ADMIN_PASSWORD` y `MAILPIT_URL`, los tres por variables. Sin ellos, los casos que necesitan entrar
-  o leer un correo se saltan en vez de fallar con un mensaje que no explica nada.
-- **`BASE_URL` decide la dirección** contra la que corre (por defecto, la de desarrollo por nginx):
-  apuntarla a `http://127.0.0.1:11001` prueba **el servidor de desarrollo y su proxy**, sin nginx.
-- **Después de cada pasada se reinicia el entorno** (`docker compose -f dev.yml run --rm seed`,
-  decisión del responsable, 2026-09-28): los tickets de prueba que deja la suite **no se borran desde
-  ella** —un ticket no se borra—, así que el entorno se deja como nuevo con el seeder, **avisando
-  antes** porque el seeder borra también lo que haya a mano.
-- **Cada caso monta sus datos y los deja apagados al terminar**: da de alta sus cuentas —lo que prueba
-  el camino de verdad, con su correo y su enlace—, y **al acabar la pasada el cierre
-  (`tests/e2e/limpiar.ts`) las apaga** por la API. No se borran: las cuentas no se borran en este
-  producto. Y **los tickets que crea la pasada tampoco se borran** —un ticket no se borra—: si se
-  quiere el entorno como nuevo, `docker compose -f dev.yml run --rm seed` borra los tickets y las
-  cuentas de prueba y vuelve a poner las once de ejemplo.
-- **Los correos se leen del buzón**, no se dan por hechos: el caso del enlace del correo saca el
-  token de la pantalla de Mailpit y lo abre en el navegador, que es lo que haría una persona.
-- Cuando algo no se ve como debería, hay una herramienta que vuelca el HTML pintado, los errores de
-  la consola y una captura:
+Para incluir AD y Keycloak, sustituir el segundo comando por:
 
-```bash
-docker compose -f dev.yml run --rm -e DIAGNOSTICO=1 e2e
+```text
+docker compose -f tests.yml --profile directory up -d --build database backend frontend mail ldap keycloak
 ```
 
-**Las cuentas que crean las pruebas se quedan**, porque en este producto **no existe dar de baja
-cuentas** (`docs/modules/users.md`): dar de alta una es para siempre. Se llaman `e2e-…@demo.com`,
-así que se reconocen, y en desarrollo se limpian cuando estorban:
+El runner conserva el código de salida de Playwright. Tras un fallo también se ejecuta la limpieza
+final; las capturas, trazas e informe permanecen en `tests/e2e/resultados/`. Cada pasada comienza
+retirando exclusivamente los volúmenes de este proyecto de pruebas, también tras una interrupción.
+No se cargan seeders: las cuentas y fixtures se crean por las APIs normales de la aplicación.
 
-```bash
-docker compose -f dev.yml exec database psql -U catalina_support -d catalina_support -p 11003 \
-  -c "DELETE FROM ticket_comments; DELETE FROM ticket_attachments; DELETE FROM ticket_history; \
-      DELETE FROM internal_tickets; DELETE FROM tickets; DELETE FROM ticket_number_counters; \
-      DELETE FROM password_tokens WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-%@demo.com' OR email LIKE '%directorio@demo.com' OR email LIKE '%keycloak@demo.com'); \
-      DELETE FROM users WHERE email LIKE 'e2e-%@demo.com' OR email LIKE '%directorio@demo.com' OR email LIKE '%keycloak@demo.com';"
-```
+El origen de Chromium es `http://frontend.localhost:11001`: Docker declara el alias y el navegador
+lo resuelve al servicio `frontend` con `--host-resolver-rules`. El sufijo localhost habilita el
+portapapeles real sin modificar la seguridad de la aplicación. La IA permanece ausente por diseño.
 
-**Los tickets van primero, y no es un detalle de orden**: un ticket apunta a quien lo pidió, y la
-base no deja borrar una cuenta que tiene tickets detrás (`ON DELETE RESTRICT`), que es justo lo que
-hace que la historia de un ticket sobreviva a la baja de una cuenta.
+La suite cubre cuentas locales, correo, configuración, permisos y tickets en PC y móvil.
+Los directorios se prueban una sola vez porque el protocolo no depende del ancho. Los casos de
+IA requieren un motor y se omiten en este entorno sin IA. La preparación verifica además el
+asistente antes de sellar, con capturas de ambos anchos. El historial de los hallazgos anteriores
+queda en las enmiendas de la cabecera; sus comandos contra desarrollo ya no son el procedimiento.
 
-**Y después de limpiar, se vuelve a los datos de ejemplo con un comando**: esa limpieza se lleva por
-delante también los 25 tickets del seeder —borra **todos** los tickets, a propósito—, así que lo
-normal es terminar con `docker compose -f dev.yml run --rm seed`, que deja el entorno otra vez
-conocido (sección 3.3).
-
-**Las cuentas de las personas del directorio y del reino de Keycloak se borran a propósito**, y no es
-por limpieza: los casos del alta automática de los dos caminos de directorio comprueban que la cuenta
-**no existía** antes de entrar, y con una cuenta de una ejecución anterior lo que probarían es otra
-cosa. Si se dejan, esos casos se saltan solos diciendo qué hay que limpiar
-(`docs/modules/auth.md`, sección 11).
-
-**Los casos de los caminos de directorio —AD y Keycloak— necesitan sus servicios levantados**, que en
-desarrollo viven cada uno en **su propio archivo**: `active-directory.yml` (OpenLDAP) y `keycloak.yml`.
-Los dos entran en la red `catalina-support-dev`, que **posee `dev.yml`** con un nombre fijo, así que
-**primero se levanta el entorno** y después cada servicio. La suite se corre después, con el comando
-de siempre, **en dos pasos**:
-
-```bash
-docker compose -f dev.yml up -d                  # el entorno (crea la red)
-docker compose -f active-directory.yml up -d     # el directorio de pruebas (AD/LDAP)
-docker compose -f keycloak.yml up -d             # Keycloak
-docker compose -f dev.yml run --rm e2e           # la suite entera, con los dos caminos
-```
-
-**Cada elemento opcional tiene su comando y no hace falta levantar los otros**: el motor de IA, el
-tercero, tiene su propio compose (sección 3.4). Los **tres comandos** son:
-
-```bash
-docker compose -f ai.yml up -d               # el motor de IA (opcional; sección 3.4)
-docker compose -f active-directory.yml up -d # el directorio de pruebas (AD/LDAP)
-docker compose -f keycloak.yml up -d         # Keycloak
-```
-
-**El perfil `auth` ya no existe**: el directorio y Keycloak no están en `dev.yml`, así que no hay un
-comando que levante los dos de una vez —se levanta cada uno con el suyo—.
-
-Sin ellos, esos casos **se saltan** en vez de fallar: la suite tiene que poder correr en una
-instalación que no tenga AD (`docs/modules/auth.md`, decisión 28).
-
-**Y cinco de ellos —el alta automática y el vínculo de cada camino, que son los que crean la
-cuenta— corren sólo en PC**: los dos proyectos comparten la misma base de datos, así que el segundo
-vería la cuenta que dejó el primero y ya no probaría lo mismo. Se saltan diciéndolo, no en silencio.
-
-**Keycloak se levanta con su reino ya importado**, y el navegador llega a él por el mismo dominio que
-a la aplicación (`/sso/`, que es un `location` del vhost de desarrollo): por eso, si se cambia algo de
-Keycloak en el repositorio, se recrea el contenedor y **el reino vuelve a como está escrito**.
-
-**Si la suite falla con un `vite-error-overlay` que intercepta el clic**, no es la prueba: es que el
-**servidor de desarrollo está sirviendo un error de compilación** de un cambio anterior. Se ve en sus
-logs (`docker compose -f dev.yml logs --tail 40 frontend`) y se arregla tocando el archivo que dice el
-error —o reiniciando el contenedor—, porque el servidor sólo vuelve a intentar lo que ve cambiar.
-Pasó al añadir un texto que faltaba: la suite siguió corriendo contra una pantalla que no compilaba y
-el fallo que contaba hablaba de otra cosa.
-
-Los casos, con lo que hay hoy:
-
-| Caso | Qué recorre | Estado |
-| --- | --- | --- |
-| La aplicación abre | La raíz lleva a la entrada, los campos tienen nombre accesible, se llega con el tabulador y **ninguna pantalla repite un `id`** | **Hecho** |
-| La marca | Que **el logo de fábrica cambie con el tema** —el claro y el oscuro, cada uno cargando de verdad—, que el logo **cargue de verdad** en la pantalla de entrada, que un logo propio sustituya al de fábrica y que al quitarlo se vuelva, y que el color institucional se aplique a los dos temas de fábrica sin romper el contraste. Y **la versión del sistema**: que se lea en el pie de la entrada y en la fila de salir del menú —comparada con lo que dice la API—, que sea texto y no un enlace, que se lea sobre el fondo del menú, y que plegado no se enseñe | **Hecho** |
-| El armazón | Las tres zonas del menú, el plegado que se recuerda, el cajón del móvil y que las pantallas de la sesión no lo lleven | **Hecho** |
-| Los permisos del menú | Que un papel no vea lo que no le toca **y** que el backend se lo rechace si lo pide a mano | **Hecho** |
-| La pantalla de Configuración | Subir un logo por el formulario, verlo en la vista previa y en el menú, volver al de fábrica, el color con su vista previa antes de guardar, **el nombre de la instalación en los tres sitios donde se lee**, **el método de entrada cambiándolo desde la pantalla** y **las dos pruebas de conexión** —la del directorio y la del reino, con lo que hay en pantalla y sin guardar nada— | **Hecho** |
-| La lista de cuentas | Que un Administrador **entre directamente en ella**, los filtros por papel, origen y estado, la búsqueda por nombre o correo, el estado vacío y el filtro que esconde lo desactivado | **Hecho** |
-| Dar de alta una cuenta | El diálogo, el papel que se elige, el aviso de lo que ha pasado, **el enlace leído del buzón de pruebas** y que la persona nueva entre con él | **Hecho** |
-| Desactivar y reactivar | Que desactivar **pregunte antes**, que la persona deje de poder entrar de verdad y que reactivarla la devuelva | **Hecho** |
-| Soporte edita en la lista | Que Soporte cambie nombre y apellidos **en línea**, que el cambio esté guardado de verdad al recargar, y que **no tenga ficha de nadie** (403 si la escribe a mano) | **Hecho** |
-| El perfil propio | Cambiar el nombre desde tu nombre en el menú, que el menú lo enseñe al momento, que el correo no se pueda tocar, y que el idioma de la cuenta cambie la interfaz (y sus correos) | **Hecho** |
-| Nadie se desactiva a sí mismo | Que tu propia ficha **no ofrezca** el botón, y que la cuenta de fábrica no tenga perfil ni enlace a él | **Hecho** |
-| El idioma de arranque | Español, inglés y **un idioma que no es ninguno de los dos** (inglés), más el conmutador | **Hecho** |
-| El tema | Que siga al sistema, que el selector cambie **de verdad** —se mide el color de fondo—, que se recuerde al recargar, que estén los ocho con sus grupos y **que los ocho se lean**: el contraste se mide en el navegador, sobre lo que se pinta, para el texto, el texto apagado, el acento, el botón, el borde del campo y los tres colores de estado | **Hecho** |
-| Entrar y salir | Sesión, cabecera `Authorization`, `GET /api/auth/me`, salir y que sin sesión no se entra | **Hecho** |
-| La política de contraseñas y el enlace | Que una contraseña de **siete** caracteres se rechace con su clave, que **el enlace siga sirviendo** después de ese intento fallido, que **ocho** caracteres valgan, y que con esa contraseña se entre de verdad. Nació al bajar el mínimo de 12 a 8 y encontró que el enlace se gastaba antes de comprobar la contraseña | **Hecho** |
-| El enlace del correo | Alta, correo en el buzón, enlace en el fragmento, contraseña puesta y entrada con ella, y que **un enlace no vale dos veces** | **Hecho** |
-| Los adjuntos en los comentarios | Que un comentario lleve sus archivos **pegados** (con un evento de pegado de verdad), **elegidos** con el botón y arrastrados; que **un comentario pueda ser sólo un archivo** —con el cuerpo vacío en la base y **sin dejar un párrafo vacío** en la conversación—; que sin texto **ni** archivos no se envíe; y que **si una subida falla** —cortándola en el navegador— el comentario se quede publicado **una sola vez**, se diga qué archivo falta y el botón de reintentar lo suba al mismo comentario. Y el pegado también en el alta | **Hecho** |
-| El recorrido de un ticket | El usuario lo abre con su adjunto, comenta, lo cierra y lo reabre; Soporte pregunta y **escala**; Desarrollo **lo devuelve**; y el principal vuelve a la bandeja de Soporte | **Hecho** |
-| El aspecto del ticket | El estado con **su color y su borde** medidos, las tarjetas con el borde del tema, la ficha **a la derecha en PC y debajo en móvil**, y que en móvil **no se pinte la tabla** | **Hecho** |
-| Los permisos de los tickets | El usuario no ve el interno, Desarrollo no escribe en el principal y al Administrador no se le ofrece ningún botón | **Hecho** |
-| El editor de los correos | Llegar desde Configuración, cambiar el asunto y el cuerpo, **insertar un marcador pulsándolo**, ver la vista previa que renderiza el backend, guardarlo, **mandarse una prueba y leerla en el buzón**, y volver al texto de fábrica. Y que **un marcador inventado se avise antes de guardar** | **Hecho** |
-| El camino de Keycloak | Que el botón **esté sólo si la instalación tiene ese camino** y que lleve a la pantalla de Keycloak, que una persona entre por el reino **sin que nadie le dé de alta nada** y su cuenta aparezca con origen `keycloak`, que quien ya es de Keycloak vuelva a entrar, que una cuenta local con el correo de alguien del reino **se vincule** (y su contraseña local deje de servir), **que el fragmento con el token se borre de la dirección**, y que una vuelta que no vale se cuente en la pantalla de entrada | **Hecho** (necesita Keycloak levantado) |
-| Las tres acciones del directorio en `users` | Que la ficha de una cuenta de **AD** desactivada **sí ofrezca reactivarla** y que la reactivación pregunte al directorio de verdad, y que la de una cuenta de **Keycloak** no ofrezca el botón y **cuente lo que pasa** —que vuelve sola al entrar— en vez de llevar a un error | **Hecho** (necesita el directorio y Keycloak levantados) |
-| El camino de AD | Que una persona del directorio **entre sin que nadie le dé de alta nada** y que su cuenta aparezca con origen `ad` y sin contraseña local, que quien ya es del directorio vuelva a entrar, que la contraseña equivocada **la rechace el directorio** y que una cuenta local con el correo de alguien del directorio **se vincule** al entrar por su camino (y su contraseña local deje de servir) | **Hecho** (necesita el directorio de pruebas levantado) |
-
-**Y desde el 2026-09-25, las dos suites de los caminos de directorio ponen el método y lo devuelven.**
-Como la instalación entra por uno solo, probar el de AD o el de Keycloak exige elegirlo primero: cada
-suite lo pone al empezar y **lo deja en `local` al terminar, pase lo que pase**, con la cuenta de
-fábrica, que entra siempre. Si el servicio no responde, la suite **se salta** en vez de fallar, y lo
-pregunta **por el botón de «Probar la conexión»**, que es lo que pregunta una persona y no depende del
-método puesto.
-
-**El backend se prueba con `curl`, y los correos se leen del buzón.** Mientras una pantalla no
-existe, lo que se comprueba de extremo a extremo es la API: se entra con cuentas de verdad, se
-recorre el caso completo y se miran los avisos en Mailpit. Así se probó el módulo de `tickets` el
-2026-09-24: **78 comprobaciones** que van del alta con su reparto hasta el adjunto que el solicitante
-no puede alcanzar, pasando por las dos reglas de sincronización y el re-escalado. Cuando exista la
-pantalla, esos recorridos pasan a `tests/e2e/` y esto queda como lo que es: la prueba de la API.
-
-**Cuándo se ejecutan**: cuando el cambio toca la interfaz, antes de darlo por terminado. Si el cambio
-afecta a un flujo que todavía no tiene prueba, **se añade el caso en el mismo trabajo**.
-
-**Lo que encontró esta capa el 2026-09-23**, para que se vea para qué sirve: tres fallos que las
-pruebas de unidad no podían ver.
-
-1. Un `id` repetido en el componente de campo dejaba los campos **sin nombre accesible**: la etiqueta
-   apuntaba al elemento anfitrión y no al campo.
-2. Un 401 del enlace de contraseña **echaba de su sesión** a quien ya estaba dentro, en vez de decir
-   que el enlace había caducado.
-3. `hayToken` era un valor calculado que leía el almacenamiento **sin depender de nada**, así que se
-   quedaba con el primer «no» para siempre: después de entrar bien, la guarda devolvía a la pantalla
-   de entrada.
-4. **El CSS llegaba sin estilos**: la hoja se servía con el tema de Tailwind pero **sin ninguna
-   utilidad generada**, así que la pantalla se veía como texto suelto. Lo encontró el responsable al
-   abrir la aplicación, no una prueba: las de estructura daban todo por bueno. Ahora hay un caso que
-   mira el **aspecto** —que la hoja traiga utilidades, que el botón tenga color, que el campo tenga
-   borde y que no falle ninguna petición—, y es el que impide que esto vuelva sin que nadie se
-   entere.
-
-Los cuatro están corregidos y con su prueba. El segundo, el tercero y el cuarto sólo se ven **usando
-la aplicación de verdad**, que es justo lo que aporta esta capa.
-
-**Y el 2026-09-24, con las pantallas de usuarios, otros dos**:
-
-5. **La tarjeta titulaba con `h1`**, así que la pantalla de usuarios tenía tres `h1` y el perfil otros
-   tantos: una página así no se navega con un lector de pantalla. Lo dijo la prueba al encontrar dos
-   encabezados con el mismo nombre donde esperaba uno. La tarjeta ahora **elige su nivel**, y en las
-   pantallas de producto es un `h2`.
-6. **El cajón del menú medía el alto del documento y no el de la zona visible** (`inset-y-0`): en un
-   móvil con barra del navegador lo visible son 839 px de 890, y **el botón de salir quedaba por debajo
-   de lo que se ve**, imposible de pulsar. En PC, con una lista larga, los controles del menú quedaban
-   al final de la página. Ahora mide la zona visible (`h-dvh`), se desplaza por dentro si su contenido
-   no cabe y en PC va pegado arriba, que es lo que el documento de interfaz llama «fijo». La prueba
-   decía que «otro elemento interceptaba el clic»: ese mensaje no cuenta el problema de verdad.
-
-Los seis están corregidos y con su prueba.
-
-**Antes de la primera prueba, la instalación vuelve a entrar por cuentas de la aplicación**
-(`tests/e2e/preparar.ts`, la preparación previa de `playwright.config.ts`). Hace falta porque **la
-instalación entra por un método a la vez**: si una pasada se corta con el método en `ad` o en
-`keycloak`, la siguiente empieza con decenas de casos fallando por «credenciales incorrectas», que no
-dicen nada de lo que pasó de verdad —pasó el 2026-09-27—. Lo hace la **cuenta de fábrica**, que entra
-siempre sea cual sea el método.
+Verificado en Linux el 2026-10-03: suite con directorios, 193 aprobados, 20 omitidos y un
+acceso cancelado durante la recarga del frontend (salida 1, informe conservado). En una base
+nueva, sin directorios y con los archivos estables, ese caso pasó en PC y móvil: 2 aprobados
+y 24 omitidos por servicios ausentes, salida 0. La detección de LDAP ausente se corrigió al
+encontrar que su función de comprobación no se llamaba. Go y vet pasan; frontend: 216 pruebas.
+No se han ejecutado estas comprobaciones en Windows o macOS.
 
 ## 10. Lo que se decidió al repasar este documento
 

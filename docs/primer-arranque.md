@@ -1,7 +1,12 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El paso de Keycloak
+> admite `internalIssuer` opcional. La preparación de Playwright sobre una base nueva recorre los
+> cuatro pasos en PC y móvil antes de sellar, comprueba la conexión de Mailpit y termina en móvil.
+> Esta verificación automatizada sustituye la limitación histórica del punto 3 de las desviaciones.
 >
 > **Enmendado el 2026-09-30**: **el asistente prueba lo que pide**, como prometía la §3 y la §6. Se
 > añaden dos endpoints públicos más —`POST /api/setup/entry/test` y `POST /api/setup/mail/test`— con
@@ -33,7 +38,7 @@
 > 2. **El asistente no tiene botón propio de «probar el motor de IA»**: el resumen **dice** si responde
 >    —el backend lo pregunta al arrancar el paso y lo devuelve en `aiAvailable`—, que es lo que hace
 >    falta saber antes de terminar.
-> 3. **El camino completo de instalación no está en la suite de interfaz.** El contenedor de las pruebas
+> 3. **Limitación histórica, corregida el 2026-10-03 en `tests.yml`:** el camino completo de instalación no estaba en la suite de interfaz. El contenedor de las pruebas
 >    no habla con la base y no se puede quitar el sello desde él, así que el recorrido de los cuatro
 >    pasos se verifica **por la API, a mano** (los cuatro pasos, los 422 de cada paso, las dos pruebas
 >    de conexión y el 409 al volver a configurar), y lo que sí está en la suite es **el candado**: en

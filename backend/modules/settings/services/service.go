@@ -178,10 +178,11 @@ type DirectoryInput struct {
 // KeycloakInput es la configuración de Keycloak tal y como llega de la pantalla. El secreto vacío
 // quiere decir «no lo cambies», igual que la contraseña del directorio.
 type KeycloakInput struct {
-	Issuer       string
-	ClientID     string
-	ClientSecret string
-	RedirectURI  string
+	InternalIssuer string
+	Issuer         string
+	ClientID       string
+	ClientSecret   string
+	RedirectURI    string
 }
 
 // DirectoryView es la configuración del directorio **sin su contraseña**, que es lo único que sale
@@ -1174,10 +1175,11 @@ func (s *Service) directoryDeInput(input DirectoryInput, usarLaGuardada bool) (c
 // misma regla para el secreto que el directorio.
 func (s *Service) keycloakDeInput(input KeycloakInput, usarLaGuardada bool) (config.OIDC, error) {
 	keycloak := config.OIDC{
-		Issuer:       strings.TrimRight(strings.TrimSpace(input.Issuer), "/"),
-		ClientID:     strings.TrimSpace(input.ClientID),
-		ClientSecret: input.ClientSecret,
-		RedirectURI:  strings.TrimSpace(input.RedirectURI),
+		Issuer:         strings.TrimRight(strings.TrimSpace(input.Issuer), "/"),
+		InternalIssuer: strings.TrimRight(strings.TrimSpace(input.InternalIssuer), "/"),
+		ClientID:       strings.TrimSpace(input.ClientID),
+		ClientSecret:   input.ClientSecret,
+		RedirectURI:    strings.TrimSpace(input.RedirectURI),
 	}
 
 	if usarLaGuardada && keycloak.ClientSecret == "" {
@@ -1188,6 +1190,14 @@ func (s *Service) keycloakDeInput(input KeycloakInput, usarLaGuardada bool) (con
 		keycloak.ClientSecret = guardada.ClientSecret
 	}
 
+	for _, direccion := range []string{keycloak.Issuer, keycloak.InternalIssuer} {
+		if direccion != "" && !config.ValidIssuerURL(direccion) {
+			return config.OIDC{}, ErrKeycloakIncomplete
+		}
+	}
+	if keycloak.InternalIssuer != "" && keycloak.Issuer == "" {
+		return config.OIDC{}, ErrKeycloakIncomplete
+	}
 	// Un Keycloak configurado a medias tampoco vale: sin vuelta no se puede volver.
 	if keycloak.Issuer != "" && (keycloak.ClientID == "" || keycloak.RedirectURI == "") {
 		return config.OIDC{}, ErrKeycloakIncomplete
@@ -1220,9 +1230,10 @@ func (s *Service) cambiosDeDirectorio(directorio config.Directory) map[string]an
 // cambiosDeKeycloak arma lo que se escribe en la base: el secreto sólo si viene.
 func (s *Service) cambiosDeKeycloak(keycloak config.OIDC) map[string]any {
 	cambios := map[string]any{
-		"issuer":       keycloak.Issuer,
-		"client_id":    keycloak.ClientID,
-		"redirect_uri": keycloak.RedirectURI,
+		"issuer":          keycloak.Issuer,
+		"internal_issuer": keycloak.InternalIssuer,
+		"client_id":       keycloak.ClientID,
+		"redirect_uri":    keycloak.RedirectURI,
 	}
 	if keycloak.ClientSecret != "" {
 		cambios["client_secret"] = keycloak.ClientSecret
@@ -1251,10 +1262,11 @@ func directorioDe(fila repositories.DirectorySettings) config.Directory {
 // keycloakDe traduce la fila a la configuración que usa el camino de Keycloak.
 func keycloakDe(fila repositories.KeycloakSettings) config.OIDC {
 	return config.OIDC{
-		Issuer:       fila.Issuer,
-		ClientID:     fila.ClientID,
-		ClientSecret: fila.ClientSecret,
-		RedirectURI:  fila.RedirectURI,
+		Issuer:         fila.Issuer,
+		InternalIssuer: fila.InternalIssuer,
+		ClientID:       fila.ClientID,
+		ClientSecret:   fila.ClientSecret,
+		RedirectURI:    fila.RedirectURI,
 	}
 }
 
@@ -1281,9 +1293,10 @@ func vistaDeDirectorio(fila repositories.DirectorySettings) DirectoryView {
 func vistaDeKeycloak(fila repositories.KeycloakSettings) KeycloakView {
 	return KeycloakView{
 		KeycloakInput: KeycloakInput{
-			Issuer:      fila.Issuer,
-			ClientID:    fila.ClientID,
-			RedirectURI: fila.RedirectURI,
+			Issuer:         fila.Issuer,
+			InternalIssuer: fila.InternalIssuer,
+			ClientID:       fila.ClientID,
+			RedirectURI:    fila.RedirectURI,
 		},
 		SecretSet: fila.ClientSecret != "",
 	}

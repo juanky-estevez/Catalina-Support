@@ -6,6 +6,7 @@ dist/
 # Playwright: informes, capturas y vídeos de las pruebas de interfaz
 tests/e2e/informe/
 tests/e2e/test-results/
+tests/e2e/resultados/
 
 # Artefactos de Go
 backend/server

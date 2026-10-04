@@ -103,7 +103,7 @@ export const ES = {
     metodoKeycloak: 'Keycloak',
     metodoKeycloakAyuda:
       'Se entra desde la pantalla de Keycloak, con su cuenta. Aquí no hay formulario de correo y contraseña.',
-    metodoSinConfigurar: 'Falta configurarlo aquí abajo para poder elegirlo.',
+    metodoSinConfigurar: 'Completa los datos aquí abajo antes de guardar el método.',
     guardarEntrada: 'Guardar cómo se entra',
     entradaGuardada: 'Guardado. Vale desde la próxima entrada, sin reiniciar nada.',
     directorio: 'El directorio de la organización',
@@ -138,6 +138,8 @@ export const ES = {
     keycloak: 'Keycloak',
     keycloakAyuda:
       'Lo que hace falta para entrar por Keycloak. El secreto del cliente se guarda y no se vuelve a enseñar.',
+    kcInterno: 'Dirección interna del reino (opcional)',
+    kcInternoAyuda: 'La dirección que alcanza el servidor. Déjala vacía para usar el emisor público. En Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Emisor del reino',
     kcEmisorAyuda:
       'La dirección del reino, la que ve el navegador. Ejemplo: https://sso.empresa.com/realms/empresa.',

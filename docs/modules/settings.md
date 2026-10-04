@@ -1,7 +1,14 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Se añade
+> `keycloak_settings.internal_issuer`, expuesto como `internalIssuer`, vacío por defecto.
+> Configuración y primer arranque muestran la dirección interna opcional junto al emisor público,
+> con textos ES/EN; guardar y probar usan ambos campos. Enmienda §5.1.b de `prueba-local.md`
+> aprobada explícitamente: elegir AD/Keycloak permite completar campos vacíos; el método vigente
+> cambia sólo al guardar datos válidos, y el backend conserva 422 para métodos incompletos.
 >
 > **Enmendado el 2026-09-30**: el módulo declara **`ProberDeCorreo`**, su cuarta interfaz de prueba
 > —con las de directorio, Keycloak e IA—, para **probar el correo saliente sin mandar ningún correo**.
@@ -151,7 +158,7 @@ guarda, cuál se enseña en cada tema y cómo se vuelve al de fábrica.
   el único sitio donde un administrador los puede cambiar sin entrar por SSH— y **se enseñan una sola
   vez: al escribirlos**. Lo que devuelve la API es si hay uno puesto, nunca el valor: eso lo fija la
   sección 5.8 y lo comprueba una prueba.
-- **El método de entrada se elige, y los otros dos quedan apagados.** No se elige uno que no esté
+- **El método de entrada se elige, y los otros dos quedan apagados.** Se permite seleccionarlo para escribir sus campos, pero no guardar uno que no esté
   configurado: eso dejaría la instalación sin puerta para todo el mundo menos la cuenta de fábrica, y
   el backend lo rechaza con su clave (sección 7).
 
@@ -231,6 +238,7 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | Columna | Tipo | Nulo | Por defecto | Qué es |
 | --- | --- | --- | --- | --- |
 | `id` | `integer` | no | `1` | Una sola fila |
+| `internal_issuer` | `text` | no | `''` | Dirección interna opcional del mismo reino; vacía usa el emisor público |
 | `issuer` | `text` | no | `''` | La dirección del reino, **la que ve el navegador**; vacío es «no hay este camino» |
 | `client_id` | `text` | no | `''` | El cliente confidencial del reino |
 | `client_secret` | `text` | no | `''` | Su secreto: **no sale nunca por la API** |
@@ -453,7 +461,7 @@ funcionen, es que la instalación no los ofrece.
   pueden entrar.** Es la consecuencia de «uno a la vez» y está contada donde toca
   (`docs/usuarios-y-permisos.md`, sección 5): una instalación que pasa a AD se queda con el directorio
   como única puerta, y volver atrás es volver a elegir `local`.
-- **No se puede elegir un método que no esté configurado**: el backend lo rechaza
+- **Se puede elegir un método vacío para rellenar sus campos, pero no activarlo sin configurarlo**: el backend rechaza el guardado
   (`settings.method.notConfigured`, 422). Es lo que impide dejar la instalación con la cuenta de
   fábrica como única puerta por un descuido.
 - **Los dos caminos se prueban antes de guardarlos**, con su botón: la prueba deja al módulo `auth`

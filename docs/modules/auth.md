@@ -1,7 +1,13 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-01
+> **Última actualización:** 2026-10-03
+>
+> **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Keycloak distingue emisor
+> público e `internalIssuer` opcional. Descubrimiento, token y UserInfo usan la dirección interna;
+> autorización sigue siendo pública. Se exige issuer anunciado igual al configurado y endpoints del
+> mismo origen y reino, y se rechazan redirecciones HTTP. La configuración se lee en cada intento.
+> El compose local anuncia `http://127.0.0.1:11006/sso` por defecto; nginx no es necesario.
 >
 > **Enmendado el 2026-10-01**: **los dos servicios de pruebas dejan `dev.yml`**. OpenLDAP y Keycloak
 > viven ahora cada uno en **su propio archivo** —`active-directory.yml` y `keycloak.yml`—, con **su
@@ -666,14 +672,17 @@ con el que entra la aplicación: confidencial —con secreto, porque el canje lo
 el flujo de código encendido, **el de contraseña directa apagado** y la única dirección de vuelta que
 se admite.
 
-**Cómo llega el navegador a Keycloak, que es lo que decide el emisor.** Keycloak no se publica en su
-propio dominio en desarrollo: **nginx lo sirve en un camino del mismo dominio que la aplicación**
-(`/sso/`), que es un `location` más del vhost de desarrollo (en producción, Keycloak será su propio
-servicio con su certificado, y el emisor, su dirección de siempre). Así **el emisor es uno solo** —el
-que ve el navegador— y el backend usa el mismo: no hay dos direcciones que puedan discrepar, ni un
-`iss` que no cuadre, ni una vuelta que se firme contra un sitio y se compruebe contra otro. El
-contenedor escucha en `127.0.0.1:11006` y no está expuesto a la red, y su reino vive en el
-repositorio: **recrearlo lo deja como está escrito**, igual que el directorio.
+**Cómo llega el navegador a Keycloak.** En local se publica sólo en `127.0.0.1:11006`,
+con emisor `http://127.0.0.1:11006/sso/realms/catalina-support`. El backend conecta mediante
+`internalIssuer = http://keycloak:8080/sso/realms/catalina-support`; el emisor anunciado conserva
+la identidad pública. La autorización es pública y sólo el tráfico del backend utiliza la dirección
+interna. El cliente permite vueltas exactas a `http://127.0.0.1:11001/api/auth/keycloak/callback`
+y `http://frontend.localhost:11001/api/auth/keycloak/callback` para la suite aislada, sin comodines.
+No se necesita nginx. `KEYCLOAK_PUBLIC_URL` permite configurar el origen anunciado.
+
+El perfil `directory` de `tests.yml` levanta sus propios LDAP y Keycloak, sin publicar puertos
+ni usar los servicios del usuario. Allí navegador y backend alcanzan `http://keycloak:8080/sso`,
+por lo que la dirección interna puede permanecer vacía. Los tres usuarios del reino se conservan.
 
 **Una consulta más, que no es entrar pero vive aquí**: «¿sigues conociendo a esta persona?». La
 declara `users`, que es quien la usa —para no devolverle el acceso a una cuenta de AD que ya no está
@@ -721,7 +730,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 32 | **Cuándo se dispara el vínculo** | Cuando la contraseña local de una cuenta **no vale** y el directorio conoce ese correo: se vincula en esa misma entrada y la contraseña local deja de servir. Es lo que hace que la fila «existe una cuenta local con ese correo» se cumpla sin que nadie avise a Soporte |
 | 33 | **La pantalla de entrada cambia poco por AD** | **Enmendada el 2026-09-25**: el formulario **es el mismo** y no hay botón propio, pero ahora sí lleva un aviso —«esta instalación entra con las cuentas de la organización»— y **se quita el enlace de «he olvidado mi contraseña»**, porque con el método en AD esa contraseña no es de aquí y el enlace mandaría un correo que no sirve para entrar. **Con Keycloak la pantalla sí cambia del todo**: no hay formulario |
 | 34 | **`methods` no sondea el directorio** | **Enmendada el 2026-09-25**: dice el método que está puesto, no la salud de nadie. Sondear el directorio en cada carga de la pantalla costaría una conexión por visita y un directorio lento retrasaría la entrada; el aviso honesto llega al entrar, que es cuando importa, y **la prueba de la conexión está en Configuración**, que es donde se configura |
-| 36 | **El emisor es el que ve el navegador** | En desarrollo, Keycloak se publica en un camino del mismo dominio que la aplicación (`/sso/`) y el backend usa ese mismo emisor. Se gana que haya **una sola dirección** y que el `iss` cuadre siempre; se pierde una ida y vuelta de red del backend a su propio dominio en cada canje, que es irrelevante al lado de tener dos direcciones que puedan discrepar |
+| 36 | **El emisor es el que ve el navegador** | En desarrollo, Decisión histórica, sustituida por la enmienda local del 2026-10-03: Keycloak se publicaba en un camino del mismo dominio que la aplicación (`/sso/`) y el backend usa ese mismo emisor. Se gana que haya **una sola dirección** y que el `iss` cuadre siempre; se pierde una ida y vuelta de red del backend a su propio dominio en cada canje, que es irrelevante al lado de tener dos direcciones que puedan discrepar |
 | 37 | **El `state` no se guarda en ningún sitio** | Es un valor aleatorio con su fecha, firmado con `TOKEN_SECRET`: lo que impide que una vuelta vieja sirva es su caducidad de cinco minutos, y la fecha va dentro de lo firmado. Sin cookies y sin tabla de estados pendientes, que es la misma decisión que con la sesión |
 | 38 | **La vuelta deja a la persona en la pantalla de entrada, también cuando falla** | Con el token (`#token=…`) o con la clave del fallo (`#error=…`). Es una navegación de un navegador: hasta lo que sale mal tiene que acabar en un sitio donde se pueda contar qué ha pasado. La pantalla lee el fragmento y **lo borra con `replaceState`** |
 | 39 | **Cuatro claves de error nuevas** | `auth.oidc.notConfigured` (404: esta instalación no tiene ese camino), `auth.oidc.rejected` (la vuelta no vale: código caducado, usado, de otra instalación, o alguien que canceló), `auth.oidc.unavailable` (503: Keycloak no responde) y `auth.oidc.noEmail` (la cuenta del directorio no trae correo, y sin correo no hay cuenta aquí). `auth.oidc.state`, que ya estaba, es la quinta |
@@ -729,7 +738,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 44 | **Con el método en AD no se ofrece recuperar la contraseña** | **Confirmado por el responsable el 2026-09-25**: con el método en AD el enlace desaparece, porque esa contraseña no es de aquí y un correo con un enlace para establecerla sería mentira —entrar con ella no serviría—. Con el método local se queda como estaba, y con el de Keycloak tampoco se ofrece |
 | 45 | **La puerta de la cuenta de fábrica es discreta** | **Confirmado por el responsable el 2026-09-25**: un enlace de texto al pie de la pantalla de entrada, que saca el formulario cuando el método no lo tiene. No se le ofrece a quien entra todos los días, pero está donde hay que buscarla, y es lo que impide que elegir mal el método cierre la instalación |
 | 41 | **Un método de entrada a la vez** | **Decisión del responsable, 2026-09-25**: los tres caminos **no conviven**; el que está puesto es el único que se atiende, y se puede cambiar cuando se quiera. **La cuenta de fábrica entra siempre**, por su cuenta y con su puerta discreta en la pantalla de entrada cuando el método no tiene formulario. Consecuencia dicha y aceptada: con el método en `ad` o en `keycloak` **las cuentas locales no entran**, y eso enmienda la sección 5 de `docs/usuarios-y-permisos.md`, que describía los tres caminos conviviendo |
-| 42 | **El directorio y el reino se leen en cada intento** | **Consecuencia de la decisión anterior, y su precio**: cambiar el método o el directorio vale en el intento siguiente, sin reiniciar nada, a cambio de tres lecturas por clave primaria en cada entrada. Un cliente de Keycloak **sí se recuerda**, porque lleva dentro el documento de descubrimiento del reino: se vuelve a construir sólo si su configuración cambia |
+| 42 | **El directorio y el reino se leen en cada intento** | **Consecuencia de la decisión anterior, y su precio**: cambiar el método o el directorio vale en el intento siguiente, sin reiniciar nada, a cambio de tres lecturas por clave primaria en cada entrada. El cliente de Keycloak se construye por intento con la configuración vigente; el documento se recuerda únicamente durante ese intento |
 | 43 | **Una cuenta es de un camino, y no de dos** | Una cuenta de Keycloak **no entra por el directorio** aunque el método puesto sea el de AD, y una cuenta de AD no entra con una contraseña local con el método en `local`. Lo que cambia el método es **por dónde se entra**, no la naturaleza de cada cuenta |
 | 35 | **Una cuenta desactivada aquí vuelve por el directorio** | Vale también para el vínculo: si la cuenta local estaba desactivada, al vincularse se reactiva. Es la regla 6, y es lo que hace cierto el aviso `users.directoryMayReturn`. Con esto **queda cerrada la duda que quedaba abierta** en `docs/modules/users.md` sobre si ese aviso se podía ejercitar: se ejercita, y hay prueba de interfaz |
 

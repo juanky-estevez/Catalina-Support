@@ -76,6 +76,8 @@ else
     }
 fi
 
+echo "AVISO: se recrean todos los tickets, categorías, cuentas @demo.com y adjuntos de desarrollo (salvo la marca)."
+echo "La configuración se conserva si la instalación está sellada; si no, se completa y sella una demo local."
 echo "1/3  Aplicando el esquema…"
 psql -q -o /dev/null <"$PROYECTO/backend/migrations/v1.0.0.sql"
 

@@ -401,3 +401,78 @@ func TestMethodsConKeycloak(t *testing.T) {
 		t.Fatalf("con el método en Keycloak sólo debería estar ese camino y llegó %+v", caminos)
 	}
 }
+
+// Una dirección interna cambia la conexión, nunca el emisor que ve el navegador.
+func TestOIDCConexionInternaConIdentidadPublica(t *testing.T) {
+	public := "http://127.0.0.1:11006/sso/realms/catalina-support"
+	canjes := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/sso/realms/catalina-support/.well-known/openid-configuration":
+			json.NewEncoder(w).Encode(map[string]string{"issuer": public, "authorization_endpoint": public + "/auth", "token_endpoint": public + "/token", "userinfo_endpoint": public + "/userinfo"})
+		case "/sso/realms/catalina-support/token":
+			canjes++
+			r.ParseForm()
+			if r.Form.Get("client_secret") != "secreto" {
+				t.Error("el canje no recibió el secreto")
+			}
+			json.NewEncoder(w).Encode(map[string]string{"access_token": "token"})
+		case "/sso/realms/catalina-support/userinfo":
+			if r.Header.Get("Authorization") != "Bearer token" {
+				t.Error("UserInfo no recibió el token")
+			}
+			json.NewEncoder(w).Encode(map[string]string{"sub": "1", "email": "prueba@demo.com"})
+		default:
+			t.Errorf("ruta inesperada %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	o := NewOIDC(config.OIDC{Issuer: public, InternalIssuer: server.URL + "/sso/realms/catalina-support", ClientID: "cliente", ClientSecret: "secreto", RedirectURI: "http://127.0.0.1:11001/api/auth/keycloak/callback"})
+	address, err := o.AuthURL("state")
+	if err != nil || !strings.HasPrefix(address, public+"/auth?") {
+		t.Fatalf("autorización pública: %s, %v", address, err)
+	}
+	person, err := o.Exchange("code")
+	if err != nil || person.Email != "prueba@demo.com" || canjes != 1 {
+		t.Fatalf("canje interno: %v, %v", person, err)
+	}
+}
+
+func TestOIDCRechazaEmisorYEndpointsAjenos(t *testing.T) {
+	public := "https://sso.example/realms/catalina"
+	for _, caso := range []struct{ name, issuer, endpoint string }{
+		{"sin emisor", "", public + "/auth"},
+		{"otro emisor", "https://otro.example", public + "/auth"},
+		{"otro origen", public, "https://otro.example/auth"},
+		{"reino parecido", public, public + "-otro/auth"},
+		{"ruta relativa", public, "/auth"},
+		{"salir del reino", public, public + "/../otro/auth"},
+	} {
+		t.Run(caso.name, func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				json.NewEncoder(w).Encode(map[string]string{"issuer": caso.issuer, "authorization_endpoint": caso.endpoint, "token_endpoint": public + "/token", "userinfo_endpoint": public + "/userinfo"})
+			}))
+			defer s.Close()
+			o := NewOIDC(config.OIDC{Issuer: public, InternalIssuer: s.URL, ClientID: "cliente", RedirectURI: "https://app.example/callback"})
+			if !errors.Is(o.Probe(), ErrOIDCUnavailable) {
+				t.Fatal("se aceptó un descubrimiento ajeno")
+			}
+		})
+	}
+}
+
+func TestOIDCNoSigueRedireccionConCredenciales(t *testing.T) {
+	recibidas := 0
+	destino := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { recibidas++; w.WriteHeader(200) }))
+	defer destino.Close()
+	reino := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, destino.URL, 307) }))
+	defer reino.Close()
+	o := NewOIDC(config.OIDC{Issuer: reino.URL})
+	if _, err := o.pedirToken(reino.URL, "codigo"); err == nil {
+		t.Fatal("la redirección no produjo un fallo")
+	}
+	if recibidas != 0 {
+		t.Fatal("se enviaron credenciales al destino de la redirección")
+	}
+}

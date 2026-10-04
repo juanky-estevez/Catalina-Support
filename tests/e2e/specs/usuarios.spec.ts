@@ -305,13 +305,7 @@ test.describe('Los usuarios, por papel', () => {
     //
     // La ficha de otra cuenta la ve **el Administrador** (el reparto de la sección 8 de
     // `docs/usuarios-y-permisos.md`), así que aquí se entra con la cuenta de fábrica.
-    const deFabrica = await tokenDeFabrica(request);
-
-    const listado = (await request
-      .get('/api/users?q=user1@demo.com&active=true', { headers: { Authorization: `Bearer ${deFabrica}` } })
-      .then((r) => r.json())) as { users: { id: number; hasPassword: boolean }[] };
-    const cuenta = listado.users[0]!;
-    expect(cuenta.hasPassword, 'la cuenta de ejemplo tiene contraseña').toBe(true);
+    const cuenta = await crearCuentaLista(request, { name: 'Usuario', lastName: 'Uno' });
 
     await entrar(page, FABRICA.email, FABRICA.password);
     await page.goto(`/users/${cuenta.id}`);

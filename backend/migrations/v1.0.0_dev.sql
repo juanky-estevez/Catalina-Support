@@ -821,6 +821,10 @@ ON CONFLICT (ticket_id, tag_id) DO NOTHING;
 -- La contraseña de la cuenta de servicio es la del LDIF de pruebas (`config/ldap/`): es un directorio
 -- de mentira en un contenedor de desarrollo, no un secreto.
 
+-- Los ajustes de una instalación sellada pertenecen al usuario: no se reescriben.
+DO $$
+BEGIN
+IF EXISTS (SELECT 1 FROM installation_settings WHERE id = 1 AND installed_at IS NULL) THEN
 UPDATE directory_settings SET
     host = 'ldap',
     port = '389',
@@ -837,15 +841,17 @@ UPDATE directory_settings SET
 WHERE id = 1;
 
 UPDATE keycloak_settings SET
-    issuer = 'https://dev.catalina-support.example.com/sso/realms/catalina-support',
+    issuer = 'http://127.0.0.1:11006/sso/realms/catalina-support',
+    internal_issuer = 'http://keycloak:8080/sso/realms/catalina-support',
     client_id = 'catalina-support',
     client_secret = 'el-secreto-de-desarrollo',
-    redirect_uri = 'https://dev.catalina-support.example.com/api/auth/keycloak/callback',
+    redirect_uri = 'http://127.0.0.1:11001/api/auth/keycloak/callback',
     updated_at = now()
 WHERE id = 1;
 
 UPDATE installation_settings
    SET installation_name = 'Catalina Support',
+       entry_method = 'local',
        -- **El correo saliente de desarrollo vive aquí**, no en el entorno (decisión del responsable,
        -- 2026-09-30): es el buzón de pruebas, y sin él no saldría ningún correo en el entorno.
        ai_url          = 'http://catalina_support_ai:8080',
@@ -858,11 +864,13 @@ UPDATE installation_settings
        smtp_from_name  = 'Catalina Support',
        smtp_from_email = 'no-responder@catalina-support.local',
        time_zone      = 'America/Guayaquil',
-       public_app_url = 'https://dev.catalina-support.example.com',
-       -- **Desarrollo queda instalado**: el asistente de primer arranque se prueba a mano, quitándole
-       -- el sello, y no puede salir en cada arranque del entorno ni en las pruebas.
+       public_app_url = 'http://127.0.0.1:11001',
+       -- La demo incompleta queda instalada; las pruebas recorren su propia instalación vacía.
        installed_at   = COALESCE(installed_at, now()),
        updated_at     = now()
  WHERE id = 1;
+
+END IF;
+END $$;
 
 COMMIT;

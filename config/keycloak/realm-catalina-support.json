@@ -22,7 +22,11 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "la-de-keycloak-larga", "temporary": false }
+        {
+          "type": "password",
+          "value": "la-de-keycloak-larga",
+          "temporary": false
+        }
       ]
     },
     {
@@ -33,7 +37,11 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "la-de-pablo-larga", "temporary": false }
+        {
+          "type": "password",
+          "value": "la-de-pablo-larga",
+          "temporary": false
+        }
       ]
     },
     {
@@ -44,7 +52,11 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "la-de-nuria-larga", "temporary": false }
+        {
+          "type": "password",
+          "value": "la-de-nuria-larga",
+          "temporary": false
+        }
       ]
     }
   ],
@@ -63,13 +75,17 @@
       "serviceAccountsEnabled": false,
       "secret": "el-secreto-de-desarrollo",
       "redirectUris": [
-        "https://dev.catalina-support.example.com/api/auth/keycloak/callback"
+        "http://127.0.0.1:11001/api/auth/keycloak/callback",
+        "http://frontend:11001/api/auth/keycloak/callback",
+        "http://frontend.localhost:11001/api/auth/keycloak/callback"
       ],
       "webOrigins": [
-        "https://dev.catalina-support.example.com"
+        "http://127.0.0.1:11001",
+        "http://frontend:11001",
+        "http://frontend.localhost:11001"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "https://dev.catalina-support.example.com/login"
+        "post.logout.redirect.uris": "http://127.0.0.1:11001/login##http://frontend:11001/login##http://frontend.localhost:11001/login"
       }
     }
   ]

@@ -328,3 +328,19 @@ func TestProbarCorreoSellada(t *testing.T) {
 		t.Fatal("no se puede probar nada con la instalación sellada")
 	}
 }
+
+func TestDireccionInternaDelReino(t *testing.T) {
+	s := NewService(&repoDePrueba{}, t.TempDir())
+	base := KeycloakInput{Issuer: "https://public.example/realms/catalina", InternalIssuer: "http://keycloak:8080/sso/realms/catalina", ClientID: "cliente", RedirectURI: "https://app.example/callback"}
+	cfg, err := s.keycloakDeInput(base, false)
+	if err != nil || cfg.InternalIssuer != base.InternalIssuer {
+		t.Fatalf("configuración interna: %v, %v", cfg, err)
+	}
+	for _, value := range []string{"ftp://keycloak/realm", "http://user:password@keycloak/realm", "http://keycloak/realm?x=1", "http://keycloak/realm#fragment", "http://keycloak/a/../realm"} {
+		input := base
+		input.InternalIssuer = value
+		if _, err := s.keycloakDeInput(input, false); !errors.Is(err, ErrKeycloakIncomplete) {
+			t.Fatalf("se aceptó %s: %v", value, err)
+		}
+	}
+}

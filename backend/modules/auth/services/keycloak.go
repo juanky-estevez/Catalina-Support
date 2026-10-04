@@ -63,7 +63,7 @@ type OIDC struct {
 func NewOIDC(cfg config.OIDC) *OIDC {
 	return &OIDC{
 		cfg:     cfg,
-		cliente: &http.Client{Timeout: tiempoDeEspera},
+		cliente: &http.Client{Timeout: tiempoDeEspera, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }},
 	}
 }
 
@@ -93,9 +93,9 @@ func (o *OIDC) Probe() error {
 }
 
 // descubrimiento es lo que se lee del documento de descubrimiento del reino, reducido a lo que se
-// usa. Se leen tres direcciones y nada más: ni el emisor ni las capacidades, que aquí no deciden
-// nada.
+// usa. El emisor público identifica el reino; la dirección interna sólo decide cómo conectar.
 type descubrimiento struct {
+	Issuer                string `json:"issuer"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 	TokenEndpoint         string `json:"token_endpoint"`
 	UserInfoEndpoint      string `json:"userinfo_endpoint"`
@@ -164,7 +164,7 @@ func (o *OIDC) pedirToken(endpoint, code string) (string, error) {
 		"client_secret": {o.cfg.ClientSecret},
 	}
 
-	peticion, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(cuerpo.Encode()))
+	peticion, err := http.NewRequest(http.MethodPost, o.interno(endpoint), strings.NewReader(cuerpo.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrOIDCUnavailable, err)
 	}
@@ -211,7 +211,7 @@ func (o *OIDC) leerPersona(endpoint, token string) (auth.DirectoryAccount, error
 		return auth.DirectoryAccount{}, fmt.Errorf("%w: el reino no dice dónde preguntar quién es", ErrOIDCUnavailable)
 	}
 
-	peticion, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	peticion, err := http.NewRequest(http.MethodGet, o.interno(endpoint), nil)
 	if err != nil {
 		return auth.DirectoryAccount{}, fmt.Errorf("%w: %v", ErrOIDCUnavailable, err)
 	}
@@ -290,7 +290,14 @@ func (o *OIDC) documento() (*descubrimiento, error) {
 	}
 	o.mu.Unlock()
 
-	direccion := strings.TrimRight(o.cfg.Issuer, "/") + "/.well-known/openid-configuration"
+	base := o.cfg.Issuer
+	if o.cfg.InternalIssuer != "" {
+		base = o.cfg.InternalIssuer
+	}
+	if !config.ValidIssuerURL(o.cfg.Issuer) || !config.ValidIssuerURL(base) {
+		return nil, fmt.Errorf("%w: dirección del reino inválida", ErrOIDCUnavailable)
+	}
+	direccion := strings.TrimRight(base, "/") + "/.well-known/openid-configuration"
 
 	peticion, err := http.NewRequest(http.MethodGet, direccion, nil)
 	if err != nil {
@@ -313,6 +320,14 @@ func (o *OIDC) documento() (*descubrimiento, error) {
 		return nil, fmt.Errorf("%w: no se entiende el descubrimiento del reino", ErrOIDCUnavailable)
 	}
 
+	if documento.Issuer != o.cfg.Issuer {
+		return nil, fmt.Errorf("%w: el emisor anunciado no coincide", ErrOIDCUnavailable)
+	}
+	for _, endpoint := range []string{documento.AuthorizationEndpoint, documento.TokenEndpoint, documento.UserInfoEndpoint} {
+		if !o.endpointDelReino(endpoint) {
+			return nil, fmt.Errorf("%w: endpoint fuera del reino", ErrOIDCUnavailable)
+		}
+	}
 	o.mu.Lock()
 	o.descubrimiento = &documento
 	o.mu.Unlock()
@@ -335,4 +350,34 @@ func claveDeError(datos []byte) string {
 	}
 
 	return fallo.Error + ": " + fallo.Description
+}
+
+// endpointDelReino compara origen y límites de ruta; no acepta prefijos parecidos.
+func (o *OIDC) endpointDelReino(endpoint string) bool {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.User != nil || u.Fragment != "" || u.RawPath != "" {
+		return false
+	}
+	base, err := url.Parse(o.cfg.Issuer)
+	if err != nil || u.Scheme != base.Scheme || u.Host != base.Host {
+		return false
+	}
+	prefix := strings.TrimRight(base.Path, "/")
+	if u.Path != prefix && !strings.HasPrefix(u.Path, prefix+"/") {
+		return false
+	}
+	return config.ValidIssuerURL(u.Scheme + "://" + u.Host + u.Path)
+}
+
+// interno sólo se usa después de validar el documento. Conserva ruta y consulta del endpoint.
+func (o *OIDC) interno(endpoint string) string {
+	if o.cfg.InternalIssuer == "" {
+		return endpoint
+	}
+	public, _ := url.Parse(o.cfg.Issuer)
+	target, _ := url.Parse(o.cfg.InternalIssuer)
+	u, _ := url.Parse(endpoint)
+	target.Path = strings.TrimRight(target.Path, "/") + strings.TrimPrefix(u.Path, strings.TrimRight(public.Path, "/"))
+	target.RawQuery = u.RawQuery
+	return target.String()
 }

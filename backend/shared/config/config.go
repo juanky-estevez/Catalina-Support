@@ -12,7 +12,9 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -44,13 +46,15 @@ func (d Directory) Configured() bool { return d.Host != "" }
 // OIDC es la configuración del camino de Keycloak.
 //
 // Los cuatro valores van juntos porque sin los cuatro no hay camino: un emisor sin cliente no sirve
-// de nada, y un cliente sin su secreto tampoco. **Sin `OIDC_ISSUER` no hay camino de Keycloak**, y
+// de nada, y un cliente sin su secreto tampoco. **Sin emisor configurado no hay camino de Keycloak**, y
 // como con AD, no hay un interruptor aparte (docs/modules/auth.md, sección 5.3).
 type OIDC struct {
 	// Issuer es la base del reino: de ahí sale el documento de descubrimiento. **El mismo para el
-	// navegador y para el backend**: si se ven por direcciones distintas, la que manda es la que ve
+	// navegador y la identidad del reino**: si se ven por direcciones distintas, manda la que ve
 	// el navegador, que es quien firma la vuelta.
 	Issuer string
+	// InternalIssuer permite conectar al mismo reino desde la red interna. Vacío usa Issuer.
+	InternalIssuer string
 	// ClientID y ClientSecret son del cliente confidencial que se da de alta en el reino. Su
 	// secreto no se escribe en la documentación ni en el código: **vive en la base**, se guarda desde
 	// Configuración y no se devuelve nunca por la API (docs/modules/settings.md, sección 5.8).
@@ -221,4 +225,14 @@ func get(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// ValidIssuerURL admite bases de reino HTTP(S), sin credenciales ni componentes ambiguos.
+func ValidIssuerURL(value string) bool {
+	u, err := url.Parse(value)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" || u.RawPath != "" {
+		return false
+	}
+	p := strings.TrimRight(u.Path, "/")
+	return p == "" || path.Clean(p) == p
 }

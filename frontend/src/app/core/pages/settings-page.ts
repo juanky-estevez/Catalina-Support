@@ -154,16 +154,12 @@ export class SettingsPage {
   protected readonly dirApellidos = signal('');
   protected readonly dirId = signal('');
   protected readonly kcEmisor = signal('');
+  protected readonly kcInterno = signal('');
   protected readonly kcCliente = signal('');
   protected readonly kcSecreto = signal('');
   protected readonly kcVuelta = signal('');
 
-  /**
-   * Si el directorio está configurado, para poder ofrecer el método de AD.
-   *
-   * Sale de **lo que se está escribiendo**, no de lo guardado: así, en cuanto se rellenan el servidor
-   * y la base de búsqueda, la opción deja de estar apagada sin tener que guardar antes.
-   */
+  /** Indica si los campos escritos están completos y permite mostrar el aviso antes de guardar. */
   protected readonly directorioConfigurado = computed(
     () => this.dirServidor().trim() !== '' && this.dirBase().trim() !== '',
   );
@@ -199,6 +195,7 @@ export class SettingsPage {
       this.dirId().trim() !== configuracion.directory.attrId ||
       this.dirContrasena() !== '' ||
       this.kcEmisor().trim() !== configuracion.keycloak.issuer ||
+      this.kcInterno().trim() !== (configuracion.keycloak.internalIssuer ?? '') ||
       this.kcCliente().trim() !== configuracion.keycloak.clientId ||
       this.kcVuelta().trim() !== configuracion.keycloak.redirectUri ||
       this.kcSecreto() !== ''
@@ -629,14 +626,7 @@ export class SettingsPage {
     }
   }
 
-  /**
-   * Los tres métodos de entrada.
-   *
-   * Un método que no está configurado **se enseña pero no se puede elegir**: elegirlo dejaría la
-   * instalación sin puerta para todo el mundo menos la cuenta de fábrica, y el backend lo rechaza de
-   * todos modos (`docs/modules/settings.md`, sección 5.8). Vale tanto lo guardado como lo que se está
-   * escribiendo ahora mismo en la tarjeta.
-   */
+  /** Elegir muestra los campos; el método vigente sólo cambia al guardar datos válidos. */
   protected opcionesDeMetodo(): readonly OpcionSelector[] {
     return [
       {
@@ -648,13 +638,11 @@ export class SettingsPage {
         valor: 'ad',
         etiqueta: this.t().configuracion.metodoAD,
         grupo: this.t().configuracion.metodo,
-        deshabilitado: !this.directorioConfigurado(),
       },
       {
         valor: 'keycloak',
         etiqueta: this.t().configuracion.metodoKeycloak,
         grupo: this.t().configuracion.metodo,
-        deshabilitado: !this.keycloakConfigurado(),
       },
     ];
   }
@@ -752,6 +740,7 @@ export class SettingsPage {
   private keycloakEscrito(): KeycloakEscrito {
     return {
       issuer: this.kcEmisor().trim(),
+      internalIssuer: this.kcInterno().trim(),
       clientId: this.kcCliente().trim(),
       redirectUri: this.kcVuelta().trim(),
       clientSecret: this.kcSecreto(),
@@ -873,6 +862,7 @@ export class SettingsPage {
     this.dirApellidos.set(configuracion.directory.attrLastName);
     this.dirId.set(configuracion.directory.attrId);
     this.kcEmisor.set(configuracion.keycloak.issuer);
+    this.kcInterno.set(configuracion.keycloak.internalIssuer ?? '');
     this.kcCliente.set(configuracion.keycloak.clientId);
     this.kcSecreto.set('');
     this.kcVuelta.set(configuracion.keycloak.redirectUri);
