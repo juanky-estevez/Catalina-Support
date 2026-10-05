@@ -32,6 +32,21 @@ export async function instalar(): Promise<void> {
       const page = await context.newPage();
       await page.goto(baseURL);
       await expect(page).toHaveURL(/\/setup$/);
+      if (!movil) {
+        // Una base nueva empieza en inglés aunque el navegador de esta prueba prefiera español.
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+        await expect(page.locator('#idioma-instalacion')).toHaveValue('en');
+        await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeVisible();
+
+        // El selector traduce el asistente entero en el acto, antes de guardar el paso.
+        await page.locator('#idioma-instalacion').selectOption('es');
+        await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+        await expect(page.getByRole('button', { name: 'Siguiente', exact: true })).toBeVisible();
+      } else {
+        // Al reanudar manda el idioma guardado por el primer recorrido, no el del navegador.
+        await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+        await expect(page.locator('#idioma-instalacion')).toHaveValue('es');
+      }
       await page.locator('#nombre-instalacion').fill('Catalina Support');
       await page
         .getByRole('button', { name: 'Siguiente', exact: true })

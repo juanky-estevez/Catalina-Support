@@ -314,8 +314,9 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     -- Es lo que hace que la vista de instalación se enseñe **sólo** en una instalación sin configurar y
     -- que su API rechace configurarla dos veces (docs/primer-arranque.md, sección 2).
     installed_at  timestamptz,
-    -- **El correo saliente** (docs/primer-arranque.md, sección 5): pasa a vivir aquí, como el directorio
-    -- y Keycloak, y la variable de entorno queda de respaldo. La contraseña **no sale nunca por la API**.
+    -- **El correo saliente** (docs/primer-arranque.md, sección 5): vive aquí, como el directorio y
+    -- Keycloak. Las sugerencias del asistente no configuran el envío. La contraseña **no sale nunca
+    -- por la API**.
     smtp_host      text NOT NULL DEFAULT '',
     smtp_port      text NOT NULL DEFAULT '',
     smtp_secure    boolean NOT NULL DEFAULT false,
@@ -323,7 +324,7 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     smtp_password  text NOT NULL DEFAULT '',
     smtp_from_name  text NOT NULL DEFAULT '',
     smtp_from_email text NOT NULL DEFAULT '',
-    language      text        NOT NULL DEFAULT 'es',
+    language      text        NOT NULL DEFAULT 'en',
     primary_color text        NOT NULL DEFAULT '#1d4ed8',
     -- El NOMBRE del archivo del logo, no el archivo: vive en el disco, en _files/brand.
     -- Nulo es «no hay logo propio» y se usa el de fábrica que trae la aplicación.
@@ -348,7 +349,9 @@ CREATE TABLE IF NOT EXISTS installation_settings (
 COMMENT ON TABLE installation_settings IS
     'La configuración de la instalación: el nombre, el idioma, el color institucional y la marca (los dos huecos del logo).';
 
-
+-- Una instalación nueva empieza en inglés. Cambiar el valor por defecto no toca la fila de una
+-- instalación existente, así que su idioma se conserva al volver a aplicar la migración.
+ALTER TABLE installation_settings ALTER COLUMN language SET DEFAULT 'en';
 
 -- El directorio de la organización (AD por LDAP). **Lo configura un Administrador desde la
 -- pantalla**, no el entorno (decisión del responsable, 2026-09-25): con el servidor vacío, ese camino

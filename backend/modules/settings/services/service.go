@@ -122,12 +122,18 @@ type Service struct {
 	// correo prueba el correo saliente **sin mandar ningún correo**: es lo que hace falta en el
 	// asistente, donde no hay destinatario (docs/primer-arranque.md, sección 3).
 	correo ProberDeCorreo
+	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
+	// envío: el módulo mail sigue leyendo la configuración persistida.
+	correoInicial MailInput
 }
 
 // NewService construye el servicio.
 func NewService(repo Repositorio, filesPath string) *Service {
 	return &Service{repo: repo, filesPath: filesPath, now: time.Now}
 }
+
+// SetCorreoInicial fija las sugerencias editables del paso de correo en una instalación vacía.
+func (s *Service) SetCorreoInicial(correo MailInput) { s.correoInicial = correo }
 
 // UpdateInput es lo que llega para guardar la configuración. Va todo: es un `PUT`, y quien guarda
 // manda la configuración entera, no un trozo.

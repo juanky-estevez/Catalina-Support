@@ -158,6 +158,14 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 		MailFromEmail: instalacion.SMTPFromEmail,
 		MailSet:       strings.TrimSpace(instalacion.SMTPHost) != "",
 	}
+	if !estado.Installed && !estado.MailSet && strings.TrimSpace(s.correoInicial.Host) != "" {
+		estado.MailHost = s.correoInicial.Host
+		estado.MailPort = s.correoInicial.Port
+		estado.MailSecure = s.correoInicial.Secure
+		estado.MailUser = s.correoInicial.User
+		estado.MailFromName = s.correoInicial.FromName
+		estado.MailFromEmail = s.correoInicial.FromEmail
+	}
 	if s.ia != nil {
 		estado.AiAvailable = s.ia.Disponible()
 	}

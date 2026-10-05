@@ -123,6 +123,15 @@ type Config struct {
 	AIPalabras int
 	AIEspera   time.Duration
 
+	// SetupMail son sugerencias para el correo del asistente de primer arranque. Sólo desarrollo
+	// las declara; no configuran el envío ni sustituyen valores guardados en la instalación.
+	SetupMailHost      string
+	SetupMailPort      string
+	SetupMailSecure    bool
+	SetupMailUser      string
+	SetupMailFromName  string
+	SetupMailFromEmail string
+
 	PostgresHost     string
 	PostgresPort     string
 	PostgresUser     string
@@ -147,12 +156,18 @@ func Load() (Config, error) {
 		// **Cuatro minutos por defecto**, y no es un número redondo: medido, un ticket de 6 000
 		// caracteres tarda ~82 s sólo en leerse y luego redacta a 5-9 palabras por segundo
 		// (`docs/modules/ai.md`, sección 2). Un tiempo corto haría fallar justo los tickets largos.
-		AIEspera:         time.Duration(getInt("AI_ESPERA_SEGUNDOS", 240)) * time.Second,
-		PostgresHost:     get("POSTGRES_HOST", "database"),
-		PostgresPort:     get("PGPORT", "11003"),
-		PostgresUser:     os.Getenv("POSTGRES_USER"),
-		PostgresPassword: os.Getenv("POSTGRES_PASSWORD"),
-		PostgresName:     os.Getenv("POSTGRES_DB"),
+		AIEspera:           time.Duration(getInt("AI_ESPERA_SEGUNDOS", 240)) * time.Second,
+		SetupMailHost:      strings.TrimSpace(os.Getenv("SETUP_MAIL_HOST")),
+		SetupMailPort:      strings.TrimSpace(os.Getenv("SETUP_MAIL_PORT")),
+		SetupMailSecure:    getBool("SETUP_MAIL_SECURE", false),
+		SetupMailUser:      strings.TrimSpace(os.Getenv("SETUP_MAIL_USER")),
+		SetupMailFromName:  strings.TrimSpace(os.Getenv("SETUP_MAIL_FROM_NAME")),
+		SetupMailFromEmail: strings.TrimSpace(os.Getenv("SETUP_MAIL_FROM_EMAIL")),
+		PostgresHost:       get("POSTGRES_HOST", "database"),
+		PostgresPort:       get("PGPORT", "11003"),
+		PostgresUser:       os.Getenv("POSTGRES_USER"),
+		PostgresPassword:   os.Getenv("POSTGRES_PASSWORD"),
+		PostgresName:       os.Getenv("POSTGRES_DB"),
 	}
 
 	var missing []string
@@ -218,6 +233,20 @@ func getInt(key string, fallback int) int {
 	}
 
 	return numero
+}
+
+func getBool(key string, fallback bool) bool {
+	valor := strings.TrimSpace(os.Getenv(key))
+	if valor == "" {
+		return fallback
+	}
+
+	booleano, err := strconv.ParseBool(valor)
+	if err != nil {
+		return fallback
+	}
+
+	return booleano
 }
 
 func get(key, fallback string) string {

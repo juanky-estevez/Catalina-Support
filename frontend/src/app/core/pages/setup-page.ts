@@ -104,7 +104,7 @@ export class SetupPage {
 
   // --- Paso 1 · la instalación ---
   protected readonly nombre = signal('');
-  protected readonly idioma = signal('es');
+  protected readonly idioma = signal('en');
 
   // --- Paso 2 · cómo se entra ---
   protected readonly metodo = signal('local');
@@ -192,6 +192,9 @@ export class SetupPage {
   protected readonly correoPuesto = computed(() => this.correoHost().trim() !== '');
 
   constructor() {
+    // Una instalación nueva empieza siempre en inglés, aunque este navegador recuerde otro idioma.
+    // Al cargar un asistente empezado, ponerEstado aplica inmediatamente el valor ya guardado.
+    this.textos.cambiar('en');
     void this.cargar();
   }
 
@@ -224,6 +227,13 @@ export class SetupPage {
       { valor: 'es', etiqueta: this.t().idioma.es, grupo: this.t().configuracion.idioma },
       { valor: 'en', etiqueta: this.t().idioma.en, grupo: this.t().configuracion.idioma },
     ];
+  }
+
+  /** Aplica el idioma elegido a toda la aplicación mientras se completa el asistente. */
+  protected cambiarIdioma(idioma: string): void {
+    const elegido = idioma === 'es' ? 'es' : 'en';
+    this.idioma.set(elegido);
+    this.textos.cambiar(elegido);
   }
 
   /**
@@ -486,7 +496,7 @@ export class SetupPage {
 
     if (conservarEscrito) {
       this.nombre.set(estado.name);
-      this.idioma.set(estado.language || 'es');
+      this.cambiarIdioma(estado.language || 'en');
     }
 
     this.metodo.set(estado.entryMethod || 'local');

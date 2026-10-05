@@ -41,17 +41,10 @@ docker compose -f dev.yml up -d --build
 docker compose -f dev.yml ps
 ```
 
-Después prepara sólo el esquema, sin datos de ejemplo:
-
-```bash
-docker compose -f dev.yml run --rm migrate
-```
-
-El comando espera a que la base esté saludable y aplica una migración transaccional e idempotente.
-Puedes repetirlo: no borra tus datos, no carga ejemplos y no vuelve a abrir el asistente.
-Si el SQL falla, el comando termina con error. Al completarlo aparece «Esquema aplicado».
-La aplicación no crea las tablas al arrancar. Espera también a que frontend y backend terminen
-de compilar; puedes seguir sus registros con:
+Ese único arranque espera a PostgreSQL, aplica el esquema y sólo entonces inicia el backend. No
+carga datos de ejemplo. La migración es transaccional e idempotente; si falla, el backend permanece
+detenido y el error se ve en los registros de `migrate`. Espera también a que frontend y backend
+terminen de compilar; puedes seguir sus registros con:
 
 ```bash
 docker compose -f dev.yml logs -f frontend backend
@@ -64,10 +57,10 @@ Completa sus pasos:
 
 | Paso | Valores para probar en local |
 | --- | --- |
-| Instalación | El nombre que quieras e idioma español o inglés |
+| Instalación | El nombre que quieras. El asistente empieza en inglés; elegir Español traduce toda la pantalla inmediatamente |
 | Cómo se entra | **Local**; no necesita un directorio externo |
 | Dónde está | Tu zona horaria y **`http://127.0.0.1:11001`** como dirección pública |
-| Correo saliente | Servidor **`mail`**, puerto **`1025`**, sin TLS ni credenciales; nombre de remitente a elección y correo **`no-responder@catalina-support.local`** |
+| Correo saliente | Ya aparece **`mail`**, puerto **`1025`**, sin TLS ni credenciales, remitente **Catalina Support** y **`no-responder@catalina-support.local`**. Todos los valores son editables |
 
 En el paso del correo pulsa **Probar la conexión**. Comprueba conexión y autenticación; no envía un
 mensaje. El aviso de motor de IA ausente no impide terminar. Al finalizar queda sellada la instalación:
@@ -156,7 +149,7 @@ pero conserva los volúmenes; añadir `-v` elimina también los volúmenes, incl
 | `docker compose` no existe o Docker no responde | Docker debe estar instalado y en marcha; en Linux tu usuario necesita acceso al daemon. Comprueba `docker compose version`. |
 | Un puerto está ocupado | El entorno usa 11001–11004. Detén el servicio que los ocupa antes de arrancar; una segunda copia del repositorio comparte nombres de contenedores y volúmenes. |
 | La web aún no abre | Mira `docker compose -f dev.yml logs -f frontend backend`: `up -d` no espera a que Angular y Go terminen de compilar. |
-| Error de tablas inexistentes | Falta preparar la base: ejecuta `docker compose -f dev.yml run --rm migrate`. |
+| `backend` no arranca y `migrate` terminó con error | Mira `docker compose -f dev.yml logs migrate`. Corrige el error y repite `docker compose -f dev.yml run --rm migrate`; después ejecuta `docker compose -f dev.yml up -d backend`. |
 | Aparece el asistente en vez del login | Es normal en una base nueva sin ejemplos: completa los cuatro pasos. |
 | El enlace del correo abre el dominio del proyecto | Corrige la dirección pública en Configuración a `http://127.0.0.1:11001`. El seeder conserva esta dirección si la instalación ya está sellada. |
 | Las cuentas de ejemplo no entran | Comprueba que cargaste los ejemplos y que el método de entrada es **Local**. `admin` entra siempre y permite cambiarlo. |

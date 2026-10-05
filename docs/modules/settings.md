@@ -1,7 +1,12 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: el valor inicial de
+> `installation_settings.language` es `en` para bases nuevas. El servicio de primer arranque admite
+> sugerencias `SETUP_MAIL_*`, pero sólo las devuelve si la instalación no está sellada y no tiene
+> SMTP guardado; nunca configuran el envío.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Se añade
 > `keycloak_settings.internal_issuer`, expuesto como `internalIssuer`, vacío por defecto.
@@ -125,7 +130,7 @@ guarda, cuál se enseña en cada tema y cómo se vuelve al de fábrica.
 | Qué | Valores | De fábrica |
 | --- | --- | --- |
 | **El nombre de la instalación** | texto, **hasta 60 caracteres**; vacío devuelve el de fábrica | `Catalina Support` |
-| **Idioma de la instalación** | `es` o `en` | `es` |
+| **Idioma de la instalación** | `es` o `en` | `en` |
 | **Color primario institucional** | un color, en hexadecimal | el azul institucional |
 | **La marca**: el logo | hasta **dos** archivos: uno para los temas claros y otro para los oscuros, **los dos opcionales** | ninguno: se usan los dos logos de fábrica, uno por tema |
 | **El prefijo de la numeración** | mayúsculas y dígitos, de 2 a 8 caracteres | `CS` |
@@ -188,7 +193,7 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | Columna | Tipo | Nulo | Por defecto | Qué es |
 | --- | --- | --- | --- | --- |
 | `id` | `integer` | no | `1` | Clave primaria con `CHECK (id = 1)`: la tabla entera es **una sola fila** |
-| `language` | `text` | no | `'es'` | El idioma de la instalación (`es` o `en`): el de las cuentas nuevas y el de lo suyo; **no manda sobre la interfaz** de nadie |
+| `language` | `text` | no | `'en'` | El idioma de una instalación nueva (`es` o `en`) y el de las cuentas nuevas; durante `/setup` también manda sobre esa interfaz |
 | `primary_color` | `text` | no | `'#1d4ed8'` | El color institucional, en hexadecimal `#rrggbb`; sólo afecta a los dos temas de fábrica |
 | `logo_light` | `text` | sí | — (nulo) | **El nombre del archivo** del logo para los temas claros, o nulo si no hay logo propio |
 | `logo_dark` | `text` | sí | — (nulo) | El del tema oscuro, o nulo |

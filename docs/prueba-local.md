@@ -1,7 +1,15 @@
 # Prueba local: instalación vacía, ejemplos y verificación aislada
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, aprobado explícitamente por el responsable e implementado en el mismo
+> trabajo. Corrige el ruido de una base nueva —el backend consulta tablas antes de aplicar el
+> esquema—, hace que el primer arranque
+> empiece en inglés y que su selector traduzca toda la interfaz al instante, y precarga en desarrollo
+> los valores editables de Mailpit. Las tres decisiones fueron confirmadas por el responsable antes
+> de escribir esta propuesta. El repaso quedó cerrado y la aprobación «Lo apruebo» habilita su
+> implementación.
 >
 > **Propuesta del 2026-10-03, aprobada explícitamente por el responsable.** Reúne las decisiones del
 > responsable de las dos tandas de preguntas. La primera eligió local primero, esquema con un
@@ -285,3 +293,142 @@ Hallazgo durante la verificación sin servicios opcionales: `directorio.spec.ts`
 `respondeElDirectorio`, pero no lo utilizaba antes de ejecutar sus casos. La documentación
 prometía omitirlos cuando LDAP estuviera ausente. Se aplica la detección en `beforeAll`,
 conforme al comportamiento ya aprobado en las secciones 6 y 8; no cambia el producto.
+
+## 12. Arranque limpio y valores iniciales del asistente
+
+### 12.1 Hallazgos
+
+1. En una base nueva, `backend` espera a que PostgreSQL esté saludable, pero no a que exista el
+   esquema. Por eso alcanza a consultar `installation_settings` y `ai_insights`, escribe errores
+   `42P01` y queda escuchando aunque `/setup` todavía no puede funcionar.
+2. El formulario de `/setup` inicializa el idioma en `es` y la fila nueva de
+   `installation_settings` también nace con `language = 'es'`. Elegir otro idioma sólo cambia el
+   valor que se guardará: no cambia los textos del asistente ni los demás textos de la aplicación.
+3. Mailpit forma parte de `dev.yml`, pero una instalación vacía recibe los campos SMTP vacíos. El
+   README obliga a copiar a mano los valores locales que el entorno ya conoce.
+
+### 12.2 Arranque de desarrollo
+
+`docker compose -f dev.yml up -d --build` aplica automáticamente `v1.0.0.sql` antes de iniciar el
+backend. El servicio `migrate` deja de estar oculto tras un perfil; espera a la base saludable,
+termina con éxito y sólo entonces habilita el arranque de `backend` mediante
+`service_completed_successfully`.
+
+La migración sigue siendo transaccional e idempotente. Se puede repetir con
+`docker compose -f dev.yml run --rm migrate`, pero deja de ser un paso obligatorio del recorrido
+normal. Si falla, `backend` no arranca y el error queda en `migrate`; no aparece un backend saludable
+que en realidad carece de tablas. Esto se aplica sólo a `dev.yml`: no cambia el despliegue ni las
+migraciones de producción. `seed` continúa separado, explícito, opcional y con la misma semántica
+destructiva para los datos de ejemplo.
+
+### 12.3 Idioma del primer arranque
+
+Una instalación nueva nace con inglés como idioma de instalación. Al entrar por primera vez a
+`/setup`, toda esa pantalla se presenta en inglés, aunque el navegador prefiera español o conserve
+una elección anterior de otra instalación.
+
+El selector **The installation language** sigue ofreciendo English y Español. Cambiarlo actualiza
+inmediatamente todos los textos de la aplicación, incluidos los cuatro pasos, ayudas, botones,
+avisos y resumen de `/setup`; también actualiza `html[lang]` y recuerda la elección en el navegador.
+Al guardar el primer paso, el mismo valor queda persistido como idioma de la instalación y será el
+idioma inicial de las cuentas nuevas. Si se vuelve a un asistente empezado, manda el idioma ya
+guardado en esa instalación.
+
+El cambio del valor inicial de `installation_settings.language` de `es` a `en` afecta a bases nuevas.
+No modifica el idioma de instalaciones existentes ni de cuentas existentes.
+
+### 12.4 Valores editables de Mailpit en desarrollo
+
+Mientras la instalación no esté sellada y no haya correo guardado, la API de `/api/setup` puede
+devolver valores iniciales procedentes del entorno, exclusivos del formulario de primer arranque.
+`dev.yml` declara:
+
+| Campo | Valor inicial de desarrollo |
+| --- | --- |
+| Servidor | `mail` |
+| Puerto | `1025` |
+| TLS | no |
+| Usuario y contraseña | vacíos |
+| Nombre del remitente | `Catalina Support` |
+| Correo del remitente | `no-responder@catalina-support.local` |
+
+Son sugerencias editables: el usuario puede cambiar cualquier campo antes de probar o guardar. Sólo
+se persisten al guardar el paso 4. No son un segundo mecanismo de configuración SMTP ni un respaldo
+para enviar correo después de instalar: el módulo `mail` continúa leyendo exclusivamente la
+configuración guardada. En producción estas variables no se declaran y el formulario permanece
+vacío. Si el asistente ya tiene correo guardado, siempre se devuelve lo guardado y no los valores
+iniciales.
+
+### 12.5 Documentos y código de la implementación
+
+| Documento | Cambio al cerrar como `as-built` |
+| --- | --- |
+| `docs/prueba-local.md` | Un solo comando de arranque, seeders opcionales y valores locales iniciales |
+| `docs/ambientes.md` y `docs/arquitectura.md` | Orden real de servicios y fallo de migración |
+| `docs/primer-arranque.md` | Inglés inicial, traducción inmediata y valores editables de Mailpit |
+| `docs/interfaz-y-experiencia.md` | Comportamiento del selector de idioma durante `/setup` |
+| `README.md` | Quitar el segundo comando obligatorio y explicar que Mailpit ya aparece precargado |
+| `docs/README.md` y `AGENTS.md` | Estado y recuento de las enmiendas afectadas |
+
+El código implementado se limita a `dev.yml`, la carga de configuración del backend y el servicio de
+primer arranque, el valor inicial de la migración, `setup-page.*` y sus pruebas. No cambia los
+seeders, los métodos de acceso, el correo de producción, el flujo posterior al asistente ni el
+despliegue de producción.
+
+### 12.6 Criterios de aceptación
+
+1. Con un volumen nuevo, `docker compose -f dev.yml up -d --build` aplica el esquema y después
+   arranca `backend`; sus logs no contienen consultas a tablas inexistentes.
+2. Si la migración falla, `backend` no arranca. Repetirla sobre una base preparada conserva datos,
+   ajustes y sello. No se cargan ejemplos.
+3. Una base nueva abre `/setup` en inglés y muestra English seleccionado. Elegir Español traduce en
+   el acto toda la pantalla, cambia `html[lang]` y se conserva al avanzar, recargar y volver.
+4. Una instalación o cuenta existente conserva su idioma. Reanudar un asistente empezado usa el
+   idioma que ya se guardó.
+5. En desarrollo, el paso 4 muestra los seis valores de Mailpit de la tabla; todos se pueden editar,
+   probar y guardar. Una edición reaparece al recargar.
+6. En producción, y en cualquier entorno sin valores iniciales, el correo empieza vacío. Los valores
+   iniciales nunca sustituyen una configuración guardada ni se usan directamente para enviar.
+7. El README se comprueba desde una base nueva. Las pruebas de backend, frontend y el recorrido de
+   `/setup` en PC y móvil pasan dentro de contenedores.
+
+### 12.7 Decisiones registradas antes de escribir
+
+El responsable confirmó el 2026-10-04:
+
+1. El esquema se aplica automáticamente al levantar desarrollo y `backend` espera su terminación.
+2. `/setup` empieza enteramente en inglés; cambiar el selector traduce toda la aplicación de
+   inmediato y recuerda la elección.
+3. Desarrollo precarga todos los valores locales de Mailpit. Son valores por defecto y el usuario
+   puede modificarlos.
+
+### 12.8 Registro del repaso
+
+1. **Fallo de la migración:** el responsable confirmó que `backend` debe permanecer detenido hasta
+   que `migrate` termine correctamente. `database`, `frontend` y Mailpit pueden quedar levantados
+   para diagnosticar el fallo y repetir la migración; no se presenta el backend como saludable.
+2. **Idioma al reanudar:** el responsable confirmó que, después de guardar el primer paso, manda el
+   idioma guardado en esa instalación aunque el navegador recuerde otro. `/setup` lo aplica a toda
+   la interfaz en cuanto carga el estado.
+3. **Correo al reanudar:** el responsable confirmó que los valores iniciales de Mailpit sólo llenan
+   un correo todavía vacío. Después de guardar el paso 4, siempre mandan los valores persistidos por
+   el usuario y los valores iniciales de desarrollo no vuelven a restaurarse.
+
+El repaso no deja decisiones de diseño abiertas. El responsable aprobó explícitamente la enmienda
+con «Lo apruebo». Implementada y verificada, esta sección y el documento quedan `as-built`.
+
+### 12.9 Verificación de la implementación
+
+Verificado el 2026-10-04 en Linux:
+
+- Una copia aislada de `dev.yml`, con volumen nuevo, ejecutó `migrate`, esperó su salida correcta y
+  arrancó después el backend. Sus logs no contienen `42P01`: leyó las dos tablas y quedó escuchando.
+- `GET /api/setup` devolvió `language: "en"` y los valores de Mailpit aprobados. La base tenía cero
+  usuarios y cero tickets; `installed_at` seguía nulo. Repetir `migrate` terminó correctamente,
+  conservó esos datos y dejó el valor por defecto de la columna en `'en'`.
+- `go test ./...` pasó en todos los paquetes; `go vet ./...` y `gofmt -d` no informaron problemas.
+- El frontend pasó sus 216 pruebas en 20 ficheros.
+- La instalación desechable de Playwright recorrió `/setup` en PC y móvil antes de sellar. Comprobó
+  inglés aunque el navegador pidiera español, traducción inmediata al elegir Español y prioridad
+  del idioma guardado al reanudar. La suite sin servicios opcionales terminó con 175 casos en verde
+  y 39 omitidos.

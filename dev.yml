@@ -42,9 +42,18 @@ services:
       dockerfile: config/dockerfiles/backend.Dockerfile
     env_file:
       - ./config/env/dev.env
+    environment:
+      # Sugerencias exclusivas del paso 4 de /setup en una instalación todavía vacía. El usuario
+      # puede cambiarlas y sólo pasan a ser configuración al guardar el paso.
+      SETUP_MAIL_HOST: mail
+      SETUP_MAIL_PORT: "1025"
+      SETUP_MAIL_SECURE: "false"
+      SETUP_MAIL_USER: ""
+      SETUP_MAIL_FROM_NAME: Catalina Support
+      SETUP_MAIL_FROM_EMAIL: no-responder@catalina-support.local
     depends_on:
-      database:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - 11002:11002
     volumes:
@@ -112,7 +121,6 @@ services:
   # Sólo el esquema: no borra, no carga ejemplos y no sella una base nueva.
   migrate:
     image: postgres:18-alpine
-    profiles: ["migrate"]
     env_file: [./config/env/dev.env]
     depends_on:
       database:

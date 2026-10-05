@@ -1,7 +1,12 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: una instalación nueva
+> empieza en inglés aunque el navegador recuerde español; el selector traduce todo `/setup` al
+> instante y, al reanudar, manda el idioma guardado. En desarrollo, un correo todavía vacío recibe
+> los valores editables de Mailpit; lo guardado siempre tiene prioridad y producción sigue vacía.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El paso de Keycloak
 > admite `internalIssuer` opcional. La preparación de Playwright sobre una base nueva recorre los
@@ -87,6 +92,10 @@ cerrar el navegador a medias no pierde lo hecho: al volver, el asistente sigue d
 | **3 · Dónde está** | **La región horaria** —de la lista con buscador— y **la dirección pública** —esquema, host y puerto—, con **el aviso si no es https** | Deciden cómo se leen las fechas y a dónde apuntan los enlaces de los correos |
 | **4 · El correo** | **El servidor saliente**: host, puerto, TLS, usuario, contraseña y remitente, **con su prueba** | Sin él no sale ningún correo: ni un alta, ni un restablecer, ni un aviso |
 
+Una instalación nueva abre el asistente completo en **inglés** y muestra English como idioma. El
+selector del paso 1 cambia de inmediato todos los textos y `html[lang]`, y recuerda la elección. Si
+el paso ya se guardó, al volver manda el idioma persistido en la instalación.
+
 **Y el resumen**, antes de terminar: lo que se ha configurado, **con la prueba del motor de IA**
 («responde» o «no está, la mesa de ayuda funciona igual») y un botón para **terminar la instalación**,
 que es lo que pone el sello.
@@ -140,9 +149,10 @@ base**, como el directorio y Keycloak (`docs/modules/settings.md`). Se hace con 
 en el repositorio: **el módulo `mail` declara lo que necesita** (`Instalacion`, una interfaz con el
 SMTP resuelto) y **`main.go` se lo da** desde el módulo de configuración. **Y las variables `SMTP_*` se retiran del entorno**, por la misma razón que se retiraron las del
 directorio y Keycloak (corrección del responsable, 2026-09-30): **un dato que vive en la base no se
-configura en dos sitios**. En desarrollo el archivo de ejemplos deja puesto el buzón de pruebas, y
-**una instalación que tuviera el correo en el entorno lo pone una vez** en la vista de instalación o
-en Configuración.
+configura en dos sitios**. En desarrollo, `SETUP_MAIL_*` aporta únicamente sugerencias editables de
+Mailpit (`mail:1025`, sin TLS ni credenciales y con el remitente local) mientras la instalación está
+sin sellar y no tiene correo guardado. Guardar el paso las persiste; después siempre manda la base.
+Producción no declara esas sugerencias y empieza vacía. El módulo `mail` nunca las lee para enviar.
 
 ## 6. Dónde vive, y con qué se prueba
 

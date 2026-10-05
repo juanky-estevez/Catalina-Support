@@ -85,6 +85,65 @@ func sellada() *repoDePrueba {
 	return &repoDePrueba{instalacion: repositories.InstallationSettings{InstalledAt: &cuando}}
 }
 
+func TestEstadoDeInstalacionUsaCorreoInicialSoloSiEstaVacio(t *testing.T) {
+	t.Run("entorno sin sugerencias", func(t *testing.T) {
+		servicio, _ := servicioDePrueba(t)
+
+		estado, err := servicio.EstadoDeInstalacion()
+		if err != nil {
+			t.Fatalf("no se pudo leer el estado: %v", err)
+		}
+		if estado.MailHost != "" || estado.MailPort != "" || estado.MailSet {
+			t.Fatalf("sin sugerencias el correo debe empezar vacio: %+v", estado)
+		}
+	})
+
+	t.Run("instalacion nueva", func(t *testing.T) {
+		servicio, _ := servicioDePrueba(t)
+		servicio.SetCorreoInicial(MailInput{
+			Host: "mail", Port: "1025", FromName: "Catalina Support",
+			FromEmail: "no-responder@catalina-support.local",
+		})
+
+		estado, err := servicio.EstadoDeInstalacion()
+		if err != nil {
+			t.Fatalf("no se pudo leer el estado: %v", err)
+		}
+		if estado.MailHost != "mail" || estado.MailPort != "1025" || estado.MailSet {
+			t.Fatalf("los valores iniciales no son los esperados: %+v", estado)
+		}
+	})
+
+	t.Run("correo guardado", func(t *testing.T) {
+		repo := &repoDePrueba{instalacion: repositories.InstallationSettings{
+			SMTPHost: "smtp.empresa.com", SMTPPort: "587", SMTPFromEmail: "mesa@empresa.com",
+		}}
+		servicio := NewService(repo, t.TempDir())
+		servicio.SetCorreoInicial(MailInput{Host: "mail", Port: "1025"})
+
+		estado, err := servicio.EstadoDeInstalacion()
+		if err != nil {
+			t.Fatalf("no se pudo leer el estado: %v", err)
+		}
+		if estado.MailHost != "smtp.empresa.com" || estado.MailPort != "587" || !estado.MailSet {
+			t.Fatalf("el correo guardado debe tener prioridad: %+v", estado)
+		}
+	})
+
+	t.Run("instalacion sellada", func(t *testing.T) {
+		servicio := NewService(sellada(), t.TempDir())
+		servicio.SetCorreoInicial(MailInput{Host: "mail", Port: "1025"})
+
+		estado, err := servicio.EstadoDeInstalacion()
+		if err != nil {
+			t.Fatalf("no se pudo leer el estado: %v", err)
+		}
+		if estado.MailHost != "" {
+			t.Fatalf("una instalacion sellada no recibe valores iniciales: %+v", estado)
+		}
+	})
+}
+
 // --- la prueba del paso 2 ---------------------------------------------------------------------
 
 // Con la instalación sellada, la prueba del paso 2 no se hace: el asistente ya no existe.

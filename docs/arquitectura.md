@@ -1,7 +1,12 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: en desarrollo,
+> `backend` depende de `migrate` con `service_completed_successfully`; así nunca consulta
+> `installation_settings` ni `ai_insights` antes de que existan. `migrate` ya no tiene perfil y el
+> seeder conserva el suyo. Las sugerencias `SETUP_MAIL_*` sólo rellenan `/setup` vacío.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Arranque local aprobado
 > en `prueba-local.md`: `dev.yml` incorpora `migrate` de un solo uso y retira el runner e2e.
@@ -488,7 +493,7 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 | `ldap` (**en `active-directory.yml`**, no en `dev.yml`) | `osixia/openldap:1.5.0` | El directorio, con las personas de `config/ldap/01-personas.ldif` sembradas al arrancar | `11005` (LDAP en claro: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f active-directory.yml up -d` |
 | `keycloak` (**en `keycloak.yml`**, no en `dev.yml`) | `quay.io/keycloak/keycloak:26.0` | `start-dev --import-realm`, con el reino de `config/keycloak/realm-catalina-support.json` | `11006` (HTTP: **es de desarrollo**). Opcional: **no se levanta con `dev.yml`**, se levanta con `docker compose -f keycloak.yml up -d` |
 | `ai` (**en `ai.yml`**, no en `dev.yml`) | llama.cpp con servidor HTTP | Sirve el modelo **Qwen2.5-1.5B-Instruct Q4_K_M**, que se descarga una vez al volumen la primera vez | **Ninguno**: el motor no se publica en la máquina, sólo se habla por la red `catalina-support-ai`. Lo comparten **desarrollo y producción** (`docs/modules/ai.md`, decisión 1) |
-| `migrate` | `postgres:18-alpine` | Aplica sólo `v1.0.0.sql`, con `ON_ERROR_STOP=1` | Ninguno; perfil propio, ejecución explícita `run --rm migrate` |
+| `migrate` | `postgres:18-alpine` | Aplica sólo `v1.0.0.sql`, con `ON_ERROR_STOP=1`; `backend` espera su finalización correcta | Ninguno; se ejecuta automáticamente con `up` y también admite `run --rm migrate` |
 | `seed` | `postgres:18-alpine` | Ejecuta `scripts/dev-seed.sh` | Ninguno; ejemplos opcionales, ejecución explícita `run --rm seed` |
 
 **El motor de IA no está en la tabla de arriba a propósito**: vive en `ai.yml`, **compartido por los dos
@@ -626,14 +631,12 @@ Todos los comandos se ejecutan **en la máquina**, contra los contenedores: no h
 instalados. Están también en `AGENTS.md`.
 
 ```bash
-docker compose -f dev.yml up -d                 # levantar los servicios de desarrollo
+docker compose -f dev.yml up -d --build         # esquema y servicios; no carga ejemplos
 docker compose -f dev.yml ps                    # ver el estado
 docker compose -f dev.yml logs -f backend        # seguir los logs (salida de go-logs)
 docker compose -f dev.yml down                   # parar (los volúmenes se conservan)
 
-# **El esquema, si la base es nueva**: no se aplica solo y la aplicación no crea tablas al arrancar,
-# así que sin esto el backend responde `relación "installation_settings" does not exist` y la entrada
-# enseña «Something failed on our side». Este comando sirve en PowerShell, CMD y bash; verificado en Linux
+# Repetición manual opcional del esquema idempotente; el `up` anterior ya lo ejecuta
 docker compose -f dev.yml run --rm migrate
 # Los datos de ejemplo, que son **opcionales** y **un extra para tener contenido, no un requisito
 # para entrar**. **El comando de los tres sistemas** es un contenedor de un solo uso que corre el

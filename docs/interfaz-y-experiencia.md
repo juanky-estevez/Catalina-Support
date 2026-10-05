@@ -1,7 +1,12 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: `/setup` es la excepción
+> inicial al idioma del navegador. Una instalación nueva se presenta entera en inglés; su selector
+> cambia todos los textos, `html[lang]` y el valor recordado al instante. Al reanudar manda el idioma
+> ya guardado en la instalación.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Los formularios de
 > Keycloak en Configuración y primer arranque incorporan la dirección interna opcional, separada del
@@ -306,8 +311,10 @@ El orden importa: cuando dos choquen, gana el de más arriba.
    ticket interno, ni un desarrollo necesita ver la administración de usuarios.
 4. **El estado se lee de un vistazo.** Mirar la lista y saber qué está esperando a quién.
 5. **Nada importante se hace por accidente.** Cerrar, escalar o borrar se confirman; lo demás, no.
-6. **El idioma de arranque sale del navegador.** Si pide español o inglés se entra en ese idioma, y
-   si pide cualquier otro se entra **en inglés**; el conmutador está siempre a la vista y lo que
+6. **El idioma de arranque sale del navegador**, salvo en una instalación nueva: `/setup` empieza
+   en inglés y su selector traduce toda la pantalla inmediatamente. Fuera del asistente, si el
+   navegador pide español o inglés se entra en ese idioma, y si pide cualquier otro se entra **en
+   inglés**; el conmutador está siempre a la vista y lo que
    alguien elija se recuerda. Dentro de la aplicación manda el idioma de su cuenta
    (`docs/modules/auth.md`, decisión 25).
 7. **Lo que falla, se explica.** Un error dice qué pasó y qué hacer, en el idioma de quien lo lee.

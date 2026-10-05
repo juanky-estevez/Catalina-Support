@@ -1,7 +1,12 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-04
+>
+> **Enmendado el 2026-10-04**, conforme a la sección 12 aprobada de `docs/prueba-local.md`:
+> `dev.yml` ejecuta la migración automáticamente y `backend` espera a que termine correctamente.
+> Una instalación local nueva queda lista con un solo `up -d --build`, sin datos de ejemplo; el
+> seeder continúa separado y opcional. El paso de correo recibe las sugerencias editables de Mailpit.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El recorrido vigente es
 > instalación vacía con `docker compose -f dev.yml up -d --build` y `docker compose -f dev.yml run
@@ -240,25 +245,26 @@ docker compose -f dev.yml down          # los volúmenes se conservan
 
 Se entra por `https://dev.catalina-support.example.com`. **Y también, sin nginx, por
 `http://127.0.0.1:11001`**: el servidor de desarrollo reenvía `/api` al backend
-(`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado y el esquema
-aplicado **se abre la 11001**. En una base nueva aparece `/setup`; después de completar el
+(`frontend/proxy.conf.json` → `http://backend:11002`), así que con el entorno levantado **se abre la
+11001**. `migrate` espera a PostgreSQL, aplica el esquema y `backend` espera su terminación correcta.
+En una base nueva aparece `/setup`; después de completar el
 asistente se entra con **`admin`/`admin`**. Los ejemplos son opcionales y sellan la instalación
 (`README.md`, «Probar en local: instalación vacía»).
 Los puertos 11001 y 11002 siguen publicados para depurar sin pasar por nginx.
 
-**Levantar el entorno no deja la base lista**: la aplicación **no crea las tablas al arrancar**, así
-que en una base nueva hay que **aplicar el esquema** (sección 3.2) **antes de abrirla**. El comando de
-los datos de ejemplo también lo aplica en su primer paso —y, con ellos, copia los adjuntos—, pero
-**los ejemplos son opcionales**: con el esquema la aplicación ya funciona. Los pasos del arranque en
-local, con el síntoma exacto si se abre antes, están en el `README.md`, «Probarlo en local
-(desarrollo)».
+**Levantar el entorno deja la base lista**: la aplicación no crea tablas por su cuenta; el servicio
+de un solo uso `migrate` las aplica antes de que Compose permita iniciar `backend`. Si el SQL falla,
+el backend queda detenido y el diagnóstico vive en `docker compose -f dev.yml logs migrate`. Los
+datos de ejemplo también aplican el esquema en su primer paso, pero siguen siendo opcionales.
 
 ### 3.2 La base de datos
 
 - El esquema se aplica **repetidas veces** sin miedo: `v1.0.0.sql` es transaccional e idempotente
   (`docs/arquitectura.md`, sección 7). **El archivo existe, está aplicado y crea 18 tablas.**
-- Aplicarlo con un servicio de un solo uso: espera la salud de PostgreSQL, usa su cliente
-  en Docker y termina con error si falla el SQL. No instala dependencias en la máquina.
+- `docker compose -f dev.yml up -d --build` ejecuta el servicio de un solo uso automáticamente:
+  espera la salud de PostgreSQL, usa su cliente en Docker y termina con error si falla el SQL.
+  `backend` depende de su finalización correcta.
+- También se puede repetir manualmente; no borra datos, no carga ejemplos y no reabre el asistente:
 
 ```bash
 docker compose -f dev.yml run --rm migrate
@@ -281,17 +287,17 @@ docker volume rm catalina_support_dev_database
 docker compose -f dev.yml up -d
 ```
 
-Y volver a aplicar la migración. Esto borra los datos y la configuración local: hacerlo sólo si se quiere empezar otra instalación.
+El siguiente `up -d` vuelve a aplicar la migración automáticamente. Esto borra los datos y la
+configuración local: hacerlo sólo si se quiere empezar otra instalación.
 
 ### 3.3 Los datos de ejemplo
 
-**Los datos de ejemplo se aplican a propósito**, después de levantar el entorno y antes de abrir la
-aplicación. **No son un requisito para entrar** —con el esquema se completa el asistente y después se entra con `admin`—, pero sí son
-lo que deja el entorno con contenido. La aplicación **no crea las tablas al arrancar** y las
-migraciones no se aplican solas, así que **en una base nueva el paso que la deja lista es el esquema**
-(sección 3.2): si se abre antes, el backend falla con `relación "installation_settings" does not
-exist` y `relación "ai_insights" does not exist`. Los pasos del arranque en local están en el
-`README.md`, «Probar en local: instalación vacía», y **aquí no se repiten**.
+**Los datos de ejemplo se aplican a propósito**, después de levantar el entorno. **No son un
+requisito para entrar** —`up` ya deja el esquema listo, se completa el asistente y después se entra
+con `admin`—, pero sí son lo que deja el entorno con contenido. La aplicación no crea las tablas: el
+servicio `migrate` de
+Compose lo hace y termina antes de que arranque el backend (sección 3.2). Los pasos del arranque en
+local están en el `README.md`, «Probar en local: instalación vacía».
 
 **La forma de los tres sistemas —Linux, macOS y Windows— es un comando de Docker**: un contenedor de
 un solo uso que arranca, siembra y se va.
@@ -540,7 +546,7 @@ nunca en producción**, y por eso lleva el sufijo bien visible.
 
 | Momento | Qué se aplica |
 | --- | --- |
-| **En desarrollo, al empezar** | El esquema de `v1.0.0.sql`, **antes de abrir la aplicación** (sección 3.2): no se aplica solo y la aplicación no crea tablas. Lo aplican los dos comandos de Docker de la sección 3.2, o su paso 1 de `docker compose -f dev.yml run --rm seed` (los tres sistemas) —y `./scripts/dev-seed.sh` en Linux y macOS—. Los ejemplos son **aparte** (sección 3.3) |
+| **En desarrollo, al empezar** | `docker compose -f dev.yml up -d --build` aplica `v1.0.0.sql` automáticamente antes del backend. `run --rm migrate` permite repetirlo. Los ejemplos son **aparte** (sección 3.3) |
 | **Hasta la 1.0.0** | `backend/migrations/v1.0.0.sql`, todas las veces que haga falta en desarrollo |
 | **Al cerrar la 1.0.0** | El mismo archivo, **una sola vez** en producción |
 | **Después de la 1.0.0** | Un archivo por versión, aplicados **en orden**, sin saltarse ninguno |

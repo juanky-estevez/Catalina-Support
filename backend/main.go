@@ -208,6 +208,14 @@ func run() error {
 	mailService := services.NewService(repositories.NewTemplateRepository(db), services.NewSender(), cfg.PublicAppURL)
 
 	settingsService := settingsservices.NewService(settingsrepositories.NewSettingsRepository(db), cfg.FilesPath)
+	settingsService.SetCorreoInicial(settingsservices.MailInput{
+		Host:      cfg.SetupMailHost,
+		Port:      cfg.SetupMailPort,
+		Secure:    cfg.SetupMailSecure,
+		User:      cfg.SetupMailUser,
+		FromName:  cfg.SetupMailFromName,
+		FromEmail: cfg.SetupMailFromEmail,
+	})
 
 	usersService := userservices.NewService(userrepositories.NewUserRepository(db))
 	authService := authservices.NewService(
