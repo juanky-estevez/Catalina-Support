@@ -1,7 +1,20 @@
 # Interfaz y experiencia
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-04
+> **Última actualización:** 2026-10-05
+>
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Al revisar todas las vistas se
+> encontró que los controles de navegación de cabecera ya están a la izquierda en el alta y el
+> detalle de tickets y en la ficha de usuario, pero `/mail` coloca a la derecha su vuelta a
+> Configuración aunque este mismo documento dice desde el 2026-09-29 que debe ir a la izquierda.
+> El responsable confirmó que se unifiquen los controles de cabecera como icono antes del título y
+> que los enlaces de flujo dentro del contenido conserven su presentación. Se corrigió `/mail` y se
+> verificó la posición y el regreso a Configuración en PC y móvil.
+>
+> **Enmendado el 2026-10-05**, conforme a `docs/primer-arranque.md` aprobado: el paso 3 de `/setup`
+> muestra antes del buscador un campo de sólo lectura con la zona seleccionada. Enseña el
+> identificador IANA exacto, se actualiza en el acto al elegir en la lista y permite seleccionar y
+> copiar el texto; la hora y el desfase continúan debajo. Se verificó en PC y móvil.
 >
 > **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: `/setup` es la excepción
 > inicial al idioma del navegador. Una instalación nueva se presenta entera en inglés; su selector
@@ -1149,3 +1162,85 @@ Casi nadie diseña esto y es lo que más se sufre:
 Con `docs/interfaz-y-experiencia.md` aprobado, la documentación cubre **qué se construye, cómo se
 comporta y cómo se ve**. El código puede empezar por `auth` (`docs/modules/tickets.md`), y sus pantallas
 —entrar, recuperar contraseña— se diseñan ya con estas reglas, en lugar de retocarlas después.
+
+## 13. Navegación de regreso a la izquierda
+
+### 13.1 Hallazgo e inventario
+
+La regla aprobada el 2026-09-29 ya dice que los botones de volver van a la izquierda y son una
+flecha de sólo icono con nombre accesible. El inventario de las vistas con ese control de cabecera
+encontró:
+
+| Vista | Destino | Posición encontrada | Cumplía la regla |
+| --- | --- | --- | --- |
+| `/mail` | Configuración | A la derecha del título | No |
+| `/tickets/new` | Lista de tickets | A la izquierda del título | Sí |
+| `/tickets/:número` | Lista de tickets | A la izquierda del número | Sí |
+| `/users/:id` | Lista de usuarios | A la izquierda del nombre | Sí |
+
+El comentario del propio `correos-page.html` también afirmaba que la flecha estaba a la izquierda
+del título, pero la estructura `justify-between` la colocaba después del título y al extremo
+derecho. Era una incoherencia entre el documento, el comentario y lo que se pintaba.
+
+### 13.2 Regla
+
+Todo control que **regresa desde una vista secundaria y vive en su cabecera** aparece como primer
+elemento de esa cabecera, inmediatamente antes del título o identificador principal. Es una flecha
+de sólo icono, conserva un nombre accesible y mantiene su destino actual.
+
+Esta regla se aplica a los cuatro controles inventariados. Tres ya cumplían; la implementación
+reordena la cabecera de `/mail` para colocar su enlace a Configuración antes del bloque de título y
+descripción. No cambia el destino, el texto accesible, el icono ni el tamaño del control.
+
+Quedan fuera:
+
+- los enlaces que forman parte del flujo de una pantalla, como **Volver a iniciar sesión**;
+- el botón **Volver a mi trabajo** de la vista sin permiso;
+- acciones con otra finalidad que usan la palabra «volver», como restaurar un logo o un correo;
+- añadir botones nuevos a vistas que hoy no tienen navegación de regreso;
+- el backend, las rutas y los permisos.
+
+### 13.3 Documentos y código
+
+- Este documento define la regla general y registra el hallazgo.
+- `docs/README.md` y `AGENTS.md` reflejan el estado final de la enmienda.
+- `frontend/src/app/modules/mail/correos-page.html` coloca la flecha antes del bloque de título y
+  descripción.
+- La prueba E2E del editor de correos comprueba que la flecha es el primer elemento de la cabecera,
+  antes del título, y que sigue regresando a Configuración. La suite la ejecuta en PC y móvil.
+
+`docs/modules/mail.md` no cambia: describe las funciones del editor y no fija la composición de su
+cabecera. Además, su comportamiento funcional no cambia.
+
+### 13.4 Criterios de aceptación
+
+1. En `/mail`, la flecha aparece inmediatamente a la izquierda del título **Los correos**.
+2. En anchos de PC y móvil, el control permanece antes del título cuando la cabecera se reparte en
+   más de una línea.
+3. Su nombre accesible sigue siendo **Volver / Back** y su destino sigue siendo `/settings`.
+4. Los tres controles que ya cumplen conservan su posición y su destino.
+5. Los enlaces y acciones excluidos no cambian.
+
+### 13.5 Decisión registrada
+
+El responsable confirmó el 2026-10-05 la recomendación: unificar sólo los controles de navegación
+de cabecera como icono a la izquierda del título. Los enlaces de flujo dentro del contenido quedan
+fuera.
+
+### 13.6 Registro del repaso
+
+El responsable confirmó el 2026-10-05 que:
+
+1. la flecha quedaría como primer elemento de la cabecera;
+2. el título y su descripción permanecerían juntos, en un bloque a la derecha de la flecha;
+3. no se añade ninguna excepción adicional a la regla ni se amplía el alcance.
+
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente la propuesta
+con «Sí». La implementación respeta el alcance aprobado y el documento vuelve a `as-built`.
+
+### 13.7 Verificación
+
+- Las 216 pruebas unitarias del frontend pasan.
+- Los cuatro casos E2E del editor de correos pasan: dos en PC y dos en móvil.
+- La prueba comprueba que la flecha es el primer elemento de la cabecera, que su posición horizontal
+  queda antes del título y que al pulsarla se regresa a `/settings`.

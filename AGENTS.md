@@ -89,9 +89,9 @@ completo.
 | `docs/modules/tickets.md` | Cubre `backend/modules/tickets/**`, las diez tablas de `tickets` en `backend/migrations/v1.0.0.sql`, **las pantallas de `frontend/src/app/modules/tickets/**`** y los aumentos que necesitaron `users` (la lista de técnicos activos y la lectura de cuentas en bloque) y `settings` (la configuración del reparto). **Está entero**, backend y pantallas |
 | `docs/flujos.md` | **as-built**: los recorridos paso a paso de los tickets y sus correos, que es lo que hacen `backend/modules/tickets/**` y sus pantallas |
 | `docs/ambientes.md` | El runbook: **el despliegue a producción** —`scripts/prod-build.sh`, hecho y usado en el primer despliegue—, las migraciones, **las copias de seguridad** —`scripts/backup-db.sh`, con las dos bases en el `cron`— y las tres capas de pruebas (`tests/e2e/`) |
-| `docs/interfaz-y-experiencia.md` | Cubre `frontend/src/app/core/**` (el armazón, los controles, las pantallas de la sesión y Configuración), `frontend/src/app/shared/components/**` y **la forma de las pantallas de producto**: las de usuarios (3.6), las de tickets (3.7) y el editor de los correos (3.8), todas hechas |
+| `docs/interfaz-y-experiencia.md` | **as-built**: cubre `frontend/src/app/core/**`, `frontend/src/app/shared/components/**` y la forma de las pantallas de producto. Los controles de regreso de cabecera son iconos a la izquierda del título; `/mail`, la única incoherencia del inventario, está corregida y verificada en PC y móvil |
 | `docs/modules/settings.md` | Cubre `backend/modules/settings/**`, `backend/shared/version/**`, **las cuatro tablas de configuración de una fila** (`installation_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`) y `frontend/src/app/core/pages/settings-page.*` (el nombre de la instalación, **cómo se entra y las dos configuraciones de directorio con sus pruebas de conexión**, la marca, el color, el idioma, el prefijo y el reparto, **y el motor de IA con su prueba**). **Está entero** |
-| `docs/primer-arranque.md` | **as-built**: la vista de primer arranque, que pide lo necesario para dejar la instalación en marcha en cuatro pasos. Es el **sello** de `installation_settings`, `backend/modules/settings/**` (la API `/api/setup/**`), `frontend/src/app/core/pages/setup-page.*` y el correo saliente del módulo `mail` |
+| `docs/primer-arranque.md` | **as-built**: la vista de primer arranque y sus cuatro pasos. En el paso 3, un campo de sólo lectura muestra explícitamente la región seleccionada con su identificador IANA; implementado y verificado en PC y móvil |
 | `docs/modules/ai.md` | **aprobado**: los dos resúmenes del ticket —**motivo** y **última acción**— que redacta el **motor de IA de un contenedor aparte**, en español y en inglés. Cubre `backend/modules/ai/**`, la tabla `ai_insights` y el `ai.yml` del motor. Lo consume `tickets` a través de una interfaz que él mismo declara |
 | `docs/modules/mail.md` | Cubre `backend/modules/mail/**`, las plantillas de `backend/migrations/v1.0.0.sql` y **el editor de `frontend/src/app/modules/mail/**`**. **Está entero**, backend y editor |
 | `docs/modules/auth.md` | Cubre `backend/modules/auth/**`, el token de sesión y el `state` de OIDC de `shared/auth`, `shared/auth/methods.go`, el middleware y `frontend/src/app/core/**` (sesión, interceptor, guarda y las seis pantallas). **Está entero**: los tres caminos de entrada —local, AD y Keycloak— hechos y verificados, **con la instalación entrando por uno a la vez y la cuenta de fábrica siempre dentro** |
@@ -214,6 +214,10 @@ autenticación sin mandar ningún correo**. El sello vive en `installation_setti
 **una instalación que ya estaba configurada queda sellada al actualizar**, así que nadie ve el
 asistente en producción por este cambio. **La contraseña de la cuenta de fábrica sigue en el entorno**
 (`ADMIN_PASSWORD`): el asistente no la pide.
+
+**La región seleccionada se ve explícitamente en el paso 3** (2026-10-05): antes del buscador,
+`/setup` muestra un campo de sólo lectura con el identificador IANA exacto. Cambia inmediatamente al
+elegir otra zona y conserva debajo la hora y el desfase; se verificó en PC y móvil.
 
 **El motor de IA se levanta aparte y es opcional** (corrección del responsable, 2026-09-30): vive en
 **`ai.yml`**, su propio compose —como el directorio de pruebas (`active-directory.yml`) y Keycloak
@@ -356,14 +360,14 @@ El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 - `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
 - `docs/ambientes.md` (**as-built**, **21 enmiendas**): despliegue, migraciones, copias de seguridad y pruebas. El arranque local aplica el esquema automáticamente; los ejemplos siguen siendo opcionales.
-- `docs/interfaz-y-experiencia.md` (**as-built**, **38 enmiendas**): la parte visual y de experiencia. `/setup` empieza en inglés y cambia toda la interfaz al elegir otro idioma.
+- `docs/interfaz-y-experiencia.md` (**as-built**, **40 enmiendas**): la parte visual y de experiencia. `/setup` empieza en inglés, cambia toda la interfaz al elegir otro idioma y muestra explícitamente la zona elegida en el paso 3. Los controles de regreso de cabecera quedan a la izquierda, incluido el de `/mail`.
 - `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
 - `docs/modules/settings.md` (**as-built**, **10 enmiendas**): la configuración de la instalación y la marca. El idioma inicial es inglés y las sugerencias SMTP sólo rellenan un asistente vacío.
 - `docs/modules/auth.md` (**as-built**, **8 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**. Enmendado el 2026-10-01: **el directorio de pruebas y Keycloak dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, con **su propio comando** y la red `catalina-support-dev` que posee `dev.yml`; **el perfil `auth` desaparece** (sección 11 y decisión 1).
 - `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
 - `docs/README.md`: índice de documentación.
 
-- `docs/primer-arranque.md` (**as-built**, **3 enmiendas**): la vista de primer arranque y su sello, con inglés inicial, traducción inmediata y valores editables de Mailpit en desarrollo.
+- `docs/primer-arranque.md` (**as-built**, **4 enmiendas**): la vista de primer arranque y su sello, con inglés inicial, traducción inmediata, valores editables de Mailpit en desarrollo y la región seleccionada visible en el paso 3.
 - `docs/modules/ai.md` (**as-built**, **2 enmiendas**): el motor de IA y los dos campos que redacta —«Motivo» y «Última acción»—, en español y en inglés. **Es el sexto módulo**, y el único sin pantalla propia: su motor se configura desde Configuración. Enmendado el 2026-10-01: **los recursos del motor se corrigen** —tope de **1500m de memoria**, **sin tope de CPU** (`ai.yml` no limita CPU; el «2 CPU» anterior no salía del compose) y **~1,44 GiB medidos en marcha**—, y se explica el **aviso esperado del volumen `ai_modelos`** (nombre fijo, no hay que arreglarlo).
 
 La cadena de producto **está completa**. Además, **cada módulo tiene su documento**, escrito justo

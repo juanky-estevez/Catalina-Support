@@ -55,11 +55,16 @@ export async function instalar(): Promise<void> {
       await page
         .getByRole('button', { name: 'Siguiente', exact: true })
         .click();
+      await expect(page.locator('#zona-seleccionada')).toHaveValue(
+        movil ? 'America/Guayaquil' : 'UTC',
+      );
       await page.locator('#zona-busqueda').fill('America/Guayaquil');
       await page
         .getByRole('option')
         .filter({ hasText: 'America/Guayaquil' })
         .click();
+      await expect(page.locator('#zona-seleccionada')).toHaveValue('America/Guayaquil');
+      await expect(page.locator('#zona-seleccionada')).toHaveAttribute('readonly', '');
       await page.locator('#direccion-publica').fill(baseURL);
       await page
         .getByRole('button', { name: 'Siguiente', exact: true })

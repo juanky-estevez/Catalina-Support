@@ -62,6 +62,7 @@ export const ES = {
     region: 'Región horaria',
     regionAyuda:
       'La zona en la que se leen todas las fechas, aquí y en los correos. Se guardan en UTC: cambiarla no mueve ningún ticket.',
+    regionSeleccionada: 'Región horaria seleccionada',
     buscarZona: 'Buscar una ciudad o una zona',
     sinZonas: 'Ninguna zona coincide con lo que buscas.',
     horaDeLaZona: 'Ahora son las {hora} ({desfase}).',
@@ -139,7 +140,8 @@ export const ES = {
     keycloakAyuda:
       'Lo que hace falta para entrar por Keycloak. El secreto del cliente se guarda y no se vuelve a enseñar.',
     kcInterno: 'Dirección interna del reino (opcional)',
-    kcInternoAyuda: 'La dirección que alcanza el servidor. Déjala vacía para usar el emisor público. En Docker: http://keycloak:8080/sso/realms/catalina-support.',
+    kcInternoAyuda:
+      'La dirección que alcanza el servidor. Déjala vacía para usar el emisor público. En Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Emisor del reino',
     kcEmisorAyuda:
       'La dirección del reino, la que ve el navegador. Ejemplo: https://sso.empresa.com/realms/empresa.',

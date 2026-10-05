@@ -1,14 +1,9 @@
 <main class="mx-auto flex max-w-7xl flex-col gap-6">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h1 class="text-xl font-semibold text-texto">{{ t().correos.titulo }}</h1>
-      <p class="text-sm text-apagado">{{ t().correos.descripcion }}</p>
-    </div>
-
+  <div class="flex flex-wrap items-center gap-3">
     <!--
       **La vuelta a Configuración es el botón de atrás** (decisión del responsable, 2026-09-29): una
-      flecha a la izquierda del título, como en las listas de tickets, en vez de un botón con el nombre de
-      la pantalla a la que vuelve. Su nombre accesible dice que vuelve.
+      flecha como primer elemento de la cabecera y a la izquierda del título, igual que en las otras
+      vistas secundarias. Su nombre accesible dice que vuelve.
     -->
     <a
       routerLink="/settings"
@@ -18,6 +13,11 @@
     >
       <app-icono nombre="volver" />
     </a>
+
+    <div class="min-w-0 flex-1">
+      <h1 class="text-xl font-semibold text-texto">{{ t().correos.titulo }}</h1>
+      <p class="text-sm text-apagado">{{ t().correos.descripcion }}</p>
+    </div>
   </div>
 
   @if (mensaje(); as aviso) {

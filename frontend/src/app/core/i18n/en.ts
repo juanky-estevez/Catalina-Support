@@ -61,6 +61,7 @@ export const EN: Textos = {
     region: 'Time zone',
     regionAyuda:
       'The zone every date is read in, here and in the e-mails. They are stored in UTC: changing it moves no ticket.',
+    regionSeleccionada: 'Selected time zone',
     buscarZona: 'Search a city or a zone',
     sinZonas: 'No zone matches what you are looking for.',
     horaDeLaZona: 'It is now {hora} ({desfase}).',
@@ -139,7 +140,8 @@ export const EN: Textos = {
     keycloakAyuda:
       'What is needed to sign in through Keycloak. The client secret is stored and never shown again.',
     kcInterno: 'Internal realm address (optional)',
-    kcInternoAyuda: 'The address reachable by the server. Leave empty to use the public issuer. In Docker: http://keycloak:8080/sso/realms/catalina-support.',
+    kcInternoAyuda:
+      'The address reachable by the server. Leave empty to use the public issuer. In Docker: http://keycloak:8080/sso/realms/catalina-support.',
     kcEmisor: 'Realm issuer',
     kcEmisorAyuda:
       'The realm address, the one the browser sees. For example: https://sso.company.com/realms/company.',

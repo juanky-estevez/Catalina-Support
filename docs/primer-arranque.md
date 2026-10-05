@@ -1,7 +1,14 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-04
+> **Última actualización:** 2026-10-05
+>
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. En el paso 3,
+> la zona elegida sólo se distingue por el resaltado dentro de una lista larga y puede quedar fuera
+> de la parte visible. El responsable pidió un campo que indique explícitamente la región
+> seleccionada y aceptó la propuesta de mostrarlo antes del buscador, como sólo lectura, con el
+> identificador IANA exacto y la hora con su desfase debajo. Se implementó y se verificó en PC y
+> móvil dentro de la instalación desechable de Playwright.
 >
 > **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: una instalación nueva
 > empieza en inglés aunque el navegador recuerde español; el selector traduce todo `/setup` al
@@ -187,3 +194,74 @@ Aprobar esta propuesta habilita: la columna del sello en `v1.0.0.sql` con su rel
 `/setup` con sus cuatro pasos y su resumen, los endpoints `/api/setup/**` con su candado, el correo
 saliente en la base —y fuera del entorno—, y las pruebas de las tres capas. **Nada de eso se
 escribe hasta que el responsable lo apruebe.**
+
+## 9. Región seleccionada visible en el paso 3
+
+### 9.1 Hallazgo
+
+En **Where it is / Dónde está**, la lista marca la zona elegida con fondo y peso de texto. Esa marca
+no basta: la lista es larga, tiene desplazamiento propio y la opción seleccionada puede no estar en
+la parte visible. Después de elegir, el buscador se limpia y no queda un dato estable que diga cuál
+es la región actual. La hora y el desfase ayudan a validarla, pero no nombran la zona.
+
+### 9.2 Comportamiento
+
+Antes del buscador aparece un campo de sólo lectura:
+
+- etiqueta **Selected time zone** en inglés y **Región horaria seleccionada** en español;
+- valor IANA exacto, por ejemplo `America/Guayaquil`;
+- al abrir el paso muestra la zona que ya tiene el asistente —`UTC` en una instalación nueva o la
+  persistida si se está reanudando—;
+- al elegir una opción de la lista, el campo cambia inmediatamente;
+- su texto se puede seleccionar y copiar, pero no editar: una zona sólo entra al estado al elegirla
+  de la lista válida;
+- la hora actual y el desfase continúan debajo de la lista, como hoy.
+
+El buscador, la lista, el resaltado de la opción, la dirección pública y la forma de guardar el paso
+no cambian. El campo ocupa el ancho disponible tanto en PC como en móvil y conserva una etiqueta
+visible y asociada para lectores de pantalla.
+
+### 9.3 Alcance de la implementación
+
+La implementación modifica `frontend/src/app/core/pages/setup-page.html`, añade los dos textos al
+diccionario estricto ES/EN y amplía la preparación Playwright de la instalación para comprobar el
+valor inicial y el cambio de zona. `docs/interfaz-y-experiencia.md` recoge también el comportamiento
+final.
+
+Quedan fuera la API, la base de datos, la validación de zonas, la pantalla general de Configuración
+y los otros tres pasos de `/setup`.
+
+### 9.4 Criterios de aceptación
+
+1. Al abrir el paso 3 se ve el campo con `UTC` o con la zona guardada que corresponda.
+2. Elegir `America/Guayaquil` actualiza el campo en el acto y mantiene debajo su hora y desfase.
+3. El campo no admite escritura, pero permite seleccionar y copiar su texto.
+4. La búsqueda y la lista siguen funcionando con teclado y lector de pantalla, sin identificadores
+   duplicados.
+5. El comportamiento se comprueba en PC y móvil dentro de la instalación desechable de Playwright.
+
+### 9.5 Decisión registrada
+
+El responsable confirmó la recomendación el 2026-10-05: campo de sólo lectura antes del buscador,
+identificador IANA exacto y hora/desfase conservados debajo.
+
+### 9.6 Registro del repaso
+
+El responsable confirmó el 2026-10-05:
+
+1. El texto se selecciona y se copia con el comportamiento normal del campo; no se añade un botón
+   de copiar.
+2. Esta última observación se limita al paso 3 de `/setup`; la pantalla general de Configuración no
+   cambia.
+
+El repaso no deja decisiones abiertas. El responsable aprobó explícitamente esta enmienda con
+«Sí». La implementación respeta el alcance aprobado y el documento vuelve a `as-built`.
+
+### 9.7 Verificación
+
+- Las 216 pruebas unitarias del frontend pasan.
+- La preparación Playwright de una instalación vacía pasa en PC y móvil: comprueba `UTC` en el
+  recorrido nuevo, `America/Guayaquil` al reanudar, la actualización inmediata después de elegir y
+  el atributo de sólo lectura.
+- Los cuatro casos de `arranque-instalacion.spec.ts` pasan en PC y móvil después de sellar esa
+  instalación.

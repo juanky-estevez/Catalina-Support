@@ -37,7 +37,23 @@ test.describe('El editor de los correos', () => {
 
     // **Y la vuelta a Configuración es el botón de atrás** (decisión del responsable, 2026-09-29): la
     // flecha a la izquierda, como en las listas de tickets, con su nombre accesible.
-    await expect(page.getByRole('link', { name: 'Volver' })).toBeVisible();
+    const volver = page.getByRole('link', { name: 'Volver' });
+    const titulo = page.getByRole('heading', { name: 'Los correos' });
+    await expect(volver).toBeVisible();
+    expect(
+      await volver.evaluate((enlace) => enlace.parentElement?.firstElementChild === enlace),
+    ).toBe(true);
+    const [cajaDeVolver, cajaDelTitulo] = await Promise.all([
+      volver.boundingBox(),
+      titulo.boundingBox(),
+    ]);
+    expect(cajaDeVolver).not.toBeNull();
+    expect(cajaDelTitulo).not.toBeNull();
+    expect(cajaDeVolver!.x).toBeLessThan(cajaDelTitulo!.x);
+    await volver.click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await page.getByRole('link', { name: 'Editar los correos' }).click();
+    await expect(page).toHaveURL(/\/mail$/);
 
     // Los **once** correos, y los dos idiomas del elegido. Eran diez hasta el 2026-09-27, que entró el
     // aviso de que te han etiquetado (`docs/modules/mail.md`, sección 5.1).
