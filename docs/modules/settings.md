@@ -1,7 +1,13 @@
 # settings
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-04
+> **Estado:** propuesta
+> **Última actualización:** 2026-10-05
+>
+> **Propuesta de enmienda del 2026-10-05, pendiente de aprobación.** La región elegida en
+> Configuración sólo se distingue por el resaltado dentro de la lista y puede quedar fuera de la
+> parte visible, el mismo hallazgo ya corregido en `/setup`. El responsable confirmó reutilizar en
+> `/settings` el campo de sólo lectura con el identificador IANA exacto, antes del buscador, con
+> actualización inmediata y la hora y el desfase debajo. No cambia la persistencia.
 >
 > **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: el valor inicial de
 > `installation_settings.language` es `en` para bases nuevas. El servicio de primer arranque admite
@@ -523,6 +529,10 @@ confirma.
 
 **La región** se elige de **una lista con buscador**, no se escribe:
 
+- Antes del buscador, un campo de sólo lectura mostrará explícitamente la zona que tiene el
+  formulario, con su identificador IANA exacto —por ejemplo, `America/Guayaquil`—. Al cargar enseña
+  la zona guardada y al elegir otra se actualiza inmediatamente, aunque todavía no se haya pulsado
+  **Guardar**. El texto se puede seleccionar y copiar, pero no editar.
 - La lista es **el catálogo de zonas del navegador** (`Intl.supportedValuesOf('timeZone')`), **más los
   desfases fijos** `Etc/GMT±1…12`, que ese catálogo deja fuera y son la forma de decir «UTC-5» sin
   horario de verano. Si el navegador no trae la función —o contesta vacío—, cae a **una lista corta
@@ -537,6 +547,12 @@ confirma.
   correos, por lo que el módulo de correo le pide a este. **Las fechas guardadas siguen en UTC**, así
   que cambiarla no mueve ningún ticket; y los correos que llevan fecha —el aviso de contraseña
   cambiada— y la vista previa del editor se escriben en ella.
+
+La etiqueta del campo reutiliza los textos estrictos ya existentes: **Región horaria seleccionada**
+en español y **Selected time zone** en inglés. Es el mismo patrón del paso 3 de `/setup`; en ambas
+pantallas el valor sólo cambia al elegir una opción válida de la lista. El responsable confirmó en
+el repaso del 2026-10-05 que también se reutilizan el identificador técnico y la apariencia, sin
+diferencias visuales ni funcionales.
 
 **La dirección pública** se escribe con su esquema, su host y **su puerto si hace falta**, y
 **`localhost` vale**: es lo que permite probar la instalación en local y usarla en serio sin tocar el

@@ -1,7 +1,12 @@
 # Interfaz y experiencia
 
-> **Estado:** as-built
+> **Estado:** propuesta
 > **Última actualización:** 2026-10-05
+>
+> **Propuesta de enmienda del 2026-10-05, pendiente de aprobación.** Configuración tiene el mismo
+> problema visual que tuvo el paso 3 de `/setup`: una lista larga puede ocultar la opción resaltada.
+> El responsable confirmó aplicar en `/settings` el mismo campo de sólo lectura antes del buscador,
+> con el identificador IANA exacto, actualización inmediata y la hora y el desfase debajo.
 >
 > **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Al revisar todas las vistas se
 > encontró que los controles de navegación de cabecera ya están a la izquierda en el alta y el
@@ -1244,3 +1249,62 @@ con «Sí». La implementación respeta el alcance aprobado y el documento vuelv
 - Los cuatro casos E2E del editor de correos pasan: dos en PC y dos en móvil.
 - La prueba comprueba que la flecha es el primer elemento de la cabecera, que su posición horizontal
   queda antes del título y que al pulsarla se regresa a `/settings`.
+
+## 14. Propuesta: región seleccionada visible en Configuración
+
+### 14.1 Hallazgo
+
+La tarjeta **Región horaria y dirección pública** de `/settings` ofrece el mismo buscador y la misma
+lista desplazable que `/setup`. La opción elegida sólo se reconoce por el fondo y el peso de texto
+dentro de esa lista; si queda fuera de la parte visible, la pantalla no nombra de forma estable la
+zona que se guardará. La hora y el desfase permiten comprobarla, pero no dicen cuál es.
+
+### 14.2 Comportamiento propuesto
+
+Se reutiliza exactamente el patrón aprobado para `/setup`:
+
+- campo de sólo lectura antes del buscador;
+- etiqueta **Selected time zone / Región horaria seleccionada** según el idioma de la interfaz;
+- identificador IANA exacto como valor;
+- zona guardada al cargar la pantalla y actualización inmediata al elegir otra;
+- texto seleccionable y copiable, sin edición directa;
+- hora y desfase conservados debajo de la lista.
+
+El valor del campo es el borrador actual del formulario. Elegir una zona lo cambia y habilita el
+guardado existente; guardar, recibir un error o volver a cargar siguen las reglas actuales de
+Configuración. El buscador, la lista, el resaltado, la dirección pública y el botón de guardar no
+cambian.
+
+### 14.3 Alcance
+
+- `docs/modules/settings.md` define el comportamiento dentro de la tarjeta de región.
+- Este documento define su presentación coherente con `/setup`.
+- `docs/README.md` y `AGENTS.md` reflejan temporalmente el estado de la propuesta.
+- Una vez aprobada, se modifica `frontend/src/app/core/pages/settings-page.html` y se amplían las
+  pruebas existentes de Configuración.
+- Se reutilizan los textos ES/EN actuales; no se añaden claves de traducción.
+
+Quedan fuera la API, la base de datos, la validación de zonas, `/setup`, la dirección pública y las
+demás tarjetas de Configuración.
+
+### 14.4 Criterios de aceptación
+
+1. Al cargar `/settings`, el campo muestra la zona guardada.
+2. Elegir `America/Guayaquil` actualiza el campo inmediatamente antes de guardar.
+3. El campo es de sólo lectura y permite seleccionar y copiar el identificador.
+4. La búsqueda, la lista, el resaltado, la hora y el desfase conservan su comportamiento.
+5. Las pruebas unitarias comprueban el valor cargado, el cambio inmediato y el atributo de sólo
+   lectura; Playwright comprueba la presencia del campo en PC y móvil.
+
+### 14.5 Decisión registrada
+
+El responsable confirmó el 2026-10-05 reutilizar exactamente el patrón de `/setup`, sin cambios en
+el guardado, la API ni la base de datos.
+
+### 14.6 Registro del repaso
+
+El responsable confirmó el 2026-10-05 que `/settings` usará el mismo identificador técnico, la
+misma apariencia y el mismo comportamiento de `/setup`, sin diferencias adicionales.
+
+El repaso queda cerrado sin decisiones abiertas. La propuesta todavía necesita la aprobación
+explícita del responsable antes de modificar código.
