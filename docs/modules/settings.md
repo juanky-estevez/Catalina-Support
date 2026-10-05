@@ -1,13 +1,14 @@
 # settings
 
-> **Estado:** propuesta
+> **Estado:** as-built
 > **Última actualización:** 2026-10-05
 >
-> **Propuesta de enmienda del 2026-10-05, pendiente de aprobación.** La región elegida en
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. La región elegida en
 > Configuración sólo se distingue por el resaltado dentro de la lista y puede quedar fuera de la
 > parte visible, el mismo hallazgo ya corregido en `/setup`. El responsable confirmó reutilizar en
 > `/settings` el campo de sólo lectura con el identificador IANA exacto, antes del buscador, con
-> actualización inmediata y la hora y el desfase debajo. No cambia la persistencia.
+> actualización inmediata y la hora y el desfase debajo. Se implementó y se verificó en las pruebas
+> unitarias y en Playwright, en PC y móvil. No cambia la persistencia.
 >
 > **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: el valor inicial de
 > `installation_settings.language` es `en` para bases nuevas. El servicio de primer arranque admite
@@ -529,7 +530,7 @@ confirma.
 
 **La región** se elige de **una lista con buscador**, no se escribe:
 
-- Antes del buscador, un campo de sólo lectura mostrará explícitamente la zona que tiene el
+- Antes del buscador, un campo de sólo lectura muestra explícitamente la zona que tiene el
   formulario, con su identificador IANA exacto —por ejemplo, `America/Guayaquil`—. Al cargar enseña
   la zona guardada y al elegir otra se actualiza inmediatamente, aunque todavía no se haya pulsado
   **Guardar**. El texto se puede seleccionar y copiar, pero no editar.

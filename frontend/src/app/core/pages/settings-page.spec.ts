@@ -196,6 +196,12 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
     opciones(fixture)[0].click();
     fixture.detectChanges();
 
+    const zonaSeleccionada = fixture.nativeElement.querySelector(
+      '#zona-seleccionada',
+    ) as HTMLInputElement;
+    expect(zonaSeleccionada.value).toBe('America/Guayaquil');
+    expect(zonaSeleccionada.readOnly).toBe(true);
+
     // Elegir una zona distinta de la guardada ya pide guardar.
     const guardar = botonDeGuardar(fixture);
     expect(guardar.disabled).toBe(false);
@@ -246,6 +252,12 @@ describe('SettingsPage: la región horaria y la dirección pública', () => {
       '[role="option"][aria-selected="true"]',
     ) as HTMLElement | null;
     expect(elegida?.textContent).toContain('America/Guayaquil');
+
+    const zonaSeleccionada = fixture.nativeElement.querySelector(
+      '#zona-seleccionada',
+    ) as HTMLInputElement;
+    expect(zonaSeleccionada.value).toBe('America/Guayaquil');
+    expect(zonaSeleccionada.readOnly).toBe(true);
 
     const campo = fixture.nativeElement.querySelector('#direccion-publica') as HTMLInputElement;
     expect(campo.value).toBe('http://soporte.local:8080');

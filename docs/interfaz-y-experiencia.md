@@ -1,12 +1,13 @@
 # Interfaz y experiencia
 
-> **Estado:** propuesta
+> **Estado:** as-built
 > **Última actualización:** 2026-10-05
 >
-> **Propuesta de enmienda del 2026-10-05, pendiente de aprobación.** Configuración tiene el mismo
+> **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Configuración tenía el mismo
 > problema visual que tuvo el paso 3 de `/setup`: una lista larga puede ocultar la opción resaltada.
 > El responsable confirmó aplicar en `/settings` el mismo campo de sólo lectura antes del buscador,
-> con el identificador IANA exacto, actualización inmediata y la hora y el desfase debajo.
+> con el identificador IANA exacto, actualización inmediata y la hora y el desfase debajo. Se
+> implementó y se verificó en PC y móvil.
 >
 > **Enmendado el 2026-10-05**, con aprobación explícita del responsable. Al revisar todas las vistas se
 > encontró que los controles de navegación de cabecera ya están a la izquierda en el alta y el
@@ -1250,7 +1251,7 @@ con «Sí». La implementación respeta el alcance aprobado y el documento vuelv
 - La prueba comprueba que la flecha es el primer elemento de la cabecera, que su posición horizontal
   queda antes del título y que al pulsarla se regresa a `/settings`.
 
-## 14. Propuesta: región seleccionada visible en Configuración
+## 14. Región seleccionada visible en Configuración
 
 ### 14.1 Hallazgo
 
@@ -1259,7 +1260,7 @@ lista desplazable que `/setup`. La opción elegida sólo se reconoce por el fond
 dentro de esa lista; si queda fuera de la parte visible, la pantalla no nombra de forma estable la
 zona que se guardará. La hora y el desfase permiten comprobarla, pero no dicen cuál es.
 
-### 14.2 Comportamiento propuesto
+### 14.2 Comportamiento
 
 Se reutiliza exactamente el patrón aprobado para `/setup`:
 
@@ -1279,9 +1280,9 @@ cambian.
 
 - `docs/modules/settings.md` define el comportamiento dentro de la tarjeta de región.
 - Este documento define su presentación coherente con `/setup`.
-- `docs/README.md` y `AGENTS.md` reflejan temporalmente el estado de la propuesta.
-- Una vez aprobada, se modifica `frontend/src/app/core/pages/settings-page.html` y se amplían las
-  pruebas existentes de Configuración.
+- `docs/README.md` y `AGENTS.md` reflejan el estado final de la enmienda.
+- `frontend/src/app/core/pages/settings-page.html` muestra el campo y las pruebas existentes de
+  Configuración comprueban su comportamiento.
 - Se reutilizan los textos ES/EN actuales; no se añaden claves de traducción.
 
 Quedan fuera la API, la base de datos, la validación de zonas, `/setup`, la dirección pública y las
@@ -1306,5 +1307,14 @@ el guardado, la API ni la base de datos.
 El responsable confirmó el 2026-10-05 que `/settings` usará el mismo identificador técnico, la
 misma apariencia y el mismo comportamiento de `/setup`, sin diferencias adicionales.
 
-El repaso queda cerrado sin decisiones abiertas. La propuesta todavía necesita la aprobación
-explícita del responsable antes de modificar código.
+El repaso queda cerrado sin decisiones abiertas. El responsable aprobó explícitamente las dos
+propuestas con «Sí». La implementación respeta el alcance aprobado y ambos documentos vuelven a
+`as-built`.
+
+### 14.7 Verificación
+
+- Las 216 pruebas unitarias del frontend pasan; las de Configuración comprueban el valor inicial,
+  el cambio inmediato y el atributo de sólo lectura.
+- Los cuatro recorridos E2E afectados pasan: dos en PC y dos en móvil.
+- Playwright comprueba el valor guardado, `America/Guayaquil` después de elegir, el atributo de sólo
+  lectura y que el campo pertenece a la tarjeta de región y dirección.

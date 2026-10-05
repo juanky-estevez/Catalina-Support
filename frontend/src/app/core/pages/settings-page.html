@@ -525,6 +525,17 @@
           </h3>
           <p class="text-sm text-apagado">{{ t().configuracion.regionAyuda }}</p>
 
+          <label for="zona-seleccionada" class="text-sm font-medium text-texto">
+            {{ t().configuracion.regionSeleccionada }}
+          </label>
+          <input
+            id="zona-seleccionada"
+            type="text"
+            readonly
+            [value]="zonaElegida()"
+            class="min-h-11 w-full cursor-text rounded-md border border-borde-fuerte bg-superficie-suave px-3 py-2 text-sm text-texto"
+          />
+
           <label for="zona-busqueda" class="text-sm font-medium text-texto">
             {{ t().configuracion.buscarZona }}
           </label>

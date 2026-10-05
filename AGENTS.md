@@ -89,8 +89,8 @@ completo.
 | `docs/modules/tickets.md` | Cubre `backend/modules/tickets/**`, las diez tablas de `tickets` en `backend/migrations/v1.0.0.sql`, **las pantallas de `frontend/src/app/modules/tickets/**`** y los aumentos que necesitaron `users` (la lista de técnicos activos y la lectura de cuentas en bloque) y `settings` (la configuración del reparto). **Está entero**, backend y pantallas |
 | `docs/flujos.md` | **as-built**: los recorridos paso a paso de los tickets y sus correos, que es lo que hacen `backend/modules/tickets/**` y sus pantallas |
 | `docs/ambientes.md` | El runbook: **el despliegue a producción** —`scripts/prod-build.sh`, hecho y usado en el primer despliegue—, las migraciones, **las copias de seguridad** —`scripts/backup-db.sh`, con las dos bases en el `cron`— y las tres capas de pruebas (`tests/e2e/`) |
-| `docs/interfaz-y-experiencia.md` | **propuesta**: lo existente sigue as-built. La enmienda del 2026-10-05 aplica en `/settings` el mismo campo de sólo lectura que hace visible la zona seleccionada en `/setup`; pendiente de repaso y aprobación |
-| `docs/modules/settings.md` | **propuesta**: lo existente sigue as-built. La enmienda del 2026-10-05 muestra explícitamente en Configuración la zona seleccionada, sin cambiar persistencia, API ni base; pendiente de repaso y aprobación |
+| `docs/interfaz-y-experiencia.md` | **as-built**: cubre `frontend/src/app/core/**`, `frontend/src/app/shared/components/**` y la forma de las pantallas de producto. `/setup` y `/settings` muestran explícitamente la zona seleccionada mediante el mismo campo de sólo lectura; verificado en PC y móvil |
+| `docs/modules/settings.md` | **as-built**: cubre `backend/modules/settings/**`, `backend/shared/version/**`, las cuatro tablas de configuración y `frontend/src/app/core/pages/settings-page.*`. Configuración muestra explícitamente la zona seleccionada sin cambiar persistencia, API ni base |
 | `docs/primer-arranque.md` | **as-built**: la vista de primer arranque y sus cuatro pasos. En el paso 3, un campo de sólo lectura muestra explícitamente la región seleccionada con su identificador IANA; implementado y verificado en PC y móvil |
 | `docs/modules/ai.md` | **aprobado**: los dos resúmenes del ticket —**motivo** y **última acción**— que redacta el **motor de IA de un contenedor aparte**, en español y en inglés. Cubre `backend/modules/ai/**`, la tabla `ai_insights` y el `ai.yml` del motor. Lo consume `tickets` a través de una interfaz que él mismo declara |
 | `docs/modules/mail.md` | Cubre `backend/modules/mail/**`, las plantillas de `backend/migrations/v1.0.0.sql` y **el editor de `frontend/src/app/modules/mail/**`**. **Está entero**, backend y editor |
@@ -201,6 +201,10 @@ correos** (alta, restablecer) **y de la vuelta de Keycloak**; antes era la varia
 que queda como respaldo. **Si la dirección no es https, Configuración lo avisa** —la sesión y la
 contraseña viajan sin cifrar— sin bloquear nada, que es lo que permite probar la instalación en local
 y usarla en serio (`docs/modules/settings.md`, decisiones 13 a 15). Va **en la propia migración `v1.0.0.sql`**: la versión sigue abierta.
+
+**La zona seleccionada se ve explícitamente también en Configuración** (2026-10-05): `/settings`
+reutiliza el campo de sólo lectura de `/setup`, antes del buscador, con el identificador IANA exacto
+y actualización inmediata. La hora y el desfase permanecen debajo; se verificó en PC y móvil.
 
 **La instalación tiene vista de primer arranque** (2026-09-30): en una instalación **sin sellar** la
 aplicación lleva a **`/setup`**, que pide en cuatro pasos **la instalación** (nombre e idioma), **cómo
@@ -360,9 +364,9 @@ El detalle de lo que existe, lo que está sin verificar y lo que falta está en
 - `docs/modules/tickets.md` (**as-built**, **12 enmiendas**): modelo de datos, transiciones, endpoints y pantallas. **Terminado**, backend y pantallas, con **los adjuntos dentro del texto**.
 - `docs/flujos.md` (**as-built**, **1 enmienda**): los recorridos paso a paso y sus correos.
 - `docs/ambientes.md` (**as-built**, **21 enmiendas**): despliegue, migraciones, copias de seguridad y pruebas. El arranque local aplica el esquema automáticamente; los ejemplos siguen siendo opcionales.
-- `docs/interfaz-y-experiencia.md` (**propuesta**; **40 enmiendas as-built y 1 pendiente**): lo existente sigue as-built. La propuesta muestra explícitamente en `/settings` la zona elegida con el mismo patrón de `/setup`.
+- `docs/interfaz-y-experiencia.md` (**as-built**, **41 enmiendas**): la parte visual y de experiencia. `/setup` y `/settings` muestran explícitamente la zona elegida mediante el mismo patrón; los controles de regreso de cabecera quedan a la izquierda.
 - `docs/modules/mail.md` (**as-built**, **6 enmiendas**): el módulo de correo. **Terminado**, backend y editor. Enmendado el 2026-09-30: estrena **`Probar`**, que conecta y autentica **sin mandar ningún correo**.
-- `docs/modules/settings.md` (**propuesta**; **10 enmiendas as-built y 1 pendiente**): lo existente sigue as-built. La propuesta añade a Configuración el campo de sólo lectura con la zona seleccionada, sin cambios de persistencia.
+- `docs/modules/settings.md` (**as-built**, **11 enmiendas**): la configuración de la instalación y la marca. Configuración muestra explícitamente la zona seleccionada; el idioma inicial es inglés y las sugerencias SMTP sólo rellenan un asistente vacío.
 - `docs/modules/auth.md` (**as-built**, **8 enmiendas**): el módulo de autenticación. **Terminado**: los tres caminos de entrada, con **un método a la vez**. Enmendado el 2026-10-01: **el directorio de pruebas y Keycloak dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, con **su propio comando** y la red `catalina-support-dev` que posee `dev.yml`; **el perfil `auth` desaparece** (sección 11 y decisión 1).
 - `docs/modules/users.md` (**as-built**, **5 enmiendas**): el módulo de usuarios. **Terminado**, backend y pantallas, incluidas **las tres acciones que dependían del directorio**.
 - `docs/README.md`: índice de documentación.

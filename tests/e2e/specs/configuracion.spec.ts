@@ -314,6 +314,10 @@ test.describe('Configuración', () => {
 
     const guardar = page.getByRole('button', { name: 'Guardar la región y la dirección' });
     const direccion = page.getByLabel('Dirección pública');
+    const zonaSeleccionada = page.getByLabel('Región horaria seleccionada');
+
+    await expect(zonaSeleccionada).toHaveValue(String(antes.timeZone));
+    await expect(zonaSeleccionada).toHaveAttribute('readonly', '');
 
     // **El aviso de que no hay https** (decisión 13): sale con `http://` y **no bloquea nada**, que es
     // lo que permite probar la instalación en local.
@@ -330,6 +334,7 @@ test.describe('Configuración', () => {
     // toda la interfaz para pintar sus fechas (decisión 15).
     await page.getByLabel('Buscar una ciudad o una zona').fill('guayaquil');
     await page.getByRole('option', { name: 'America/Guayaquil', exact: true }).click();
+    await expect(zonaSeleccionada).toHaveValue('America/Guayaquil');
     await guardar.click();
     await expect(page.getByText('La región y la dirección se han guardado.')).toBeVisible();
 
@@ -456,6 +461,7 @@ test.describe('Configuración', () => {
     await expect(tarjetas.nth(3).getByLabel('Reparto').first()).toBeVisible();
 
     // **Y la región y la dirección van juntas**, sin la numeración dentro.
+    await expect(tarjetas.nth(4).getByLabel('Región horaria seleccionada')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Buscar una ciudad o una zona')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Dirección pública')).toBeVisible();
     await expect(tarjetas.nth(4).getByLabel('Prefijo de los números')).toHaveCount(0);
