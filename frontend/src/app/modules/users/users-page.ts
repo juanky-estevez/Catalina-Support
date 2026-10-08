@@ -18,7 +18,6 @@ import {
   ORIGENES,
   PAPELES,
   fechaCorta,
-  opcionesDeIdioma,
   opcionesDeOrigen,
   opcionesDePapel,
   etiquetaDeOrigen,
@@ -94,7 +93,6 @@ export class UsersPage {
     email: '',
     role: 'usuario',
     origin: 'local',
-    language: 'es',
   });
 
   private temporizador: ReturnType<typeof setTimeout> | null = null;
@@ -347,9 +345,6 @@ export class UsersPage {
       // Soporte sólo puede crear usuarios, y un Administrador empieza por el papel más común.
       role: 'usuario',
       origin: 'local',
-      // **El idioma de la instalación**, que es el que pone el backend cuando no se le manda ninguno:
-      // es lo que quiere decir «El de la instalación» en el desplegable.
-      language: '',
     });
     this.mostrandoAlta.set(true);
   }
@@ -362,7 +357,7 @@ export class UsersPage {
     this.alta.update((alta) => ({ ...alta, [campo]: valor }));
   }
 
-  protected campoDelAltaElegido(campo: 'role' | 'origin' | 'language', valor: string): void {
+  protected campoDelAltaElegido(campo: 'role' | 'origin', valor: string): void {
     this.alta.update((alta) => ({ ...alta, [campo]: valor }));
   }
 
@@ -374,10 +369,6 @@ export class UsersPage {
     return opcionesDeOrigen(this.t());
   }
 
-  protected opcionesDeIdiomaDelAlta() {
-    // Con la opción del idioma de la instalación delante, que es la que viene puesta.
-    return opcionesDeIdioma(this.t(), true);
-  }
 
   /** Da de alta la cuenta y, si sale bien, cierra el diálogo y refresca la lista. */
   protected async crear(): Promise<void> {

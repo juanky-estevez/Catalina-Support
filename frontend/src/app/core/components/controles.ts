@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 
-import { TranslationService, type Idioma } from '../i18n/translation.service';
+import { TranslationService } from '../i18n/translation.service';
 import { ThemeService, TEMAS_DE_FABRICA, type Tema } from '../services/theme.service';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 
@@ -29,17 +29,6 @@ import { Selector, type OpcionSelector } from '../../shared/components/selector'
       -->
       <app-selector
         class="flex-1"
-        identificador="idioma"
-        [etiqueta]="t().idioma.cambiar"
-        [etiquetaVisible]="false"
-        [anchoCompleto]="true"
-        [opciones]="opcionesDeIdioma()"
-        [valor]="textos.idioma()"
-        (valorChange)="cambiarIdioma($event)"
-      />
-
-      <app-selector
-        class="flex-1"
         identificador="tema"
         [etiqueta]="t().tema.etiqueta"
         [etiquetaVisible]="false"
@@ -61,15 +50,6 @@ export class Controles {
   protected t() {
     return this.textos.textos();
   }
-
-  /** Los nombres de los idiomas **no se traducen**: se leen en su propio idioma. */
-  protected readonly opcionesDeIdioma = computed<readonly OpcionSelector[]>(() =>
-    (['es', 'en'] as const).map((codigo) => ({
-      valor: codigo,
-      etiqueta: codigo === 'es' ? 'Español' : 'English',
-      grupo: this.t().idioma.cambiar,
-    })),
-  );
 
   /**
    * Los ocho temas, agrupados en claros y oscuros.
@@ -120,10 +100,6 @@ export class Controles {
       grupo: claridad[tema] === 'claros' ? this.t().tema.claros : this.t().tema.oscuros,
     }));
   });
-
-  protected cambiarIdioma(valor: string): void {
-    this.textos.cambiar(valor as Idioma);
-  }
 
   protected cambiarTema(valor: string): void {
     this.tema.cambiar(valor as Tema);

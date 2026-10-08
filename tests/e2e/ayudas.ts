@@ -132,7 +132,6 @@ export async function crearCuentaLista(
   peticion: APIRequestContext,
   opciones: {
     role?: string;
-    language?: string;
     token?: string;
     /**
      * El nombre y los apellidos se pueden fijar desde la prueba.
@@ -156,7 +155,6 @@ export async function crearCuentaLista(
       ...cuenta,
       role: opciones.role ?? 'usuario',
       origin: 'local',
-      language: opciones.language ?? 'es',
     },
   });
   expect(alta.status(), await alta.text()).toBe(201);

@@ -180,7 +180,7 @@ func TestAuthConLaBaseCaidaResponde503(t *testing.T) {
 // El camino feliz: la identidad queda en el contexto para los controladores.
 func TestAuthDejaLaIdentidadEnElContexto(t *testing.T) {
 	manager, _ := auth.NewTokenManager(secretoDePruebas)
-	esperada := auth.Identity{ID: 7, Name: "Ana", LastName: "Pérez", Role: auth.RoleSoporte, Language: "es", IsActive: true}
+	esperada := auth.Identity{ID: 7, Name: "Ana", LastName: "Pérez", Role: auth.RoleSoporte, IsActive: true}
 
 	llamado := false
 	var recibida auth.Identity

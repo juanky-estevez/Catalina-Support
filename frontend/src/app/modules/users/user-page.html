@@ -62,14 +62,6 @@
           (valorChange)="papel.set($event)"
         />
 
-        <app-selector
-          identificador="ficha-idioma"
-          [etiqueta]="t().usuarios.idioma"
-          [opciones]="opcionesDeIdioma()"
-          [valor]="idioma()"
-          (valorChange)="idioma.set($event)"
-        />
-
         <div class="flex flex-wrap items-center gap-3">
           <app-boton
             tipo="submit"

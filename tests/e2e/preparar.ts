@@ -19,7 +19,11 @@ import { instalar } from './instalar';
  * que la necesitan se saltan por su cuenta.
  */
 export default async function preparar(): Promise<void> {
-  if (process.env["ISOLATED_TESTS"] === "1") await instalar();
+  // Permite repetir un caso contra la instancia desechable ya instalada después de una pasada
+  // completa. La ejecución normal no define esta variable y conserva la instalación desde cero.
+  if (process.env['ISOLATED_TESTS'] === '1' && process.env['SKIP_ISOLATED_INSTALL'] !== '1') {
+    await instalar();
+  }
   if (!FABRICA.password) {
     return;
   }

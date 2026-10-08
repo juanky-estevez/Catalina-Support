@@ -104,7 +104,6 @@ func (s *Service) UpsertFromDirectory(datos auth.DirectoryAccount) (auth.Account
 		Email:    correo,
 		Role:     auth.RoleUsuario,
 		Origin:   datos.Origin,
-		Language: s.idiomaDeLaInstalacion(),
 		IsActive: true,
 	}
 	if id != "" {
@@ -225,7 +224,6 @@ type PatchInput struct {
 	LastName *string
 	Email    *string
 	Role     *string
-	Language *string
 	IsActive *bool
 }
 
@@ -248,7 +246,7 @@ func (s *Service) patch(id int64, input PatchInput, actor auth.Identity, propio 
 
 	if !propio && !esAdministrador {
 		// Soporte editando a otra persona: sólo el nombre y los apellidos.
-		if input.Email != nil || input.Role != nil || input.Language != nil || input.IsActive != nil {
+		if input.Email != nil || input.Role != nil || input.IsActive != nil {
 			return auth.Account{}, ErrRoleNotAllowed
 		}
 	}
@@ -305,14 +303,6 @@ func (s *Service) patch(id int64, input PatchInput, actor auth.Identity, propio 
 			return auth.Account{}, ErrRoleNotAllowed
 		}
 		cambios["role"] = papel
-	}
-
-	if input.Language != nil {
-		idioma := strings.TrimSpace(*input.Language)
-		if idioma != "es" && idioma != "en" {
-			return auth.Account{}, ErrLanguageUnknown
-		}
-		cambios["language"] = idioma
 	}
 
 	if len(cambios) == 0 {

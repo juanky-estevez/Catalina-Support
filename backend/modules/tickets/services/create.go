@@ -302,7 +302,6 @@ func cuentaDe(actor auth.Identity) *auth.Account {
 		Email:    actor.Email,
 		Role:     actor.Role,
 		Origin:   actor.Origin,
-		Language: actor.Language,
 		IsActive: actor.IsActive,
 	}
 

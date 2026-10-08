@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
 import { SessionService } from '../services/session.service';
+import { SetupService } from '../services/setup.service';
 
 /**
  * Sin sesión no se entra: a la pantalla de entrada.
@@ -14,8 +15,9 @@ import { SessionService } from '../services/session.service';
  * es una sesión, y dejar pasar a alguien para que el backend lo rechace en la primera llamada es
  * enseñarle una pantalla vacía un segundo antes de echarlo.
  */
-export const sesionActiva: CanActivateFn = async () => {
+export const sesionActiva: CanActivateFn = async (_route, state) => {
   const sesion = inject(SessionService);
+  const setup = inject(SetupService);
   const router = inject(Router);
 
   if (!sesion.hayToken()) {
@@ -27,6 +29,13 @@ export const sesionActiva: CanActivateFn = async () => {
     if (!usuario) {
       return router.createUrlTree(['/login']);
     }
+  }
+
+  const usuario = sesion.usuario();
+  if ((await setup.estadoDeInstalacion()).aiRequired && state.url !== '/settings' && state.url !== '/forbidden') {
+    return usuario?.role === 'administrador'
+      ? router.createUrlTree(['/settings'], { queryParams: { ai: 'required' } })
+      : router.createUrlTree(['/forbidden'], { queryParams: { ai: 'required' } });
   }
 
   return true;

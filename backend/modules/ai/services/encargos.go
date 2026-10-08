@@ -8,6 +8,7 @@ import (
 type encargo struct {
 	sistema string
 	usuario string
+	texto   string
 }
 
 // encargoDe arma el encargo de uno de los dos campos.
@@ -32,6 +33,7 @@ func encargoDe(tipo Tipo, texto string, palabras int) encargo {
 	return encargo{
 		sistema: oficioDe(tipo),
 		usuario: recortar(texto) + "\n\n" + exigenciaDelFormato(palabras),
+		texto:   recortar(texto),
 	}
 }
 

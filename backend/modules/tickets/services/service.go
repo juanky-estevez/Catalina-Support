@@ -47,11 +47,16 @@ var (
 	// (docs/modules/tickets.md, decisión 59).
 	ErrMentionNotAllowed = errors.New("tickets.mention.notAllowed")
 	// ErrObserverNotFound: se intenta quitar a alguien que no observa ese hilo.
-	ErrObserverNotFound  = errors.New("tickets.observer.notFound")
-	ErrAttachmentFormat  = errors.New("tickets.attachment.extension")
-	ErrAttachmentTooBig  = errors.New("tickets.attachment.tooBig")
-	ErrAttachmentInvalid = errors.New("tickets.attachment.invalid")
-	ErrAttachmentMissing = errors.New("tickets.attachment.notFound")
+	ErrObserverNotFound     = errors.New("tickets.observer.notFound")
+	ErrAttachmentFormat     = errors.New("tickets.attachment.extension")
+	ErrAttachmentTooBig     = errors.New("tickets.attachment.tooBig")
+	ErrAttachmentInvalid    = errors.New("tickets.attachment.invalid")
+	ErrWritingDraftRequired = errors.New("tickets.writing.draft.required")
+	ErrWritingEditorInvalid = errors.New("tickets.writing.editor.invalid")
+	ErrWritingToneInvalid   = errors.New("tickets.writing.tone.invalid")
+	ErrWritingUnavailable   = errors.New("tickets.writing.unavailable")
+	ErrWritingInvalid       = errors.New("tickets.writing.invalid")
+	ErrAttachmentMissing    = errors.New("tickets.attachment.notFound")
 	// Las categorías y las etiquetas (docs/modules/tickets.md, sección 2.3.2, decisiones 64 a 68).
 	// `required` es un ticket que llega sin categoría —no puede existir—, `notFound` una categoría que
 	// no está en el catálogo y `inactive` una retirada, que los tickets ya creados conservan pero el
@@ -153,6 +158,21 @@ type Mailer interface {
 // apagar el reparto sin reiniciar nada.
 type Configuration interface {
 	TicketSettings() (TicketSettings, error)
+}
+
+type GlobalLanguage interface {
+	Language() (string, error)
+}
+
+// WritingAssistant es el generador del módulo ai visto desde tickets. Tickets conserva el permiso y
+// los datos del caso; el motor sólo recibe el contexto mínimo ya autorizado.
+type WritingAssistant interface {
+	Configured() bool
+	ImproveDraft(draft, tone, recipient, ticketType, language string) (string, error)
+}
+
+type Capabilities struct {
+	AIWriting bool
 }
 
 // TicketSettings es la configuración de los tickets, tal y como la necesita este módulo.
@@ -269,7 +289,8 @@ type Detail struct {
 	History     []HistoryEntry
 	// Observers sólo viaja en la ficha: en las listas paginadas sería una consulta por página para un
 	// dato que ahí no se usa (docs/modules/tickets.md, sección 5).
-	Observers []Observer
+	Observers    []Observer
+	Capabilities Capabilities
 }
 
 // Page es una página de la bandeja.
@@ -290,9 +311,11 @@ type Service struct {
 	accounts   Accounts
 	mailer     Mailer
 	config     Configuration
+	language   GlobalLanguage
 	// insights es el motor de IA, y **puede ser nulo**: sin él los dos resúmenes se quedan sin texto
 	// y todo lo demás funciona igual (docs/modules/ai.md, decisión 2).
 	insights  Insights
+	writing   WritingAssistant
 	filesPath string
 	now       func() time.Time
 }
@@ -321,6 +344,10 @@ func (s *Service) SetMailer(mailer Mailer) { s.mailer = mailer }
 
 // SetConfiguration conecta la configuración de la instalación: el prefijo y el reparto.
 func (s *Service) SetConfiguration(config Configuration) { s.config = config }
+
+func (s *Service) SetGlobalLanguage(language GlobalLanguage) { s.language = language }
+
+func (s *Service) SetWritingAssistant(writing WritingAssistant) { s.writing = writing }
 
 // esSuyo dice si el ticket es de esa persona: es lo que hace que un usuario vea «los suyos».
 func esSuyo(actor auth.Identity, ticket Ticket) bool {
@@ -372,6 +399,17 @@ func puedeEditar(actor auth.Identity, ticket Ticket) bool {
 	default:
 		return false
 	}
+}
+
+func puedeMejorarRedaccion(actor auth.Identity, ticket Ticket) bool {
+	if ticket.State == "cerrado" || !actor.Can(auth.RoleSoporte, auth.RoleDesarrollo) {
+		return false
+	}
+	return puedeEditar(actor, ticket) || puedeComentar(actor, ticket)
+}
+
+func (s *Service) capacidadDeRedaccion(actor auth.Identity, ticket Ticket) bool {
+	return s.writing != nil && s.writing.Configured() && puedeMejorarRedaccion(actor, ticket)
 }
 
 // NormalizarFiltros deja los filtros en algo que la base entiende: página desde 1 y un tope de

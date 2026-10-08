@@ -123,7 +123,7 @@ func (s *Service) avisarMovimiento(principal repositories.Ticket, interno reposi
 	}
 }
 
-// avisarAlUsuario manda al solicitante el aviso, en el idioma de su cuenta.
+// avisarAlUsuario manda al solicitante el aviso, en el idioma global.
 //
 // **A los observadores no se les manda**: son avisos de quien abrió el ticket, y duplicarlos sería
 // ruido (decisión 61).
@@ -134,7 +134,7 @@ func (s *Service) avisarAlUsuario(principal repositories.Ticket, plantilla strin
 		return
 	}
 
-	s.mailer.SendAsync(plantilla, solicitante.Language, []string{solicitante.Email}, map[string]string{
+	s.mailer.SendAsync(plantilla, s.idiomaGlobal(), []string{solicitante.Email}, map[string]string{
 		"numero": principal.Number,
 		"asunto": principal.Subject,
 		"nombre": solicitante.FullName(),
@@ -172,14 +172,11 @@ func (s *Service) avisarASoporte(plantilla, numero string, principal repositorie
 	s.avisarPersonal(plantilla, datos, append(equipo, observadores...))
 }
 
-// avisarPersonal manda una plantilla a las personas indicadas, **cada una en su idioma** y **sin
-// repetir a nadie**: el asignado puede ser también observador, y no puede recibir dos veces el mismo
+// avisarPersonal manda una plantilla en el idioma global y **sin repetir a nadie**: el asignado puede
+// ser también observador, y no puede recibir dos veces el mismo
 // correo (docs/modules/tickets.md, decisión 61).
-//
-// Va en segundo plano y por idioma: el correo se escribe en el idioma de quien lo recibe, no en el de
-// quien lo provoca.
 func (s *Service) avisarPersonal(plantilla string, datos map[string]string, personas []auth.Account) {
-	porIdioma := map[string][]string{}
+	direcciones := []string{}
 	visto := map[int64]bool{}
 
 	for i := range personas {
@@ -189,12 +186,21 @@ func (s *Service) avisarPersonal(plantilla string, datos map[string]string, pers
 		}
 		visto[persona.ID] = true
 
-		porIdioma[persona.Language] = append(porIdioma[persona.Language], persona.Email)
+		direcciones = append(direcciones, persona.Email)
 	}
 
-	for idioma, direcciones := range porIdioma {
-		s.mailer.SendAsync(plantilla, idioma, direcciones, datos)
+	if len(direcciones) > 0 {
+		s.mailer.SendAsync(plantilla, s.idiomaGlobal(), direcciones, datos)
 	}
+}
+
+func (s *Service) idiomaGlobal() string {
+	if s.language != nil {
+		if idioma, err := s.language.Language(); err == nil && idioma == "en" {
+			return "en"
+		}
+	}
+	return "es"
 }
 
 // enlaceDelTicket arma la dirección que va en el correo: es lo que se pega para abrir el ticket.

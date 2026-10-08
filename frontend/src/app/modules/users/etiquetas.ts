@@ -7,7 +7,7 @@ import type { Cuenta } from './users.service';
 /**
  * Las etiquetas y las listas cerradas del módulo `users`.
  *
- * Los papeles, los orígenes y los idiomas son **valores cerrados**, los mismos que valida el backend
+ * Los papeles y los orígenes son **valores cerrados**, los mismos que valida el backend
  * (`docs/modules/users.md`, secciones 2 y 9). Están aquí una sola vez para que las tres pantallas
  * —la lista, la ficha y el perfil— digan lo mismo, y para que añadir un valor no sea buscar en tres
  * plantillas.
@@ -18,9 +18,6 @@ export const PAPELES = ['usuario', 'soporte', 'desarrollo', 'administrador'] as 
 
 /** Los tres orígenes de una cuenta. */
 export const ORIGENES = ['local', 'ad', 'keycloak'] as const;
-
-/** Los dos idiomas de la instalación: son los mismos que los de la interfaz. */
-export const IDIOMAS = ['es', 'en'] as const;
 
 /**
  * Los orígenes que **hoy no se pueden elegir**.
@@ -44,11 +41,6 @@ export function etiquetaDePapel(textos: Textos, papel: string): string {
 export function etiquetaDeOrigen(textos: Textos, origen: string): string {
   const nombre = textos.origenes[origen as keyof Textos['origenes']];
   return nombre ?? origen;
-}
-
-/** Cómo se llama el idioma de una cuenta, **en su propio idioma**: «Español» no se traduce. */
-export function etiquetaDeIdioma(idioma: string): string {
-  return idioma === 'en' ? 'English' : 'Español';
 }
 
 /** Los papeles que se pueden repartir: Soporte sólo crea usuarios, y eso lo decide la pantalla. */
@@ -85,33 +77,6 @@ export function opcionesDeOrigen(textos: Textos): readonly OpcionSelector[] {
  */
 export function seReactivaSola(cuenta: Cuenta): boolean {
   return !cuenta.isActive && cuenta.origin === 'keycloak';
-}
-
-/**
- * Los dos idiomas, cada uno en su propio idioma.
- *
- * `conElDeLaInstalacion` añade delante una opción vacía: **el idioma de la instalación**, que es lo
- * que el backend pone cuando no se le manda ninguno. Es el valor de partida del alta, porque es lo
- * que quiere decir «el de la instalación» y no hay que elegir nada para acertar.
- */
-export function opcionesDeIdioma(
-  textos: Textos,
-  conElDeLaInstalacion = false,
-): readonly OpcionSelector[] {
-  const idiomas = IDIOMAS.map((idioma) => ({
-    valor: idioma,
-    etiqueta: etiquetaDeIdioma(idioma),
-    grupo: textos.usuarios.idioma,
-  }));
-
-  if (!conElDeLaInstalacion) {
-    return idiomas;
-  }
-
-  return [
-    { valor: '', etiqueta: textos.usuarios.idiomaDeLaInstalacion, grupo: textos.usuarios.idioma },
-    ...idiomas,
-  ];
 }
 
 /**

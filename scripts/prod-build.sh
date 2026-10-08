@@ -20,6 +20,7 @@ OUT_DIR="/srv/catalina-support"
 # que estar al lado de los artefactos. Así el despliegue funciona desde cualquier carpeta y en
 # cualquier sistema, y `./frontend` es `$OUT_DIR/frontend`, que es lo que era con las rutas absolutas.
 COMPOSE=(docker compose -f "$OUT_DIR/prod.yml")
+AI_COMPOSE=(docker compose --env-file "$OUT_DIR/config/env/prod.env" -f "$OUT_DIR/ai.yml")
 
 ONLY=""
 DEPLOY=1
@@ -46,8 +47,11 @@ mkdir -p "$OUT_DIR/frontend" "$OUT_DIR/backend" "$OUT_DIR/_files" "$OUT_DIR/_log
 # construcción escriben en `./frontend` y `./backend`, que son relativas al propio `prod.yml`, así que
 # el archivo tiene que estar ya ahí para que apunten a los artefactos y no al repositorio.
 cp "$REPO_DIR/prod.yml" "$OUT_DIR/prod.yml"
+cp "$REPO_DIR/ai.yml" "$OUT_DIR/ai.yml"
 rm -rf "$OUT_DIR/config"
 cp -a "$REPO_DIR/config" "$OUT_DIR/config"
+rm -rf "$OUT_DIR/ai-manager"
+cp -a "$REPO_DIR/ai-manager" "$OUT_DIR/ai-manager"
 
 
 # ---------------------------------------------------------------------------------------
@@ -127,6 +131,10 @@ cat "$OUT_DIR/BUILD_INFO"
 if [ "$DEPLOY" = "1" ]; then
   echo "== levantando/actualizando los contenedores de producción =="
   "${COMPOSE[@]}" up -d
+  AI_PROJECT_NAME=catalina-support-ai-prod \
+    AI_NETWORK_NAME=catalina-support-ai-prod \
+    AI_MODELS_VOLUME=catalina_support_ai_models_prod \
+    "${AI_COMPOSE[@]}" up -d --build
 
   for t in "${TARGETS[@]}"; do
     case "$t" in

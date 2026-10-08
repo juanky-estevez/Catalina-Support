@@ -1,7 +1,12 @@
 # Flujos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-26
+> **Última actualización:** 2026-10-07
+>
+> **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: todos los correos de
+> los recorridos usan el idioma global vigente al enviarse. Los grupos de destinatarios se forman
+> una sola vez, sin consultar ni separar preferencias personales. Los recorridos, destinatarios y
+> datos de cada aviso no cambian.
 >
 > **Enmendado el 2026-09-26**, al repartir las listas de tickets: donde estos recorridos decían «la
 > bandeja de Soporte» o «la bandeja de Desarrollo» ahora hay **dos sitios** —**Mis tickets** (lo mío) y
@@ -32,8 +37,7 @@ Da por escritos los permisos (`docs/usuarios-y-permisos.md`), los estados, las t
 endpoints (`docs/modules/tickets.md`) y el producto (`docs/propósito-y-alcance.md`). **No los repite**: si
 algo se contradice, mandan esos tres.
 
-Está **aprobado**, así que habilita escribir código (Regla 0). La sección 9
-recoge lo que he propuesto yo y conviene que confirmes.
+Está **as-built**: describe los recorridos y correos que ejecuta hoy la aplicación.
 
 ## 2. Cómo leerlo
 
@@ -270,3 +274,14 @@ Nada de lo que sigue existe, y está escrito para que no se dé por hecho:
 Con este documento aprobado, **la cadena de producto está completa**: `auth`, `users` y `tickets`
 pueden implementarse en ese orden, y las pantallas y los correos tienen su recorrido escrito. Queda
 `ambientes.md` para el despliegue y las pruebas, que es el último.
+
+## 13. Idioma único en todos los avisos
+
+Los avisos y correos de los seis recorridos no cambian de momento, destinatarios ni datos. Cambia
+únicamente la elección de plantilla: cada envío usa el idioma global que esté activo al enviarse.
+Cuando hay varias personas, se envía un solo grupo y ya no se separa por idioma de cuenta.
+
+Un cambio global sólo entra en vigor después de confirmar las once traducciones, de modo que ningún
+recorrido puede mandar una mezcla de idiomas. El responsable lo confirmó el 2026-10-06. El repaso
+confirmó que una sesión abierta adopta el cambio en su siguiente petición y que ningún flujo conserva
+un idioma personal. La regla se implementó y verificó el 2026-10-07.

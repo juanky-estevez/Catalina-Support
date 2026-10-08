@@ -38,6 +38,7 @@ Levanta el entorno:
 
 ```bash
 docker compose -f dev.yml up -d --build
+docker compose -f ai.yml up -d --build
 docker compose -f dev.yml ps
 ```
 
@@ -61,9 +62,10 @@ Completa sus pasos:
 | Cómo se entra | **Local**; no necesita un directorio externo |
 | Dónde está | Tu zona horaria y **`http://127.0.0.1:11001`** como dirección pública |
 | Correo saliente | Ya aparece **`mail`**, puerto **`1025`**, sin TLS ni credenciales, remitente **Catalina Support** y **`no-responder@catalina-support.local`**. Todos los valores son editables |
+| Inteligencia artificial | **Local**. Abre el catálogo, acepta la licencia del modelo 1.5B, descárgalo y actívalo; después avanza para ejecutar la generación de prueba |
 
 En el paso del correo pulsa **Probar la conexión**. Comprueba conexión y autenticación; no envía un
-mensaje. El aviso de motor de IA ausente no impide terminar. Al finalizar queda sellada la instalación:
+mensaje. La IA es obligatoria: el asistente sólo permite terminar después de activar y probar un motor. Al finalizar queda sellada la instalación:
 entra con **`admin` / `admin`**, crea cuentas desde Usuarios y abre sus enlaces en
 [Mailpit](http://127.0.0.1:11004). Para atender y escalar tickets necesitarás cuentas de Soporte y Desarrollo.
 
@@ -127,7 +129,7 @@ Son credenciales para pruebas locales; no las uses en producción.
 4. Abre el buzón de pruebas para leer los avisos. Con `admin` puedes crear otra cuenta local:
    abre su correo de alta en el buzón y sigue el enlace para establecer su contraseña.
 
-No hace falta levantar el motor de IA, AD ni Keycloak para completar este recorrido.
+No hace falta levantar AD ni Keycloak para completar este recorrido.
 
 ### Parar y volver a arrancar
 
@@ -150,11 +152,11 @@ pero conserva los volúmenes; añadir `-v` elimina también los volúmenes, incl
 | Un puerto está ocupado | El entorno usa 11001–11004. Detén el servicio que los ocupa antes de arrancar; una segunda copia del repositorio comparte nombres de contenedores y volúmenes. |
 | La web aún no abre | Mira `docker compose -f dev.yml logs -f frontend backend`: `up -d` no espera a que Angular y Go terminen de compilar. |
 | `backend` no arranca y `migrate` terminó con error | Mira `docker compose -f dev.yml logs migrate`. Corrige el error y repite `docker compose -f dev.yml run --rm migrate`; después ejecuta `docker compose -f dev.yml up -d backend`. |
-| Aparece el asistente en vez del login | Es normal en una base nueva sin ejemplos: completa los cuatro pasos. |
+| Aparece el asistente en vez del login | Es normal en una base nueva sin ejemplos: completa los cinco pasos. |
 | El enlace del correo abre el dominio del proyecto | Corrige la dirección pública en Configuración a `http://127.0.0.1:11001`. El seeder conserva esta dirección si la instalación ya está sellada. |
 | Las cuentas de ejemplo no entran | Comprueba que cargaste los ejemplos y que el método de entrada es **Local**. `admin` entra siempre y permite cambiarlo. |
 | No llegan correos al buzón | Comprueba que `mail` está en marcha y que el SMTP de la instalación apunta a `mail:1025`, sin TLS ni credenciales. |
-| No hay resúmenes de IA | Son opcionales. Levanta y configura el motor si quieres probarlos. |
+| El catálogo local no responde | Comprueba `docker compose -f ai.yml logs -f ai`. El administrador debe estar levantado antes de descargar o activar un modelo. |
 
 Los datos persisten en volúmenes de Docker y los adjuntos en `_files/`. No borres los volúmenes
 si quieres conservar el trabajo.
@@ -185,10 +187,9 @@ y las dos conversaciones no se mezclan.
   tiempo y **vista doble** —principal e interno— cuando hay escalado.
 - **Estados** con sus transiciones: nuevo, en progreso, en espera, resuelto, cerrado y escalado. Cada
   cambio **explica lo que va a pasar** antes de hacerlo, y **cerrar exige decir por qué**.
-- **Dos resúmenes por ticket los redacta un motor de IA propio** —«Motivo» y «Última acción»—, en
-  español y en inglés. **El motor se levanta aparte** —como el directorio y Keycloak— y es **opcional**:
-  sin él la mesa de ayuda **funciona entera**, sin los dos resúmenes, y se añade después desde
-  Configuración.
+- **Dos resúmenes por ticket los redacta la IA** —«Motivo» y «Última acción»— en el idioma global.
+  Durante `/setup` se elige un modelo local, un servidor propio o un proveedor externo y se prueba
+  antes de terminar la instalación.
 - **Personas y permisos**: usuario, Soporte, Desarrollo y Administrador, cada uno con lo suyo.
   Soporte no escribe en el interno y Desarrollo no escribe en el principal: **la interfaz no ofrece
   lo que no se puede hacer**, y el servidor tampoco lo acepta.
@@ -205,24 +206,25 @@ y las dos conversaciones no se mezclan.
 Lo que existe, lo que está verificado y lo que falta están en `docs/README.md` y en la sección 13 de
 `docs/arquitectura.md`.
 
-## Servicios opcionales
+## Servicios separados
 
 Arranca primero el entorno local. Cada servicio tiene su compose y se puede levantar por separado.
 
-### Resúmenes con IA
+### Motor local de IA
 
 ```bash
 docker compose -f ai.yml up -d
 docker compose -f ai.yml logs -f ai
 ```
 
-La primera vez descarga **Qwen2.5-1.5B-Instruct Q4_K_M** (~1,1 GB) y después carga el modelo.
-En **Configuración → motor de IA**, usa la dirección **`http://catalina_support_ai:8080`** y el modelo
-**`qwen2.5-1.5b-instruct`**. Prueba la conexión y guarda. La dirección es la que alcanza el backend
-por la red de Docker; no es una dirección que tengas que abrir en el navegador.
+El contenedor arranca sin descargar modelos. En `/setup` o **Configuración → motor de IA** abre el
+catálogo, revisa fuente, licencia, tamaño, checksum y RAM, acepta la licencia y descarga el modelo.
+Después actívalo y prueba la configuración. El modelo 1.5B sigue siendo el predeterminado; también se
+ofrecen 3B y 7B para máquinas con más memoria. Las direcciones internas son `http://ai:8081` para el
+administrador —sólo el backend, con token— y `http://ai:8080` para las generaciones.
 
 Los resúmenes se generan en segundo plano. En esta máquina se midieron 12–24 segundos por campo;
-no es un tiempo garantizado. Sin motor, el resto del producto funciona.
+no es un tiempo garantizado. Una caída posterior no bloquea el resto del producto.
 Para detenerlo: `docker compose -f ai.yml stop`.
 Más detalles en [el documento del módulo](docs/modules/ai.md).
 

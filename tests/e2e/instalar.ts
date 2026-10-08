@@ -23,7 +23,8 @@ export async function instalar(): Promise<void> {
     );
   const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP frontend.localhost frontend'] });
   try {
-    // Recorremos los cuatro pasos en PC y móvil antes de sellar, sin cuentas ni tickets.
+    // Recorremos los cinco pasos en PC y móvil antes de sellar, sin cuentas ni tickets. La IA usa
+    // el servidor compatible falso de tests.yml: no descarga modelos ni consume un proveedor.
     for (const movil of [false, true]) {
       const context = await browser.newContext({
         ...(movil ? devices['Pixel 7'] : {}),
@@ -82,9 +83,51 @@ export async function instalar(): Promise<void> {
         .getByRole('button', { name: 'Probar la conexión', exact: true })
         .click();
       expect((await prueba).status()).toBe(200);
+      const toast = page.locator('app-toast');
+      await expect(toast).toContainText(
+        'El servidor de correo ha contestado y la autenticación ha funcionado.',
+      );
+      expect(await toast.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('fixed');
+      const caja = await toast.boundingBox();
+      const ventana = page.viewportSize();
+      expect(caja).not.toBeNull();
+      expect(ventana).not.toBeNull();
+      expect(caja!.x).toBeGreaterThanOrEqual(0);
+      expect(caja!.y).toBeGreaterThanOrEqual(0);
+      expect(caja!.x + caja!.width).toBeLessThanOrEqual(ventana!.width);
+      await toast.getByRole('button', { name: 'Cerrar' }).click();
+      await expect(toast).toHaveCount(0);
       await page
         .getByRole('button', { name: 'Siguiente', exact: true })
         .click();
+      await page.locator('#ia-modo-setup').selectOption(movil ? 'remote' : 'provider');
+      if (!movil) {
+        await page.locator('#ia-proveedor-setup').selectOption('openai-compatible');
+        await expect(page.getByText(/costos del proveedor|provider charges/)).toBeVisible();
+      }
+      await page.locator('#ia-direccion-setup').fill('http://ai-test:8080');
+      await page.locator('#ia-modelo-setup').fill('modelo-de-prueba');
+      await page.locator('#ia-auth-setup').selectOption('none');
+      await page.locator('input[type="checkbox"]').check();
+      const pruebaIA = page.waitForResponse((r) =>
+        r.url().endsWith('/api/setup/ai'),
+      );
+      await page
+        .getByRole('button', { name: 'Siguiente', exact: true })
+        .click();
+      const respuestaIA = await pruebaIA;
+      expect(respuestaIA.status(), await respuestaIA.text()).toBe(200);
+      const resumen = page.locator('app-tarjeta').filter({
+        has: page.getByRole('heading', { name: 'Resumen' }),
+      });
+      await expect(resumen).toContainText(movil ? 'En otro servidor' : 'Proveedor externo');
+      await expect(resumen).toContainText('openai-compatible');
+      await expect(resumen).toContainText('modelo-de-prueba');
+      await expect(resumen).toContainText('No requerida');
+      if (!movil) {
+        await expect(resumen).toContainText('Privacidad y posible costo');
+        await expect(resumen).toContainText('Aceptados');
+      }
       await expect(
         page.getByRole('button', { name: /Terminar/ }),
       ).toBeVisible();

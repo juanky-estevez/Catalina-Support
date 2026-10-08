@@ -11,6 +11,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
@@ -105,6 +106,10 @@ type Config struct {
 	// TokenSecret firma el token de sesión. Obligatorio en producción: sin él no se puede
 	// validar ninguna sesión.
 	TokenSecret string
+	// AICredentialKey cifra de forma autenticada las credenciales de proveedores de IA. Siempre es
+	// obligatoria y distinta del secreto de sesión.
+	AICredentialKey []byte
+	AIManagerToken  string
 
 	// AdminPassword es la contraseña de la cuenta de fábrica `admin`, que no está en la base
 	// (docs/usuarios-y-permisos.md, sección 8).
@@ -142,17 +147,23 @@ type Config struct {
 // Load lee el entorno y falla si falta algo obligatorio: es preferible no arrancar a
 // arrancar a medias con una configuración incompleta.
 func Load() (Config, error) {
+	aiCredentialKey, err := credentialKey(os.Getenv("AI_CREDENTIAL_KEY"))
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
-		Environment:   get("ENVIRONMENT", "dev"),
-		AppPort:       get("APP_PORT", "11002"),
-		LogsFolder:    get("LOGS_FOLDER", "/logs"),
-		FilesPath:     get("FILES_PATH", "/files"),
-		TokenSecret:   strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
-		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
-		PublicAppURL:  strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
-		AIURL:         strings.TrimSpace(os.Getenv("AI_URL")),
-		AIModel:       get("AI_MODEL", "qwen2.5-1.5b-instruct"),
-		AIPalabras:    getInt("AI_PALABRAS", 40),
+		Environment:     get("ENVIRONMENT", "dev"),
+		AppPort:         get("APP_PORT", "11002"),
+		LogsFolder:      get("LOGS_FOLDER", "/logs"),
+		FilesPath:       get("FILES_PATH", "/files"),
+		TokenSecret:     strings.TrimSpace(os.Getenv("TOKEN_SECRET")),
+		AICredentialKey: aiCredentialKey,
+		AIManagerToken:  strings.TrimSpace(os.Getenv("AI_MANAGER_TOKEN")),
+		AdminPassword:   os.Getenv("ADMIN_PASSWORD"),
+		PublicAppURL:    strings.TrimSpace(os.Getenv("PUBLIC_APP_URL")),
+		AIURL:           strings.TrimSpace(os.Getenv("AI_URL")),
+		AIModel:         get("AI_MODEL", "qwen2.5-1.5b-instruct"),
+		AIPalabras:      getInt("AI_PALABRAS", 40),
 		// **Cuatro minutos por defecto**, y no es un número redondo: medido, un ticket de 6 000
 		// caracteres tarda ~82 s sólo en leerse y luego redacta a 5-9 palabras por segundo
 		// (`docs/modules/ai.md`, sección 2). Un tiempo corto haría fallar justo los tickets largos.
@@ -207,6 +218,18 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func credentialKey(value string) ([]byte, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, fmt.Errorf("falta AI_CREDENTIAL_KEY, obligatoria en todos los entornos")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil || len(decoded) != 32 {
+		return nil, fmt.Errorf("AI_CREDENTIAL_KEY debe contener 32 bytes codificados en base64")
+	}
+	return decoded, nil
 }
 
 // DSN es la cadena de conexión de GORM.

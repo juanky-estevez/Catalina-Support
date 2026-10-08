@@ -50,7 +50,6 @@ func (c *UserController) Create(w http.ResponseWriter, r *http.Request) {
 		Email:      entrada.Email,
 		Role:       entrada.Role,
 		Origin:     entrada.Origin,
-		Language:   entrada.Language,
 		ExternalID: entrada.ExternalID,
 	}, actor)
 
@@ -160,7 +159,6 @@ func (c *UserController) Update(w http.ResponseWriter, r *http.Request) {
 		LastName: entrada.LastName,
 		Email:    entrada.Email,
 		Role:     entrada.Role,
-		Language: entrada.Language,
 		IsActive: entrada.IsActive,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
@@ -182,7 +180,6 @@ func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	cuenta, err := c.service.PatchOwn(services.PatchInput{
 		Name:     entrada.Name,
 		LastName: entrada.LastName,
-		Language: entrada.Language,
 	}, auth.MustFromContext(r.Context()))
 	if err != nil {
 		c.fail(w, r, err)
@@ -283,8 +280,6 @@ func (c *UserController) fail(w http.ResponseWriter, r *http.Request, err error)
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "users.password.notLocal")
 	case errors.Is(err, services.ErrOriginUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "users.origin.unknown")
-	case errors.Is(err, services.ErrLanguageUnknown):
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "users.language.unknown")
 	case errors.Is(err, services.ErrDirectoryNotFound):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "users.directory.notFound")
 	case errors.Is(err, services.ErrOriginByDirectory):

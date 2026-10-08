@@ -1,10 +1,11 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, tap, throwError } from 'rxjs';
 
 import { AvailabilityService } from '../services/availability.service';
 import { SessionService } from '../services/session.service';
+import { TranslationService } from '../i18n/translation.service';
 
 /**
  * Todo lo que se le hace a cada petición, en un solo sitio.
@@ -41,6 +42,7 @@ export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
   const sesion = inject(SessionService);
   const router = inject(Router);
   const disponibilidad = inject(AvailabilityService);
+  const textos = inject(TranslationService);
 
   const token = sesion.token();
   const conSesion = token !== null;
@@ -52,7 +54,16 @@ export const apiInterceptor: HttpInterceptorFn = (peticion, siguiente) => {
 
   return siguiente(conCabecera).pipe(
     // Una respuesta buena es la noticia de que el servidor está: quita el aviso, si lo había.
-    tap(() => disponibilidad.disponible()),
+    tap((respuesta) => {
+      disponibilidad.disponible();
+      if (respuesta instanceof HttpResponse) {
+        const idioma = respuesta.headers.get('X-Catalina-Language');
+        const version = Number(respuesta.headers.get('X-Catalina-Settings-Version'));
+        if (idioma && Number.isFinite(version)) {
+          textos.adoptarGlobal(idioma, version);
+        }
+      }
+    }),
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse) {
         // Sin respuesta del servidor (cortado) o un 502/503 de nginx: no hay con quién hablar.

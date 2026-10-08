@@ -1,7 +1,11 @@
 # Usuarios: el módulo
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-26
+> **Última actualización:** 2026-10-07
+>
+> **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: `users.language`
+> desaparece de la migración, el modelo, las API y las pantallas. El perfil conserva nombre y
+> apellidos; los correos usan el idioma global. Backend y frontend quedaron verificados.
 >
 > **Pasa a as-built el 2026-09-26**: el módulo **está entero** —backend, las tres pantallas y las tres
 > acciones que preguntan al directorio, con las cinco enmiendas de abajo—, así que este documento
@@ -60,7 +64,7 @@
 >
 > **Enmendado el 2026-09-23**, al implementar el camino local de `auth`: la tabla de errores no tenía
 > **código HTTP** —igual que le pasaba a `mail.md`— ni ninguna clave para un origen o un idioma
-> inventados. Se añaden `users.origin.unknown` y `users.language.unknown`, y los códigos, aprobados
+> inventados. Se añadieron `users.origin.unknown` y la hoy retirada `users.language.unknown`, con sus códigos, aprobados
 > por el responsable: 404 lo que no existe, 409 el correo repetido, 422 lo que no vale y **403
 > `users.role.notAllowed`**, que es un permiso y no una errata.
 
@@ -259,7 +263,6 @@ Con claves, que el frontend traduce (`docs/interfaz-y-experiencia.md`, sección 
 | `users.email.invalid` | El correo no tiene forma de correo | **422** |
 | `users.name.required` | Falta el nombre o los apellidos | **422** |
 | `users.origin.unknown` | El origen no es `local`, `ad` ni `keycloak` | **422** |
-| `users.language.unknown` | El idioma no es `es` ni `en` | **422** |
 | `users.directory.notFound` | El directorio **ya no conoce** a esa persona, así que no se le devuelve el acceso | **422** |
 | `users.origin.byDirectory` | Se intenta dar de alta una cuenta de directorio, o cambiarle el origen a `ad` o `keycloak`, **a mano** | **422** |
 | `users.directory.activatesItself` | Se intenta reactivar a mano una cuenta de **Keycloak**, que se reactiva sola al entrar por su camino | **422** |
@@ -276,7 +279,7 @@ Con claves, que el frontend traduce (`docs/interfaz-y-experiencia.md`, sección 
 
 `users` **no manda correos**: se los pide a `auth`, que emite el enlace, y `auth` se los pide a
 `mail`, que tiene el texto y envía. Los dos que puede provocar son el del alta y el reseteo, y los
-dos llevan el mismo enlace. El texto va en el idioma de la cuenta (`docs/modules/mail.md`).
+dos llevan el mismo enlace. El texto va en el idioma global de la instalación (`docs/modules/mail.md`).
 
 ## 11. Lo que se decidió al repasar este documento
 
@@ -285,7 +288,7 @@ dos llevan el mismo enlace. El texto va en el idioma de la cuenta (`docs/modules
 | 1 | **`last_login_at`** | Sí: saber cuándo entró alguien por última vez es lo que permite decidir con criterio a quién desactivar |
 | 2 | **El detalle de una cuenta** | Sólo Administrador. Soporte ve la lista, que es lo que necesita para buscar a quien reporta |
 | 3 | **Un correo, una cuenta** | Sí, y la comparación **ignora las mayúsculas** |
-| 4 | **Las claves que faltaban** | `users.origin.unknown` y `users.language.unknown`, y un papel inventado usa `users.role.notAllowed` |
+| 4 | **Las claves que faltaban** | `users.origin.unknown`, y un papel inventado usa `users.role.notAllowed`. La antigua clave de idioma desapareció con la preferencia personal |
 | 5 | **El código de cada clave** | 404, 409, 422 y 403, cada uno donde toca |
 | 11 | **El perfil de la cuenta de fábrica** | Responde **404 `users.notFound`** y no se le enseña la pantalla: no está en la tabla de cuentas |
 | 12 | **Nadie se desactiva a sí mismo** | **403 `users.selfDeactivation`**: desactivarse es quedarse fuera sin poder volver |
@@ -308,3 +311,18 @@ Con `docs/modules/users.md` aprobado, el siguiente es **`docs/modules/auth.md`**
 sus decisiones (token sin estado de 10 horas, AD por búsqueda con cuenta de servicio, enlaces con
 huella y un solo uso, contenedores de pruebas para el directorio). Después, `users` y `auth` se
 implementan juntos: no se puede tener cuentas sin poder entrar, ni entrar sin cuentas.
+
+## 13. Idioma global, sin preferencia personal
+
+La migración elimina `users.language`. Las DTO de alta, lista, detalle, sesión y perfil no
+aceptarlo y devolverlo; desaparece `users.language.unknown`. AD y Keycloak ya no asignan el idioma de
+la instalación al crear una cuenta. `PATCH /api/users/me` cambia sólo nombre y apellidos, y
+`PATCH /api/users/{id}` tampoco admite idioma.
+
+Las pantallas de lista, alta, ficha y perfil retiran campos, etiquetas y filtros de idioma. Fechas y
+textos se formatean con el idioma global entregado por `settings`. Los correos de alta y cambio de
+contraseña usan también ese valor global, sin leer la cuenta.
+
+No cambian papeles, orígenes, permisos, directorios, desactivación ni contraseñas. El responsable
+confirmó el alcance el 2026-10-06. El repaso no añadió excepciones personales ni migración de
+valores. Se implementó y verificó el 2026-10-07.

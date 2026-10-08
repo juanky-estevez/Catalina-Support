@@ -382,6 +382,6 @@ func (s *Service) avisarEtiquetado(numero, asunto string, ids []int64) {
 			continue
 		}
 
-		s.mailer.SendAsync(CorreoTicketEtiquetado, cuenta.Language, []string{cuenta.Email}, datos)
+		s.mailer.SendAsync(CorreoTicketEtiquetado, s.idiomaGlobal(), []string{cuenta.Email}, datos)
 	}
 }

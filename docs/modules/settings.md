@@ -1,7 +1,23 @@
 # settings
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-05
+> **Última actualización:** 2026-10-08
+>
+> **Hallazgo corregido y verificado el 2026-10-08.** El administrador local devolvía cualquier
+> fallo de activación como “no disponible”, por lo que Configuración no puede explicar la memoria
+> requerida y disponible encontrada en el bloque 5. La sección 13 propone conservar esos datos hasta
+> el toast. Las decisiones 15A–22A están cerradas y fueron aprobadas explícitamente el 2026-10-08.
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. El idioma pasa a ser el
+> primer ajuste y a gobernar toda la instalación; la tarjeta de IA pasa de URL/modelo opcionales a
+> una configuración obligatoria con motor local, servidor propio o proveedor. La propuesta se
+> detalla en la sección 12. El repaso quedó cerrado y la propuesta fue aprobada.
+>
+> **Enmendado el 2026-10-06**, con aprobación explícita del responsable. Los resultados de las
+> acciones de Configuración se dibujaban en un aviso al principio de una pantalla larga. Ahora se
+> presentan en el toast compartido de `docs/interfaz-y-experiencia.md`, de modo que una prueba de
+> conexión o un guardado se vea desde la tarjeta donde se ejecutó. Los avisos permanentes siguen en
+> su sitio. Se verificó en PC y móvil; no cambian el backend ni la persistencia.
 >
 > **Enmendado el 2026-10-05**, con aprobación explícita del responsable. La región elegida en
 > Configuración sólo se distingue por el resaltado dentro de la lista y puede quedar fuera de la
@@ -148,7 +164,7 @@ guarda, cuál se enseña en cada tema y cómo se vuelve al de fábrica.
 | **Keycloak** | emisor del reino, cliente, **su secreto** y la dirección de vuelta | vacío: no hay camino de Keycloak |
 | **La región horaria** | un **nombre de zona IANA** (`America/Guayaquil`, `Etc/GMT+5`…), de la lista de zonas con buscador. Decide **cómo se leen** las fechas —interfaz y correos—; las guardadas siguen en UTC (decisión 15) | `UTC` |
 | **La dirección pública** | `http` o `https`, host y **puerto** opcional; **`localhost` vale**. Es la base de los enlaces de los correos y de la vuelta de Keycloak (decisión 14) | vacío, y entonces se usa `PUBLIC_APP_URL` |
-| **El motor de IA** | `http` o `https`, host y **puerto** opcional, y el **modelo** con el que redacta sus dos resúmenes. Vacío es «no integrado» (decisión 16) | vacío, y entonces se usa `AI_URL`/`AI_MODEL` |
+| **El motor de IA** | modalidad local, servidor propio o proveedor; modelo, URL y autenticación cuando correspondan. Se prueba antes de activar | local con Qwen2.5 1.5B seleccionado; la instalación no termina hasta activar una opción válida |
 | **El correo saliente** | servidor, puerto, cifrado, usuario, **su contraseña**, el nombre del remitente y su dirección. **No tiene tarjeta en Configuración**: se pide en el asistente de primer arranque (`docs/primer-arranque.md`, sección 5) y vive en `installation_settings` | vacío: sin correo configurado |
 
 - **El prefijo y el reparto ya estaban decididos** en `docs/modules/tickets.md`; aquí sólo se dice
@@ -156,11 +172,8 @@ guarda, cuál se enseña en cada tema y cómo se vuelve al de fábrica.
 - **Los valores viajan en inglés y sin espacios** (`por_turnos`, `al_asignado`) aunque la interfaz
   los enseñe en español: es un valor de un contrato, no un texto, y los textos los pone el
   diccionario del frontend (`docs/interfaz-y-experiencia.md`, sección 8).
-- **El idioma de la instalación es el de las cuentas nuevas** y el que usa la instalación para lo
-  suyo. **No manda sobre la interfaz de nadie**: quien ha entrado lee en el idioma de su cuenta, y
-  antes de entrar manda el navegador —y si no pide español ni inglés, se entra en inglés
-  (`docs/interfaz-y-experiencia.md`, principio 6)—. Es lo que evita que una instalación en español le
-  cambie el idioma a quien lee en inglés.
+- **El idioma de la instalación es global** y lo usa la instalación para la interfaz, los correos y
+  los nuevos resúmenes. Las cuentas no guardan idioma propio.
 - **El color institucional sólo cambia los dos temas de fábrica** (Claro y Oscuro), que son los
   personalizables. Los seis temas fijos llevan su propio acento, aprobado el 2026-09-23
   (`docs/interfaz-y-experiencia.md`, sección 6.2).
@@ -188,7 +201,7 @@ guarda, cuál se enseña en cada tema y cómo se vuelve al de fábrica.
 - **Los estados de los tickets, los límites de los adjuntos y la política de contraseñas**: son
   reglas del producto, no configuración.
 
-## 3. Dónde vive: cuatro tablas de una fila
+## 3. Dónde vive: cinco tablas de una fila y dos auxiliares de IA
 
 Como ya se decidió para la numeración, **nada de «ajustes» con clave y valor**: una tabla así acaba
 siendo el cajón donde entra todo y pierde los tipos y las restricciones. Cada tabla tiene **una sola
@@ -200,7 +213,7 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | Columna | Tipo | Nulo | Por defecto | Qué es |
 | --- | --- | --- | --- | --- |
 | `id` | `integer` | no | `1` | Clave primaria con `CHECK (id = 1)`: la tabla entera es **una sola fila** |
-| `language` | `text` | no | `'en'` | El idioma de una instalación nueva (`es` o `en`) y el de las cuentas nuevas; durante `/setup` también manda sobre esa interfaz |
+| `language` | `text` | no | `'en'` | El idioma global (`es` o `en`) de la interfaz, los correos y los nuevos resúmenes; durante `/setup` también manda sobre esa interfaz |
 | `primary_color` | `text` | no | `'#1d4ed8'` | El color institucional, en hexadecimal `#rrggbb`; sólo afecta a los dos temas de fábrica |
 | `logo_light` | `text` | sí | — (nulo) | **El nombre del archivo** del logo para los temas claros, o nulo si no hay logo propio |
 | `logo_dark` | `text` | sí | — (nulo) | El del tema oscuro, o nulo |
@@ -218,8 +231,8 @@ del esquema** (`\d installation_settings`) y los valores por defecto son los de 
 | `smtp_password` | `text` | no | `''` | La contraseña del envío: **no sale nunca por la API** |
 | `smtp_from_name` | `text` | no | `''` | El nombre del remitente de los correos |
 | `smtp_from_email` | `text` | no | `''` | La dirección del remitente de los correos |
-| `ai_url` | `text` | no | `''` | **El motor de IA**: su dirección. Vacío es «no integrado» (decisión 16) |
-| `ai_model` | `text` | no | `''` | El modelo con el que redacta el motor; vacío usa el del entorno |
+| `ai_url` | `text` | no | `''` | Columna heredada de la configuración anterior; la fuente vigente es `ai_settings` |
+| `ai_model` | `text` | no | `''` | Columna heredada de la configuración anterior; la fuente vigente es `ai_settings` |
 
 - **En la tabla se guarda el nombre del archivo, no el archivo.** El logo es un archivo y vive en el
   disco (sección 5): meterlo en la base engordaría cada copia de seguridad y cada consulta.
@@ -292,7 +305,12 @@ tiene sentido —no hay a quién avisar— y la base lo rechaza, **en los dos ti
 `internal_assignment`/`internal_notification`), igual que lo hace la pantalla, que no ofrece esa
 combinación.
 
-**La migración** (`backend/migrations/v1.0.0.sql`) crea las cuatro tablas y **siembra su única fila**
+La quinta tabla de una fila es **`ai_settings`**: modalidad, proveedor, URL, modelo, autenticación,
+credencial cifrada, confirmación de privacidad y última prueba. Sus detalles y API están en §12.3.
+`ai_model_acceptances` y `ai_recovery_batches` son auxiliares con varias filas: registran licencias y
+lotes de recuperación, por lo que no forman parte del patrón de fila única.
+
+**La migración** (`backend/migrations/v1.0.0.sql`) crea las cinco tablas y **siembra su única fila**
 con los valores de fábrica de la sección 2, para que la aplicación arranque sin pasar por la pantalla
 de configuración. **El nombre de la instalación es una columna más de esa misma tabla**, y las
 cuentas y los tickets con los que se trabaja en desarrollo van en `backend/migrations/v1.0.0_dev.sql`,
@@ -307,9 +325,9 @@ que hay es **una función de servicio**, que es lo que ya decidió `docs/modules
 | Quién | Qué le pide | Para qué |
 | --- | --- | --- |
 | `tickets` | El prefijo y el reparto de ese tipo de ticket | Numerar un ticket y repartirlo al crearlo |
-| `users` | El idioma de la instalación | El idioma con el que nace una cuenta que no lo elige |
+| `users` | No consulta idioma | Las cuentas ya no guardan una preferencia personal |
 | `auth` | **`Access()`: el método de entrada y las dos configuraciones, con sus secretos** | Entrar: decidir por dónde se entra y hablar con el directorio o con el reino |
-| `ai` | **`AI()`: la dirección y el modelo del motor, y si hay alguno puesto** | Saber si hay motor, con cuál redactar y a dónde preguntar, **en cada petición** |
+| `ai` | **`AI()`: modalidad, proveedor, dirección, modelo, autenticación, credencial e idioma global** | Redactar con la configuración vigente en cada petición |
 | El frontend (`core`) | Toda la configuración | La pantalla de Configuración, el logo, el color primario y los campos de los dos caminos |
 
 - **Sin caché**: es una fila que se lee por su clave primaria, y una caché que se quede desfasada
@@ -576,12 +594,12 @@ reparto**. Se ordenó así, de lo que la instalación **es** a cómo **entra**, 
 
 | # | Tarjeta | Qué lleva |
 | --- | --- | --- |
-| 1 | **La instalación** | El nombre y **el idioma** —las dos cosas son *qué es* esta instalación, y el idioma es el de las cuentas nuevas y el de los correos—. Un botón: **Guardar la instalación** |
+| 1 | **La instalación** | **El idioma global como primer control** y el nombre. Un botón: **Guardar la instalación** |
 | 2 | **La marca** | **El logo y el color institucional**, que son la identidad de la institución y estaban en dos tarjetas sin motivo. El logo se guarda al subirlo; el botón **Guardar la marca** es para el color |
 | 3 | **Método de autenticación** | El método y sus dos configuraciones, con sus pruebas de conexión (sección 5.8) |
 | 4 | **La numeración y el reparto** | El prefijo y el reparto de los dos tipos de ticket (secciones 2.2 y 3.3 de `docs/modules/tickets.md`) |
 | 5 | **Región horaria y dirección pública** | La zona horaria y la dirección (sección 5.10) |
-| 6 | **El motor de IA** | La dirección del motor y su modelo, con su prueba de la conexión (sección 5.13) |
+| 6 | **El motor de IA** | Modalidad, proveedor, conexión o catálogo local, modelo y **Probar y activar** (secciones 5.13 y 12) |
 | 7 | **Los correos** | El enlace al editor, que es del módulo `mail` |
 
 **El tope está en una prueba de interfaz**: mira los títulos en orden y comprueba que el nombre y el
@@ -605,7 +623,7 @@ impide que se vuelva a descolocar al añadir un campo.
   existían, y sólo lo hace la primera vez que la columna nace (ver el bloque del relleno en
   `v1.0.0.sql`).
 
-**Los cuatro pasos** guardan de uno en uno —la instalación, cómo se entra, dónde está y el correo—, y
+**Los cinco pasos** guardan de uno en uno —la instalación, cómo se entra, dónde está, correo e IA—, y
 cada uno valida **sólo lo suyo**, porque el resto todavía no está puesto. El estado que devuelven
 —`GET /api/setup` y las respuestas de cada paso— es lo que permite **seguir donde se dejó**, y **no
 lleva ningún secreto**: de las contraseñas dice sólo si hay una puesta.
@@ -703,7 +721,7 @@ con esos dos campos sin texto.
 | # | Decisión | Quedó así |
 | --- | --- | --- |
 | 1 | **El límite del logo** | **1 MB y 2000 píxeles de lado**. Un logo de más de 1 MB no aporta nada a 160 px de alto, y uno de más de 2000 px sólo engorda |
-| 2 | **Qué hace el idioma de la instalación** | Es el de **las cuentas nuevas** y el de la instalación; **no manda sobre la interfaz** de nadie |
+| 2 | **Qué hace el idioma de la instalación** | **Corregida por la sección 12**: es global y manda sobre interfaz, correos y nuevos resúmenes; no pertenece a las cuentas |
 | 3 | **El color institucional** | El de fábrica es el azul que ya está puesto, y **sólo afecta a los dos temas de fábrica**: los seis fijos llevan su acento |
 | 4 | **Dos huecos de logo, los dos opcionales** | Sí, y si sólo hay uno se usa en los ocho temas. **La marca de fábrica son dos archivos, uno por tema** (decisión del responsable, 2026-09-26): los que trae la aplicación, reemplazables pero **no configurables desde la pantalla** |
 | 5 | **`ticket_number_settings` pasa a `ticket_settings`** | La enmienda a `docs/modules/tickets.md`: el reparto no cabía en ninguna tabla |
@@ -758,3 +776,162 @@ Con `docs/modules/settings.md` aprobado se puede hacer:
    permite entregar la instalación sin pedir que nadie edite un archivo en el servidor.
 5. **El motor de IA, configurable desde la pantalla** (decisión 16): su dirección y su modelo, con su
    prueba de la conexión, leídos por el módulo `ai` en cada petición. El entorno queda de respaldo.
+
+## 11. Resultados visibles en Configuración
+
+### 11.1 Hallazgo y regla
+
+La pantalla coloca su mensaje general antes de la primera tarjeta. Como Configuración contiene siete
+tarjetas, el resultado de **Probar la conexión** en el motor de IA —y el de cualquier acción situada
+abajo— puede quedar fuera de la ventana. No falta la respuesta: su ubicación la oculta.
+
+Todos los resultados transitorios que hoy usan ese mensaje general pasan al toast compartido de
+`docs/interfaz-y-experiencia.md`, sección 15:
+
+- guardar la instalación, la marca, la autenticación, la numeración, la región o el motor de IA;
+- subir o restaurar un logo;
+- probar Active Directory, Keycloak o el motor de IA;
+- fallar al cargar la configuración o recibir un error general de validación o de servidor.
+
+Los avisos de contexto que pertenecen a una tarjeta permanecen en ella. En particular, la advertencia
+de que una dirección pública sin HTTPS expone la sesión y la contraseña no se convierte en toast.
+
+### 11.2 Alcance y criterios de aceptación
+
+La enmienda sólo cambia la presentación en `settings-page.*` y reutiliza el componente compartido.
+No modifica peticiones, endpoints, textos de resultado, códigos HTTP, validación, persistencia ni el
+orden de las tarjetas.
+
+1. La respuesta de las tres pruebas de conexión se muestra fija en la ventana desde cualquier punto
+   de la página.
+2. Los demás resultados generales usan la misma presentación, sin conservar un segundo aviso al
+   principio de Configuración.
+3. El toast cumple duración, sustitución, cierre y accesibilidad definidos en el documento de
+   interfaz.
+4. Los avisos propios de cada tarjeta siguen visibles mientras se cumpla su condición.
+5. Las pruebas de la página cubren al menos una respuesta correcta y una fallida; Playwright prueba
+   el motor de IA desde la parte inferior en PC y móvil sin desplazar la ventana al principio.
+
+### 11.3 Decisión y repaso
+
+El responsable confirmó el 2026-10-06 incluir en la propuesta `/settings` y `/setup`, y distinguir
+los resultados transitorios de los avisos permanentes. El repaso común quedó cerrado en
+`docs/interfaz-y-experiencia.md`, sección 15.7: todos los resultados descritos usan el toast, no hay
+cola y sólo éxito e información desaparecen automáticamente. No quedan decisiones abiertas ni
+decisiones propias del backend.
+
+### 11.4 Implementación y verificación
+
+`settings-page` muestra su señal general mediante `app-toast`; los avisos condicionales de las
+tarjetas continúan como `app-aviso`. Las peticiones, los textos y el manejo de errores no cambiaron.
+Las 220 pruebas unitarias y la compilación pasan. Playwright comprobó en PC y móvil que el fallo del
+motor de IA permanece fijo dentro de la ventana después de cinco segundos y desaparece al pulsar
+**Cerrar**.
+
+## 12. Implementación: idioma global e IA obligatoria
+
+### 12.1 Orden de Configuración
+
+El **idioma es el primer control de `/settings`**, antes del nombre. Sólo ofrece Español e English y
+ya no se describe como valor inicial de cuentas nuevas: gobierna interfaz, fechas, correos y textos
+de IA de toda la instalación. Elegir otro idioma previsualiza la interfaz actual, pero no persiste el
+cambio hasta completar la traducción y confirmación de los correos (§12.4).
+
+Desaparecen el idioma de alta, ficha y perfil de usuarios y los selectores de entrada y menú. El
+idioma global debe estar disponible antes de entrar; viaja en la configuración pública de marca y
+manda sobre cualquier preferencia antigua del navegador o de la cuenta.
+
+### 12.2 Tarjeta de IA
+
+La tarjeta empieza con tres opciones excluyentes: **Local**, **Servidor propio** y **Proveedor**.
+En local enseña el catálogo, descarga, progreso, estado, requisitos, modelos instalados, modelo
+activo y borrado de inactivos. En servidor propio pide URL, modelo y autenticación —ninguna, Bearer,
+cabecera con clave o usuario/contraseña—. En proveedor ofrece OpenAI, Claude, DeepSeek y compatible
+con OpenAI, con modelos sugeridos e identificador libre.
+
+El secreto escrito sólo viaja hacia el backend. La lectura devuelve `credentialSet`; nunca devuelve
+la credencial cifrada. Para una conexión externa, la tarjeta muestra qué texto del ticket saldrá del
+servidor y exige la confirmación del Administrador antes de **Probar y activar**.
+
+La prueba realiza una generación artificial completa. Guardar y activar son una sola operación:
+mantiene la configuración anterior hasta que la nueva autentique, acepte el modelo y produzca el
+objeto válido en el idioma global. Un fallo se muestra por toast y no cambia la configuración.
+
+### 12.3 Persistencia y API propuestas
+
+La configuración deja de caber en `ai_url` y `ai_model`. Se crea una configuración de IA de una fila,
+propiedad de `settings`, con modalidad, proveedor, URL, modelo, autenticación, nombre de cabecera,
+credencial cifrada, confirmación de privacidad, quién la confirmó, fecha de configuración y fecha de
+actualización. La respuesta pública nunca incluye esa fila.
+
+La API autenticada de Configuración entrega el estado sin secretos y añade operaciones específicas
+para probar/activar, consultar catálogo/progreso, descargar, activar y borrar modelos. Las acciones
+locales pasan por la interfaz que `settings` declara y cumple el administrador de modelos; los textos
+de tickets continúan siendo responsabilidad de `ai`.
+
+La clave maestra de credenciales es independiente de `TOKEN_SECRET`. `AI_CREDENTIAL_KEY` debe
+contener 32 bytes aleatorios codificados en base64: si falta o es inválida el backend no arranca; si
+fue reemplazada y el cifrado existente ya no abre, la aplicación entra en «IA requiere
+configuración» y permite a la cuenta de fábrica reemplazar la credencial. Nunca registra ni devuelve
+el valor ilegible.
+
+### 12.4 Cambio atómico de idioma
+
+`settings` coordina, pero no traduce plantillas. Pide a `mail` borradores de las once plantillas a
+partir de la versión actualmente activa. `mail` protege HTML y marcadores, `ai` traduce sólo el texto
+y `mail` valida que no aparezcan marcadores nuevos ni se alteren los existentes. Si el destino no
+estaba personalizado, la pantalla compara origen y borrador. Si ya tenía cambios, muestra tres
+versiones: fuente activa, borrador de IA y destino personalizado existente. El Administrador elige
+una, o combina y corrige el texto; nunca se sobrescribe silenciosamente.
+
+Al confirmar, una transacción guarda los once destinos y el idioma global. Si falta una traducción,
+un marcador cambió o alguna escritura falla, no se cambia nada. Los resúmenes existentes no forman
+parte de esta operación: se conservan y siguen visibles con su idioma de origen; sólo los nuevos o
+los que se vuelvan a pedir usan el nuevo idioma global.
+
+Con proveedor externo, la pantalla pide confirmación económica exclusivamente para traducir las
+plantillas. Si se rechaza, no llama al proveedor y permite editar manualmente los once destinos; la
+edición manual está disponible siempre. Con motor local o servidor propio genera borradores sin esa
+confirmación económica.
+
+Cada respuesta autenticada informa `X-Catalina-Language` y `X-Catalina-Settings-Version`. La versión
+crece al aplicar un cambio global. El interceptor adopta el idioma al recibir la siguiente respuesta
+y vuelve a formatear la interfaz mediante la señal global, sin cerrar sesión ni consultar en segundo
+plano.
+
+### 12.5 Actualizaciones existentes y alcance
+
+Una fila ya sellada sin IA probada queda marcada como pendiente. El Administrador o la cuenta de
+fábrica sólo puede completar la tarjeta de IA; el resto de cuentas no entra al producto. No se
+desella `/setup` ni se reabre su API pública.
+
+Cambian la persistencia de la instalación y de IA, las DTO y servicios de `settings`, la marca
+pública y `settings-page`. Quedan fuera precios, cuotas, cuentas comerciales y la administración de
+claves en el portal de cada proveedor.
+
+### 12.6 Decisiones registradas y repaso
+
+El responsable confirmó el 2026-10-06 las decisiones recogidas en `docs/modules/ai.md`, y corrigió
+el alcance del idioma: será global, será el primer ítem de Configuración, no pertenecerá a las
+cuentas y el cambio sólo se hará efectivo después de revisar y guardar las traducciones de los
+correos. El repaso añadió la clave de 32 bytes obligatoria, la revisión de tres versiones cuando el
+destino ya estaba personalizado, la confirmación de costo sólo antes de traducir plantillas con un
+proveedor y la alternativa de editarlas siempre a mano, además de la
+actualización de sesiones abiertas por cabeceras de idioma y versión. No quedan decisiones abiertas;
+la corrección del 2026-10-07 fue aprobada explícitamente.
+
+## 13. Error estructurado de memoria del motor local
+
+El cliente del administrador distingue la falta de memoria de una caída. Lee una respuesta limitada
+y estructurada con `key`, `requiredBytes` y `availableBytes`; valida valores no negativos y nunca
+devuelve el cuerpo crudo. El servicio expone un error tipado y los controladores de `/setup` y
+`/settings` responden la misma clave con ambos números.
+
+Los demás fallos conservan su traducción actual. Una activación rechazada no guarda ni marca como
+probada la configuración solicitada. Si el administrador restauró el modelo anterior, la respuesta
+sigue siendo error para el intento nuevo, pero el catálogo posterior enseña el anterior activo y
+sano.
+
+El contrato quedó verificado de extremo a extremo: el 7B respondió 422 con clave estable,
+6.442.450.944 bytes requeridos y la disponibilidad medida; `/settings` conservó ambos números hasta
+el toast y el catálogo siguió mostrando el 3B activo y sano.

@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 // **Sólo el tipo**: lo que devuelven subir y restablecer el logo es el documento de configuración
 // entero, porque es lo que contesta el backend. No hay dependencia de ejecución con el otro servicio.
 import { type Configuracion } from './settings.service';
+import { TranslationService } from '../i18n/translation.service';
 
 /** La marca de la instalación, tal y como la cuenta el backend (docs/modules/settings.md). */
 export interface Marca {
@@ -25,6 +26,8 @@ export interface Marca {
    * (`docs/modules/settings.md`, sección 5.9).
    */
   readonly version: string;
+  readonly language?: string;
+  readonly settingsVersion?: number;
   /**
    * La zona horaria de la instalación, **en nombre IANA** (`America/Guayaquil`).
    *
@@ -90,6 +93,7 @@ export const NOMBRE_DE_FABRICA = 'Catalina Support';
 @Injectable({ providedIn: 'root' })
 export class BrandService {
   private readonly http = inject(HttpClient);
+  private readonly textos = inject(TranslationService);
 
   private readonly marcaActual = signal<Marca | null>(null);
 
@@ -147,6 +151,9 @@ export class BrandService {
       const marca = await firstValueFrom(this.http.get<Marca>('/api/settings/brand'));
       this.marcaActual.set(marca);
       this.aplicarColor(marca);
+      if (marca.language) {
+        this.textos.adoptarGlobal(marca.language, marca.settingsVersion ?? 0);
+      }
     } catch {
       // Sin marca se sigue con lo de fábrica: ni un aviso al usuario ni un error en pantalla.
     }

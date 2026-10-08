@@ -1,7 +1,11 @@
 # auth
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-03
+> **Última actualización:** 2026-10-07
+>
+> **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: identidad, sesión y
+> respuestas de cuenta ya no llevan idioma personal. Los tres correos de cuenta consultan el idioma
+> global al enviarse, sin cambiar ninguno de los tres caminos de entrada.
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: Keycloak distingue emisor
 > público e `internalIssuer` opcional. Descubrimiento, token y UserInfo usan la dirección interna;
@@ -437,12 +441,11 @@ Tres, y ninguno más. Son **cosa distinta de los siete avisos de ticket**
 | **Recuperación** | Al pedirla la persona, o al lanzarla Soporte o un administrador | 1 hora |
 | **Aviso de cambio** | Cuando una contraseña cambia: al completar el alta, al usar un enlace, al cambiarla desde dentro | No lleva enlace |
 
-- **En el idioma de la cuenta** (`language` de `users`), no en el de quien lo provoca: `mail` elige
-  la plantilla de ese idioma.
+- **En el idioma global de la instalación**: `mail` elige la plantilla de ese idioma.
 - **HTML, con una versión de texto automática**, y las plantillas de `mail` con sus marcadores.
 - **El texto de la caducidad lo pone `auth`**, no `mail`: las plantillas llevan el marcador
   `{{caducidad}}` («este enlace caduca en …») y quien sabe si son 24 horas o 1 es este módulo, que es
-  el que emite el enlace. Por eso `auth` pasa `24 horas` o `1 hora`… en el idioma de la cuenta, que es
+  el que emite el enlace. Por eso `auth` pasa `24 horas` o `1 hora`… en el idioma global, que es
   el mismo en el que va la plantilla: `24 hours`, `1 hour`.
 - **La dirección desde la que se cambió sale de `X-Real-IP`**, que es la cabecera con la que nginx
   pasa la dirección real de quien llama: dentro del contenedor, `RemoteAddr` es la del proxy.
@@ -531,8 +534,8 @@ Todo esto vive en `frontend/src/app/core`, que es la excepción ya prevista para
   variantes, como `es-MX`— se entra en ese idioma; **si pide cualquier otro, se entra en inglés**,
   que es el segundo de la instalación y el que más gente puede leer. El conmutador está a la vista en
   la pantalla de entrada, y lo que alguien elija se recuerda en su navegador. Dentro de la
-  aplicación manda el idioma de la cuenta, que es lo que decide en qué idioma se le escriben los
-  correos (sección 7).
+  aplicación manda el idioma global de la instalación, que también decide el idioma de los correos
+  (sección 7).
 - **Los textos viven en `core/i18n/es.ts` y `core/i18n/en.ts`**, con el mismo tipo compartido: **una
   clave que falte en un idioma no compila**. Es la única forma de que la regla «cada clave necesita
   su texto en los dos idiomas» no dependa de que alguien se acuerde, y por eso los textos de error
@@ -718,7 +721,7 @@ de esas cuentas se rechaza diciendo que vuelven solas al entrar.
 | 20 | **Lo que devuelve la entrada** | `token`, `expiresAt` y un objeto `user`; `me` devuelve el mismo objeto `user`, para no tener dos formas de describir a alguien |
 | 21 | **La ruta del enlace** | `/set-password`. **Corrección del responsable**: propuse la ruta en español y decidió que **las rutas del frontend van siempre en inglés**, aunque el idioma del producto sea español |
 | 22 | **El token del enlace** | Viaja en el **fragmento** (`#token=…`), que el navegador no manda al servidor, y la pantalla lo borra de la dirección al usarlo |
-| 23 | **Una sola pantalla para los dos enlaces** | Alta y recuperación llegan a `/set-password`, y la caducidad la escribe `auth` en el idioma de la cuenta |
+| 23 | **Una sola pantalla para los dos enlaces** | Alta y recuperación llegan a `/set-password`, y la caducidad la escribe `auth` en el idioma global |
 | 24 | **Las seis pantallas** | Las cuatro de rutas más **sin permiso** (`/forbidden`) y **servidor caído** (un aviso encima, sin ruta) |
 | 25 | **El idioma de arranque** | **Corrección del responsable**: propuse español por defecto y decidió que se toma **el del navegador** y, si no es `es` ni `en`, se entra **en inglés**, con conmutador a la vista |
 | 26 | **Dónde viven los textos** | `core/i18n/es.ts` y `core/i18n/en.ts` con un tipo compartido: **una clave que falte no compila**, y los textos de error van en el mismo diccionario |
@@ -757,3 +760,20 @@ propongo es el que hace que cada paso se pueda probar solo:
 5. Los contenedores de pruebas y el camino de AD. **Hecho y verificado** (2026-09-25).
 6. El camino de Keycloak. **Hecho y verificado** (2026-09-25). **Con esto, este documento no tiene
    nada pendiente.**
+
+## 14. Autenticación sin idioma personal
+
+La identidad compartida, las respuestas de entrada y `me`, y el estado de sesión dejan de incluir
+`language`. El frontend obtiene el idioma de la marca pública y no vuelve a cambiarlo al recibir una
+cuenta. La pantalla de entrada retira su selector; se pinta directamente en el idioma global.
+
+Las respuestas autenticadas incluyen las cabeceras `X-Catalina-Language` y
+`X-Catalina-Settings-Version`. El interceptor ya existente las observa y, cuando la versión cambia,
+actualiza la señal global de idioma. Esto no cambia el token, no cierra la sesión y no añade sondeo:
+una pestaña abierta adopta el cambio en su siguiente petición.
+
+Los correos de alta, olvido y cambio de contraseña consultan el idioma global al enviarse. El texto
+de caducidad se forma con ese mismo idioma. No cambian token, duración, contraseñas, cuenta de
+fábrica, AD, Keycloak, permisos ni rutas. La propuesta fue confirmada por el responsable el
+2026-10-06 y en el repaso eligió actualizar las sesiones abiertas con las cabeceras de idioma y
+versión, sin cerrar sesión. Se implementó y verificó el 2026-10-07.

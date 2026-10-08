@@ -65,12 +65,18 @@ func (s *Service) List(filtros repositories.Filtros, actor auth.Identity) (Page,
 // lee con este mismo endpoint porque es un ticket (docs/modules/tickets.md, sección 5).
 func (s *Service) ByNumber(number string, actor auth.Identity) (Detail, error) {
 	numero := strings.TrimSpace(number)
-
+	var detalle Detail
+	var err error
 	if strings.HasPrefix(numero, "INT-") {
-		return s.fichaDeInterno(numero, actor)
+		detalle, err = s.fichaDeInterno(numero, actor)
+	} else {
+		detalle, err = s.fichaDePrincipal(numero, actor)
 	}
-
-	return s.fichaDePrincipal(numero, actor)
+	if err != nil {
+		return Detail{}, err
+	}
+	detalle.Capabilities.AIWriting = s.capacidadDeRedaccion(actor, detalle.Ticket)
+	return detalle, nil
 }
 
 // listaDePrincipales arma una página de principales.

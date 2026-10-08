@@ -127,6 +127,18 @@
             (valorChange)="descripcionEditada.set($event)"
           />
 
+          @if (puedeMejorarConIA()) {
+            <div>
+              <app-boton
+                forma="secundario"
+                nombreDeIcono="ia"
+                [texto]="t().tickets.iaRedaccionAbrir"
+                [deshabilitado]="!elDeLaDescripcion.textoPlano()"
+                (pulsado)="abrirMejora('description', elDeLaDescripcion)"
+              />
+            </div>
+          }
+
           <div class="flex flex-wrap gap-2">
             <app-boton
               [texto]="t().tickets.guardar"
@@ -219,6 +231,18 @@
                 (valorChange)="textoEditado.set($event)"
               />
 
+              @if (puedeMejorarConIA()) {
+                <div>
+                  <app-boton
+                    forma="secundario"
+                    nombreDeIcono="ia"
+                    [texto]="t().tickets.iaRedaccionAbrir"
+                    [deshabilitado]="!elDeLaEdicion.textoPlano()"
+                    (pulsado)="abrirMejora('editedComment', elDeLaEdicion)"
+                  />
+                </div>
+              }
+
               <div class="flex flex-wrap gap-2">
                 <app-boton
                   [texto]="t().tickets.guardar"
@@ -295,6 +319,18 @@
             [valor]="comentario()"
             (valorChange)="comentario.set($event)"
           />
+
+          @if (puedeMejorarConIA()) {
+            <div>
+              <app-boton
+                forma="secundario"
+                nombreDeIcono="ia"
+                [texto]="t().tickets.iaRedaccionAbrir"
+                [deshabilitado]="!elDelComentario.textoPlano()"
+                (pulsado)="abrirMejora('comment', elDelComentario)"
+              />
+            </div>
+          }
 
           <!--
             **El comentario ya está publicado y un archivo no ha subido**: se avisa de cuál falta y se
@@ -658,6 +694,14 @@
         </div>
       </div>
     </app-dialogo>
+  }
+
+  @if (puedeMejorarConIA()) {
+    <app-mejorar-redaccion
+      #modalDeRedaccion
+      [numero]="ticket().number"
+      (aplicado)="aplicarMejora($event)"
+    />
   }
 
   <!--

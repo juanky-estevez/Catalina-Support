@@ -107,46 +107,20 @@ test.describe('La aplicación abre', () => {
     expect(aspecto.fondoPagina).not.toBe('rgba(0, 0, 0, 0)');
   });
 
-  test('el idioma de arranque sale del navegador', async ({ browser }) => {
-    // Un navegador que pide español: español.
-    const enEspanol = await browser.newContext({ locale: 'es-CO' });
-    const paginaEspanol = await enEspanol.newPage();
-    await paginaEspanol.goto('/login');
-    await expect(paginaEspanol.getByRole('heading', { name: 'Entrar' })).toBeVisible();
-    await enEspanol.close();
-
-    // Uno que pide inglés: inglés.
-    const enIngles = await browser.newContext({ locale: 'en-GB' });
-    const paginaIngles = await enIngles.newPage();
-    await paginaIngles.goto('/login');
-    await expect(paginaIngles.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    await enIngles.close();
-
-    // Y uno que no pide ninguno de los dos: **inglés**, que es lo que decidió el responsable.
-    const enOtroIdioma = await browser.newContext({ locale: 'fr-FR' });
-    const paginaOtro = await enOtroIdioma.newPage();
-    await paginaOtro.goto('/login');
-    await expect(paginaOtro.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    await enOtroIdioma.close();
+  test('el idioma de arranque es el global aunque cambie el navegador', async ({ browser }) => {
+    for (const locale of ['es-CO', 'en-GB', 'fr-FR']) {
+      const context = await browser.newContext({ locale });
+      const pagina = await context.newPage();
+      await pagina.goto('/login');
+      await expect(pagina.getByRole('heading', { name: 'Entrar' })).toBeVisible();
+      await context.close();
+    }
   });
 
-  test('el idioma se cambia al elegir cualquier valor, y se recuerda', async ({ page }) => {
+  test('la entrada no ofrece un selector de idioma personal', async ({ page }) => {
     await page.goto('/login');
-
-    // **El idioma es un desplegable como el del tema** desde el 2026-09-26: se cambia eligiendo
-    // cualquier valor de la lista, y su etiqueta se queda oculta a la vista —sigue siendo el nombre
-    // accesible— porque el valor ya dice qué es.
-    // La etiqueta se queda oculta a la vista —sigue siendo el nombre accesible— y no se enseña.
-    await expect(page.getByText('Cambiar idioma')).toHaveClass(/sr-only/);
-    await page.getByLabel('Cambiar idioma').selectOption('en');
-
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-
-    // Y se recuerda al volver: es lo que eligió esa persona en este navegador.
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    await page.getByLabel('Change language').selectOption('es');
     await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible();
+    await expect(page.getByLabel('Cambiar idioma')).toHaveCount(0);
   });
 
   test('enseña la pantalla de olvido y la de contraseña', async ({ page }) => {

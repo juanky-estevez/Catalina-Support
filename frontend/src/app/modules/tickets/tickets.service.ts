@@ -122,12 +122,12 @@ export interface Insights {
   readonly ultimaAccion: Resumen;
 }
 
-/** Un resumen del motor: su estado, sus dos idiomas y la clave del error si no se pudo escribir. */
+/** Un resumen del motor en el idioma global y la clave del error si no se pudo escribir. */
 export interface Resumen {
   /** `pendiente`, `listo`, `error` o `sin_motor`. Vacío: de un ticket que nunca ha pedido resumen. */
   readonly state: string;
-  readonly es?: string;
-  readonly en?: string;
+  readonly text?: string;
+  readonly language?: string;
   readonly errorKey?: string;
 }
 
@@ -170,6 +170,9 @@ export interface DetalleDeTicket {
   readonly comments: readonly Comentario[];
   readonly attachments: readonly Adjunto[];
   readonly history: readonly EntradaDeHistorial[];
+  readonly capabilities?: {
+    readonly aiWriting: boolean;
+  };
   /**
    * Quiénes **observan** el ticket: los técnicos y desarrolladores a los que se ha etiquetado
    * (`docs/modules/tickets.md`, sección 2.3.1). **No es lo mismo que el responsable**: el ticket tiene
@@ -239,6 +242,9 @@ export interface AltaDeTicket {
 export const TIPO_PRINCIPAL = 'principal';
 export const TIPO_INTERNO = 'interno';
 
+export type EditorDeRedaccion = 'description' | 'comment';
+export type TonoDeRedaccion = 'professional' | 'friendly' | 'brief' | 'empathetic' | 'technical';
+
 /**
  * El único servicio del módulo `tickets` del frontend.
  *
@@ -296,6 +302,21 @@ export class TicketsService {
   regenerarResumenes(numero: string): Promise<{ ticket: Ticket }> {
     return firstValueFrom(
       this.http.post<{ ticket: Ticket }>(`/api/tickets/${numero}/insights`, {}),
+    );
+  }
+
+  mejorarRedaccion(
+    numero: string,
+    editor: EditorDeRedaccion,
+    draft: string,
+    tone: TonoDeRedaccion,
+  ): Promise<{ text: string }> {
+    return firstValueFrom(
+      this.http.post<{ text: string }>(`/api/tickets/${numero}/writing/improve`, {
+        editor,
+        draft,
+        tone,
+      }),
     );
   }
 

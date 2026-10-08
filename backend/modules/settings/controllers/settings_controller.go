@@ -41,6 +41,44 @@ func (c *SettingsController) Show(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, dtos.NewSettingsResponse(config))
 }
 
+func (c *SettingsController) AIModels(w http.ResponseWriter, r *http.Request) {
+	catalog, err := c.service.AIModels()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, catalog)
+}
+func (c *SettingsController) DownloadAIModel(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		AcceptLicense bool `json:"acceptLicense"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		httpx.WriteError(w, 400, KeyInternal)
+		return
+	}
+	actor := auth.MustFromContext(r.Context())
+	if err := c.service.DownloadAIModel(r.PathValue("id"), in.AcceptLicense, &actor, false); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+func (c *SettingsController) ActivateAIModel(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.ActivateAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (c *SettingsController) DeleteAIModel(w http.ResponseWriter, r *http.Request) {
+	if err := c.service.DeleteAIModel(r.PathValue("id")); err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Update guarda la configuración.
 func (c *SettingsController) Update(w http.ResponseWriter, r *http.Request) {
 	var entrada dtos.UpdateSettingsRequest
@@ -250,10 +288,41 @@ func (c *SettingsController) TestAI(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// AIConfiguration devuelve la integración activa sin revelar su credencial.
+func (c *SettingsController) AIConfiguration(w http.ResponseWriter, r *http.Request) {
+	view, err := c.service.AIConfiguration()
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewAIConfigurationResponse(view))
+}
+
+// ActivateAI prueba con una generación real y sólo entonces reemplaza la configuración activa.
+func (c *SettingsController) ActivateAI(w http.ResponseWriter, r *http.Request) {
+	var input dtos.AIConfigurationRequest
+	if json.NewDecoder(r.Body).Decode(&input) != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	actor := auth.MustFromContext(r.Context())
+	view, err := c.service.TestAndActivateAI(dtos.NewAIConfigurationInput(input), &actor, false)
+	if err != nil {
+		c.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.NewAIConfigurationResponse(view))
+}
+
 // fail traduce el error del servicio a la clave y el código que le tocan
 // (docs/modules/settings.md, sección 7).
 func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err error) {
+	var memory *services.AIInsufficientMemoryError
 	switch {
+	case errors.As(err, &memory):
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{
+			"error": memory.Error(), "requiredBytes": memory.RequiredBytes, "availableBytes": memory.AvailableBytes,
+		})
 	case errors.Is(err, services.ErrNameTooLong):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.name.tooLong")
 	case errors.Is(err, services.ErrMethodUnknown):
@@ -272,8 +341,16 @@ func (c *SettingsController) fail(w http.ResponseWriter, r *http.Request, err er
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.aiUrl.invalid")
 	case errors.Is(err, services.ErrAIUnreachable):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.ai.unreachable")
+	case errors.Is(err, services.ErrAIModeUnknown), errors.Is(err, services.ErrAIProviderUnknown), errors.Is(err, services.ErrAIAuthUnknown), errors.Is(err, services.ErrAIModelRequired), errors.Is(err, services.ErrAIPrivacyRequired), errors.Is(err, services.ErrAICredentialInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, services.ErrAILicenseRequired):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, services.ErrAIManagerUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, err.Error())
 	case errors.Is(err, services.ErrLanguageUnknown):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.language.unknown")
+	case errors.Is(err, services.ErrLanguageReviewRequired):
+		httpx.WriteError(w, http.StatusConflict, "settings.language.reviewRequired")
 	case errors.Is(err, services.ErrPrimaryColorInvalid):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "settings.primaryColor.invalid")
 	case errors.Is(err, services.ErrTimeZoneUnknown):

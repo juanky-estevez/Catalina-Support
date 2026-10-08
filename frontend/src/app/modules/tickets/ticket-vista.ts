@@ -15,7 +15,6 @@ import {
   type SafeResourceUrl,
   type SafeUrl,
 } from '@angular/platform-browser';
-import { RouterLink } from '@angular/router';
 
 import { TranslationService } from '../../core/i18n/translation.service';
 import { BrandService } from '../../core/services/brand.service';
@@ -29,6 +28,7 @@ import {
   EditorConAdjuntos,
   esImagen,
   esVideo,
+  textoComoHtml,
   type PersonaDelEditor,
   type TextosDelEditorConAdjuntos,
 } from '../../shared/components/editor-con-adjuntos';
@@ -53,6 +53,7 @@ import {
   textoDelResumen,
 } from './etiquetas';
 import { ModalEtiquetas } from './modal-etiquetas';
+import { MejorarRedaccion } from './mejorar-redaccion';
 import {
   TicketsService,
   type Adjunto as AdjuntoDeLaApi,
@@ -145,7 +146,6 @@ interface Pendiente {
 @Component({
   selector: 'app-ticket-vista',
   imports: [
-    RouterLink,
     AccionesDelTicket,
     Adjunto,
     Aviso,
@@ -155,6 +155,7 @@ interface Pendiente {
     EditorConAdjuntos,
     Estado,
     ModalEtiquetas,
+    MejorarRedaccion,
     Selector,
     Tarjeta,
   ],
@@ -206,6 +207,8 @@ export class TicketVista implements OnDestroy {
 
   /** Y el del comentario que se está editando: sólo se edita uno a la vez. */
   private readonly elDeLaEdicion = viewChild<EditorConAdjuntos>('elDeLaEdicion');
+  private readonly modalDeRedaccion = viewChild<MejorarRedaccion>('modalDeRedaccion');
+  private readonly destinoDeRedaccion = signal<'description' | 'comment' | 'editedComment'>('comment');
 
   /**
    * **Los archivos que no han subido**, con el comentario al que iban.
@@ -653,6 +656,29 @@ export class TicketVista implements OnDestroy {
       esUsuario: this.esUsuario(),
       esSuyo: this.esSuyo(),
     });
+  }
+
+  protected puedeMejorarConIA(): boolean {
+    return this.detalle().capabilities?.aiWriting === true;
+  }
+
+  protected abrirMejora(
+    destino: 'description' | 'comment' | 'editedComment',
+    editor: EditorConAdjuntos | undefined,
+  ): void {
+    const texto = editor?.textoPlano() ?? '';
+    if (!texto) return;
+    this.destinoDeRedaccion.set(destino);
+    this.modalDeRedaccion()?.abrirCon(texto, destino === 'description' ? 'description' : 'comment');
+  }
+
+  protected aplicarMejora(texto: string): void {
+    const html = textoComoHtml(texto);
+    switch (this.destinoDeRedaccion()) {
+      case 'description': this.descripcionEditada.set(html); break;
+      case 'editedComment': this.textoEditado.set(html); break;
+      default: this.comentario.set(html);
+    }
   }
 
   /**

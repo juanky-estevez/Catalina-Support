@@ -92,7 +92,44 @@ export interface Configuracion {
    */
   readonly aiUrl: string;
   readonly aiModel: string;
+  readonly ai?: ConfiguracionDeIA;
   readonly brand: { readonly light: HuecoDeLogo; readonly dark: HuecoDeLogo };
+}
+
+export interface ConfiguracionDeIA {
+  readonly mode: 'local' | 'remote' | 'provider' | '';
+  readonly provider: string;
+  readonly baseUrl: string;
+  readonly model: string;
+  readonly authType: 'none' | 'bearer' | 'header' | 'basic';
+  readonly authHeader: string;
+  readonly credentialSet: boolean;
+  readonly privacyConfirmed: boolean;
+  readonly tested: boolean;
+}
+
+export type ConfiguracionDeIAEscrita = Omit<ConfiguracionDeIA, 'credentialSet' | 'tested'> & {
+  readonly credential: string;
+  readonly language: string;
+};
+
+export interface ModeloLocalDeIA {
+  readonly id: string; readonly name: string; readonly version: string; readonly license: string;
+  readonly source: string; readonly checksum: string; readonly downloadBytes: number;
+  readonly ramBytes: number; readonly installed: boolean; readonly active: boolean; readonly healthy?: boolean;
+  readonly downloading: boolean; readonly downloadedBytes: number; readonly error?: string;
+}
+export interface CatalogoLocalDeIA {
+  readonly models: readonly ModeloLocalDeIA[];
+  readonly diskAvailableBytes: number;
+}
+
+export interface BorradorDeIdioma {
+  readonly key: string; readonly sourceLanguage: string; readonly targetLanguage: string;
+  readonly sourceSubject: string; readonly sourceBody: string;
+  readonly draftSubject: string; readonly draftBody: string;
+  readonly existingSubject: string; readonly existingBody: string;
+  readonly destinationCustomized: boolean;
 }
 
 /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
@@ -137,6 +174,15 @@ export class SettingsService {
     return firstValueFrom(this.http.put<Configuracion>('/api/settings', configuracion));
   }
 
+  async borradoresDeIdioma(language: string, options: { manual?: boolean; confirmCommercialCost?: boolean } = {}): Promise<readonly BorradorDeIdioma[]> {
+    const response = await firstValueFrom(this.http.post<{ drafts: readonly BorradorDeIdioma[] }>('/api/mail/language/drafts', { language, ...options }));
+    return response.drafts;
+  }
+
+  async aplicarIdioma(language: string, templates: readonly { key: string; subject: string; body: string }[]): Promise<void> {
+    await firstValueFrom(this.http.post('/api/mail/language/apply', { language, templates }));
+  }
+
   /**
    * Prueba la conexión con el directorio **con lo que hay en pantalla**, antes de guardarlo.
    *
@@ -160,5 +206,22 @@ export class SettingsService {
    */
   async probarMotor(url: string): Promise<void> {
     await firstValueFrom(this.http.post('/api/settings/ai/test', { url }));
+  }
+
+  async probarYActivarIA(input: ConfiguracionDeIAEscrita): Promise<ConfiguracionDeIA> {
+    return firstValueFrom(this.http.post<ConfiguracionDeIA>('/api/settings/ai/activate', input));
+  }
+
+  async modelosLocales(): Promise<CatalogoLocalDeIA> {
+    return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/settings/ai/models'));
+  }
+  async descargarModelo(id: string, acceptLicense: boolean): Promise<void> {
+    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense }));
+  }
+  async activarModelo(id: string): Promise<void> {
+    await firstValueFrom(this.http.post(`/api/settings/ai/models/${encodeURIComponent(id)}/activate`, {}));
+  }
+  async eliminarModelo(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`/api/settings/ai/models/${encodeURIComponent(id)}`));
   }
 }

@@ -51,7 +51,7 @@ func (c *cuentasDeMentira) UpsertFromDirectory(datos auth.DirectoryAccount) (aut
 	// el identificador del directorio, sin contraseña local.
 	cuenta, hay := c.porCorreo[datos.Email]
 	if !hay {
-		cuenta = auth.Account{Email: datos.Email, Role: auth.RoleUsuario, Language: "es"}
+		cuenta = auth.Account{Email: datos.Email, Role: auth.RoleUsuario}
 	}
 	cuenta.Name = datos.Name
 	cuenta.LastName = datos.LastName
@@ -185,7 +185,7 @@ func TestVinculaUnaCuentaLocalAlEntrarPorElDirectorio(t *testing.T) {
 		"marta.directorio@ejemplo.com": {
 			ID: 7, Name: "Marta", LastName: "Local", Email: "marta.directorio@ejemplo.com",
 			PasswordHash: "$2a$12$loquesea", Role: auth.RoleSoporte, Origin: auth.OriginLocal,
-			Language: "es", IsActive: true,
+			IsActive: true,
 		},
 	}}
 	directorio := &directorioDeMentira{personas: map[string]struct {
@@ -236,7 +236,7 @@ func TestUnaCuentaLocalNoPreguntaAlDirectorio(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana@ejemplo.com": {
 			ID: 1, Name: "Ana", Email: "ana@ejemplo.com", PasswordHash: hash,
-			Role: auth.RoleUsuario, Origin: auth.OriginLocal, Language: "es", IsActive: true,
+			Role: auth.RoleUsuario, Origin: auth.OriginLocal, IsActive: true,
 		},
 	}}
 	directorio := &directorioDeMentira{personas: map[string]struct {
@@ -259,7 +259,7 @@ func TestSinDirectorioLaContrasenaMalaNoEntra(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana@ejemplo.com": {
 			ID: 1, Name: "Ana", Email: "ana@ejemplo.com", PasswordHash: "$2a$12$loquesea",
-			Role: auth.RoleUsuario, Origin: auth.OriginLocal, Language: "es", IsActive: true,
+			Role: auth.RoleUsuario, Origin: auth.OriginLocal, IsActive: true,
 		},
 	}}
 
@@ -281,7 +281,7 @@ func TestCuentaDeADConElDirectorioCaido(t *testing.T) {
 		"ana.directorio@ejemplo.com": {
 			ID: 2, Name: "Ana", Email: "ana.directorio@ejemplo.com",
 			Role: auth.RoleUsuario, Origin: auth.OriginAD, ExternalID: "ana.directorio",
-			Language: "es", IsActive: true,
+			IsActive: true,
 		},
 	}}
 	directorio := &directorioDeMentira{err: ErrDirectoryUnavailable}
@@ -310,7 +310,7 @@ func TestCuentaLocalConElDirectorioCaidoNoCambiaSuMensaje(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana@ejemplo.com": {
 			ID: 1, Name: "Ana", Email: "ana@ejemplo.com", PasswordHash: "$2a$12$loquesea",
-			Role: auth.RoleUsuario, Origin: auth.OriginLocal, Language: "es", IsActive: true,
+			Role: auth.RoleUsuario, Origin: auth.OriginLocal, IsActive: true,
 		},
 	}}
 	directorio := &directorioDeMentira{err: ErrDirectoryUnavailable}
@@ -327,7 +327,7 @@ func TestConElMetodoEnLocalUnaCuentaDeDirectorioNoEntra(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana.directorio@ejemplo.com": {
 			ID: 2, Name: "Ana", Email: "ana.directorio@ejemplo.com",
-			Role: auth.RoleUsuario, Origin: auth.OriginAD, Language: "es", IsActive: true,
+			Role: auth.RoleUsuario, Origin: auth.OriginAD, IsActive: true,
 		},
 	}}
 	servicio := servicioDePrueba(t, cuentas, nil, auth.MethodLocal)
@@ -343,7 +343,7 @@ func TestCuentaDeKeycloakNoEntraPorLaPantalla(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana.directorio@ejemplo.com": {
 			ID: 3, Name: "Ana", Email: "ana.directorio@ejemplo.com",
-			Role: auth.RoleUsuario, Origin: auth.OriginKeycloak, Language: "es", IsActive: true,
+			Role: auth.RoleUsuario, Origin: auth.OriginKeycloak, IsActive: true,
 		},
 	}}
 	servicio := servicioDePrueba(t, cuentas, &directorioDeMentira{}, auth.MethodAD)
@@ -364,7 +364,7 @@ func TestCuentaDesactivadaLoDice(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"ana@ejemplo.com": {
 			ID: 1, Name: "Ana", Email: "ana@ejemplo.com", PasswordHash: hash,
-			Role: auth.RoleUsuario, Origin: auth.OriginLocal, Language: "es", IsActive: false,
+			Role: auth.RoleUsuario, Origin: auth.OriginLocal, IsActive: false,
 		},
 	}}
 	servicio := servicioDePrueba(t, cuentas, &directorioDeMentira{}, auth.MethodLocal)
@@ -411,7 +411,7 @@ func TestConElMetodoEnADNoSeEntraConLaContrasenaLocal(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"marta@ejemplo.com": {
 			ID: 4, Name: "Marta", Email: "marta@ejemplo.com", PasswordHash: hash,
-			Role: auth.RoleSoporte, Origin: auth.OriginLocal, Language: "es", IsActive: true,
+			Role: auth.RoleSoporte, Origin: auth.OriginLocal, IsActive: true,
 		},
 	}}
 	// El directorio no conoce a esa persona: es una cuenta local, y con este método no hay puerta.
@@ -433,7 +433,7 @@ func TestConElMetodoEnKeycloakNoSeEntraConLaContrasenaLocal(t *testing.T) {
 	cuentas := &cuentasDeMentira{porCorreo: map[string]auth.Account{
 		"marta@ejemplo.com": {
 			ID: 4, Name: "Marta", Email: "marta@ejemplo.com", PasswordHash: hash,
-			Role: auth.RoleSoporte, Origin: auth.OriginLocal, Language: "es", IsActive: true,
+			Role: auth.RoleSoporte, Origin: auth.OriginLocal, IsActive: true,
 		},
 	}}
 	servicio := servicioDePrueba(t, cuentas, nil, auth.MethodKeycloak)

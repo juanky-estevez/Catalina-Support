@@ -191,7 +191,6 @@ test.describe('El camino de AD', () => {
         email: MARTA.email,
         role: 'usuario',
         origin: 'local',
-        language: 'es',
       },
     });
     expect(alta.status(), await alta.text()).toBe(201);

@@ -59,6 +59,7 @@ const DETALLE: DetalleDeTicket = {
   attachments: [],
   history: [],
   observers: [{ id: 10, account: SOPORTE }],
+  capabilities: { aiWriting: true },
 };
 
 /**
@@ -84,6 +85,7 @@ const INTERNO_DETALLE: DetalleDeTicket = {
   attachments: [],
   history: [],
   observers: [],
+  capabilities: { aiWriting: true },
 };
 
 /**
@@ -145,7 +147,6 @@ describe('TicketVista', () => {
       email: 'maria@demo.com',
       role: rol,
       origin: 'local',
-      language: 'es',
       factory: false,
     });
 
@@ -530,5 +531,39 @@ describe('TicketVista', () => {
     expect(host.textContent).not.toContain('Etiquetas');
     expect(host.textContent).not.toContain('red-wifi');
     expect(host.querySelector('app-modal-etiquetas')).toBeNull();
+  });
+
+  it('ofrece la ayuda de redacción a Soporte y la oculta al usuario final', () => {
+    const soporte = montar('soporte');
+    const botonesDeSoporte = [
+      ...(soporte.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ];
+    const ayuda = botonesDeSoporte.find(
+      (boton) => boton.textContent?.trim() === 'Mejorar con IA',
+    );
+    expect(ayuda).toBeTruthy();
+    expect(ayuda?.querySelector('[data-icono="ia"]')).toBeTruthy();
+
+    soporte.destroy();
+    const usuarioFinal = montar('usuario', { ...DETALLE, capabilities: { aiWriting: false } });
+    const textos = [
+      ...(usuarioFinal.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    ].map((boton) => boton.textContent?.trim());
+    expect(textos).not.toContain('Mejorar con IA');
+  });
+
+  it('oculta la ayuda cuando el detalle declara que no hay IA configurada o no trae la capacidad', () => {
+    for (const detalle of [
+      { ...DETALLE, capabilities: { aiWriting: false } },
+      { ...DETALLE, capabilities: undefined },
+    ]) {
+      const fixture = montar('soporte', detalle);
+      const textos = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+      ].map((boton) => boton.textContent?.trim());
+      expect(textos).not.toContain('Mejorar con IA');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-mejorar-redaccion')).toBeNull();
+      fixture.destroy();
+    }
   });
 });

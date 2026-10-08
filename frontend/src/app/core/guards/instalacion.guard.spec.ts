@@ -21,6 +21,7 @@ describe('Las guardas de la instalación', () => {
   function estado(installed: boolean): EstadoDeInstalacion {
     return {
       installed,
+      aiRequired: false,
       name: 'Ayuntamiento de Ejemplo',
       language: 'es',
       entryMethod: 'local',

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type { CatalogoLocalDeIA, ConfiguracionDeIA, ConfiguracionDeIAEscrita } from './settings.service';
 
 /**
  * La configuración del directorio tal y como la ve el asistente: **sin la contraseña**, con
@@ -50,6 +51,7 @@ export interface CorreoDeInstalacion {
  */
 export interface EstadoDeInstalacion {
   readonly installed: boolean;
+  readonly aiRequired: boolean;
   readonly name: string;
   readonly language: string;
   readonly entryMethod: string;
@@ -59,6 +61,7 @@ export interface EstadoDeInstalacion {
   readonly keycloak: KeycloakDeInstalacion;
   readonly mail: CorreoDeInstalacion;
   readonly aiAvailable: boolean;
+  readonly ai?: ConfiguracionDeIA;
 }
 
 /**
@@ -70,6 +73,7 @@ export interface EstadoDeInstalacion {
  */
 const SIN_RESPUESTA: EstadoDeInstalacion = {
   installed: true,
+  aiRequired: false,
   name: '',
   language: 'es',
   entryMethod: 'local',
@@ -99,9 +103,13 @@ const SIN_RESPUESTA: EstadoDeInstalacion = {
     passwordSet: false,
   },
   aiAvailable: false,
+  ai: {
+    mode: '', provider: '', baseUrl: '', model: '', authType: 'none', authHeader: '',
+    credentialSet: false, privacyConfirmed: false, tested: false,
+  },
 };
 
-/** El paso 1 del asistente: la instalación. Los cuatro pasos comparten forma y van uno a uno. */
+/** El paso 1 del asistente: la instalación. Los cinco pasos comparten forma y van uno a uno. */
 export interface Paso1 {
   readonly name: string;
   readonly language: string;
@@ -133,6 +141,10 @@ export interface Paso4 {
   readonly mail: CorreoEscrito;
 }
 
+export interface Paso5 {
+  readonly ai: ConfiguracionDeIAEscrita;
+}
+
 /**
  * El estado de la instalación, **preguntado una vez y recordado**.
  *
@@ -154,6 +166,14 @@ export class SetupService {
 
   /** El estado que se conoce, o `null` mientras no se haya preguntado. */
   readonly estado = this.estadoActual.asReadonly();
+
+  /** Una activación válida desde Configuración desbloquea inmediatamente la navegación existente. */
+  marcarIAConfigurada(): void {
+    const actual = this.estadoActual();
+    if (actual) {
+      this.estadoActual.set({ ...actual, aiRequired: false });
+    }
+  }
 
   /**
    * El estado de la instalación, **preguntado como mucho una vez por arranque**.
@@ -206,6 +226,16 @@ export class SetupService {
   async guardarCorreo(paso: Paso4): Promise<EstadoDeInstalacion> {
     return this.guardar('/api/setup/mail', paso);
   }
+
+  /** Prueba una generación real y activa la IA obligatoria sólo si responde correctamente. */
+  async guardarIA(paso: Paso5): Promise<EstadoDeInstalacion> {
+    return this.guardar('/api/setup/ai', paso);
+  }
+
+  async modelosLocales(): Promise<CatalogoLocalDeIA> { return firstValueFrom(this.http.get<CatalogoLocalDeIA>('/api/setup/ai/models')); }
+  async descargarModelo(id: string, acceptLicense: boolean): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/download`, { acceptLicense })); }
+  async activarModelo(id: string): Promise<void> { await firstValueFrom(this.http.post(`/api/setup/ai/models/${encodeURIComponent(id)}/activate`, {})); }
+  async eliminarModelo(id: string): Promise<void> { await firstValueFrom(this.http.delete(`/api/setup/ai/models/${encodeURIComponent(id)}`)); }
 
   /** Sella la instalación: es lo que hace que el asistente no vuelva a aparecer. */
   async terminar(): Promise<EstadoDeInstalacion> {

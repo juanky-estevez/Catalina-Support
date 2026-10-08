@@ -129,7 +129,7 @@ func TestHashToken(t *testing.T) {
 	}
 }
 
-// El texto de la caducidad que va en el correo: en el idioma de la cuenta y con la duración que toca.
+// El texto de la caducidad que va en el correo: en el idioma global y con la duración que toca.
 func TestExpiryTextFor(t *testing.T) {
 	casos := []struct {
 		language string

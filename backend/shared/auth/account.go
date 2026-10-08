@@ -46,7 +46,6 @@ type Account struct {
 	Origin       string
 	// ExternalID es el identificador en el directorio. Vacío en las cuentas locales.
 	ExternalID  string
-	Language    string
 	IsActive    bool
 	LastLoginAt *time.Time
 }
@@ -100,7 +99,6 @@ func (a Account) Identity() Identity {
 		Email:    a.Email,
 		Role:     a.Role,
 		Origin:   a.Origin,
-		Language: a.Language,
 		IsActive: a.IsActive,
 	}
 }
@@ -113,7 +111,6 @@ func FactoryIdentity() Identity {
 		Name:     "Administrador",
 		Role:     RoleAdministrador,
 		Origin:   OriginLocal,
-		Language: "es",
 		IsActive: true,
 	}
 }

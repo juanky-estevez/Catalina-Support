@@ -38,7 +38,7 @@ test.describe('El enlace del correo', () => {
     const cuenta = cuentaDePrueba();
     const alta = await request.post('/api/users', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { ...cuenta, role: 'usuario', origin: 'local', language: 'es' },
+      data: { ...cuenta, role: 'usuario', origin: 'local' },
     });
     expect(alta.status(), await alta.text()).toBe(201);
 
@@ -132,7 +132,7 @@ test.describe('El enlace del correo', () => {
     const cuenta = cuentaDePrueba();
     const alta = await request.post('/api/users', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { ...cuenta, role: 'usuario', origin: 'local', language: 'es' },
+      data: { ...cuenta, role: 'usuario', origin: 'local' },
     });
     expect(alta.status(), await alta.text()).toBe(201);
 

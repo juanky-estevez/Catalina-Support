@@ -32,6 +32,7 @@ const (
 // Las claves de error del módulo (docs/modules/settings.md, sección 7).
 var (
 	ErrLanguageUnknown     = errors.New("settings.language.unknown")
+	ErrLanguageReviewRequired = errors.New("settings.language.reviewRequired")
 	ErrPrimaryColorInvalid = errors.New("settings.primaryColor.invalid")
 	// ErrTimeZoneUnknown: la zona horaria que se ha escrito no es un nombre que exista. Se guarda el
 	// nombre IANA, no un desfase, y se comprueba con la base de datos de zonas del sistema
@@ -124,7 +125,10 @@ type Service struct {
 	correo ProberDeCorreo
 	// correoInicial sólo rellena un asistente sin sellar y sin correo guardado. No participa en el
 	// envío: el módulo mail sigue leyendo la configuración persistida.
-	correoInicial MailInput
+	correoInicial   MailInput
+	aiCredentialKey []byte
+	aiManagerURL    string
+	aiManagerToken  string
 }
 
 // NewService construye el servicio.
@@ -230,6 +234,7 @@ type Config struct {
 	// (docs/modules/ai.md).
 	AIURL   string
 	AIModel string
+	AI      AIConfigurationView
 	Brand   Brand
 }
 
@@ -424,7 +429,7 @@ func (s *Service) Config() (Config, error) {
 		return Config{}, traducir(err)
 	}
 
-	return Config{
+	config := Config{
 		Name:                 nombreDeLaInstalacion(instalacion.InstallationName),
 		EntryMethod:          instalacion.EntryMethod,
 		TimeZone:             zonaHorariaDe(instalacion.TimeZone),
@@ -445,7 +450,14 @@ func (s *Service) Config() (Config, error) {
 			Light: s.logoInfo(VarianteClaro, instalacion.LogoLight),
 			Dark:  s.logoInfo(VarianteOscuro, instalacion.LogoDark),
 		},
-	}, nil
+	}
+	if _, ok := s.repo.(aiRepository); ok {
+		config.AI, err = s.AIConfiguration()
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	return config, nil
 }
 
 // Update valida y guarda la configuración.
@@ -485,7 +497,8 @@ type AIDatos struct {
 	Modelo string
 	// Hay en falso quiere decir «esta instalación no tiene motor»: el módulo de IA usa entonces el
 	// respaldo del entorno (docs/modules/ai.md, decisión 2).
-	Hay bool
+	Hay                                                        bool
+	Mode, Provider, AuthType, AuthHeader, Credential, Language string
 }
 
 // AI devuelve **el motor de IA ya resuelto**, para el módulo de IA: lo de la configuración y, si no
@@ -499,16 +512,28 @@ func (s *Service) AI() (AIDatos, error) {
 	if err != nil {
 		return AIDatos{}, traducir(err)
 	}
-
-	direccion := direccionPublicaDe(instalacion.AIURL)
-	if direccion == "" {
+	repo, ok := s.repo.(aiRepository)
+	if !ok {
 		return AIDatos{}, nil
 	}
-
+	row, err := repo.AI()
+	if err != nil {
+		return AIDatos{}, traducir(err)
+	}
+	if row.TestedAt == nil || strings.TrimSpace(row.Mode) == "" {
+		return AIDatos{Language: instalacion.Language}, nil
+	}
+	credential := ""
+	if len(row.CredentialCiphertext) > 0 {
+		credential, err = s.decryptAICredential(row)
+		if err != nil {
+			return AIDatos{}, ErrAICredentialInvalid
+		}
+	}
 	return AIDatos{
-		URL:    direccion,
-		Modelo: strings.TrimSpace(instalacion.AIModel),
-		Hay:    true,
+		URL: row.BaseURL, Modelo: row.Model, Hay: true, Mode: row.Mode, Provider: row.Provider,
+		AuthType: row.AuthType, AuthHeader: row.AuthHeader, Credential: credential,
+		Language: instalacion.Language,
 	}, nil
 }
 func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error) {
@@ -596,8 +621,15 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 	if err := validarDireccionPublica(motor); err != nil {
 		return Config{}, ErrAIURLInvalid
 	}
+	actual, err := s.repo.Installation()
+	if err != nil {
+		return Config{}, traducir(err)
+	}
+	if language != actual.Language {
+		return Config{}, ErrLanguageReviewRequired
+	}
 
-	err = s.repo.UpdateInstallation(map[string]any{
+	cambiosInstalacion := map[string]any{
 		"installation_name": nombre,
 		"entry_method":      metodo,
 		"language":          language,
@@ -606,7 +638,11 @@ func (s *Service) Update(input UpdateInput, actor auth.Identity) (Config, error)
 		"public_app_url":    direccion,
 		"ai_url":            motor,
 		"ai_model":          strings.TrimSpace(input.AIModel),
-	}, updatedByID)
+	}
+	if language != actual.Language {
+		cambiosInstalacion["settings_version"] = actual.SettingsVersion + 1
+	}
+	err = s.repo.UpdateInstallation(cambiosInstalacion, updatedByID)
 	if err != nil {
 		return Config{}, traducir(err)
 	}
@@ -641,8 +677,10 @@ type Public struct {
 	// Version es la versión del software, **sin la `v`**: la pone la interfaz al enseñarla. No es
 	// configuración de la instalación —es un dato del software— y por eso es una constante del código
 	// y no una columna (docs/modules/settings.md, sección 5.9).
-	Version string
-	Colors  Colors
+	Version         string
+	Language        string
+	SettingsVersion int64
+	Colors          Colors
 	// LogoVersion cambia cada vez que se reemplaza un logo; vacío si no hay ninguno propio.
 	LogoVersion string
 	// HasLight y HasDark dicen qué huecos están puestos, para que el frontend sepa si pedir el logo.
@@ -670,13 +708,15 @@ func (s *Service) PublicBrand() (Public, error) {
 	}
 
 	publico := Public{
-		Name:        nombreDeLaInstalacion(instalacion.InstallationName),
-		Version:     version.Version,
-		Colors:      colorsFrom(instalacion.PrimaryColor),
-		HasLight:    instalacion.LogoLight != nil,
-		HasDark:     instalacion.LogoDark != nil,
-		LogoVersion: s.versionDe(instalacion),
-		TimeZone:    zonaHorariaDe(instalacion.TimeZone),
+		Name:            nombreDeLaInstalacion(instalacion.InstallationName),
+		Version:         version.Version,
+		Language:        instalacion.Language,
+		SettingsVersion: instalacion.SettingsVersion,
+		Colors:          colorsFrom(instalacion.PrimaryColor),
+		HasLight:        instalacion.LogoLight != nil,
+		HasDark:         instalacion.LogoDark != nil,
+		LogoVersion:     s.versionDe(instalacion),
+		TimeZone:        zonaHorariaDe(instalacion.TimeZone),
 	}
 
 	return publico, nil

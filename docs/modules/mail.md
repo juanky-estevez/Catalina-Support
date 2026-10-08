@@ -1,7 +1,12 @@
 # mail
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-30
+> **Última actualización:** 2026-10-07
+>
+> **Enmienda corregida el 2026-10-07.** Lo existente continúa as-built. Todos los envíos usarán el
+> idioma global y un cambio de idioma podrá generar con IA borradores revisables únicamente de las
+> once plantillas, protegiendo HTML y marcadores. El responsable retiró la regeneración masiva de
+> resúmenes del cambio de idioma y confirmó que siempre habrá edición manual.
 >
 > **Enmendado el 2026-09-30**: el módulo estrena **`Probar`**, que **conecta y autentica contra el
 > servidor de correo sin mandar ningún correo**: abre la conexión con lo que se le pasa —host, puerto,
@@ -372,3 +377,44 @@ lo necesita para mandar el correo de alta. El orden de trabajo que propongo:
 3. El envío por SMTP con las dos versiones, y el registro en el log.
 4. Los cuatro endpoints.
 5. El editor en la pantalla de Configuración.
+
+## 11. Implementación: plantillas traducidas al cambiar el idioma global
+
+Se conservan las veintidós plantillas —once por idioma— como memoria editable de ambos idiomas, pero
+los envíos eligen siempre la versión del idioma global. `Send` y `SendAsync` dejan de recibir el
+idioma del destinatario y lo resuelven desde la instalación en cada envío.
+
+Al solicitar un cambio global, `mail` toma como fuente las once plantillas personalizadas del idioma
+activo. Antes de enviarlas a `ai`, sustituye etiquetas HTML y marcadores `{{…}}` por elementos
+protegidos. La IA traduce sólo el texto; `mail` recompone el HTML y rechaza un borrador si pierde,
+añade, cambia o mueve de forma inválida un marcador. Ningún borrador se guarda todavía.
+
+Si el destino conserva el texto de fábrica, el Administrador revisa fuente y borrador. Si el destino
+ya fue personalizado, revisa tres versiones: fuente activa, borrador de IA y destino existente, y
+puede elegir una o combinarlas en el editor. Nunca se reemplaza una personalización sin mostrarla.
+Al confirmar, una transacción guarda las once plantillas destino y el nuevo idioma global. Si una fila o
+validación falla, no cambia ninguna plantilla ni el idioma. El historial de traducciones no crea una
+tabla adicional: permanecen las dos versiones actuales y `updated_at`/`updated_by_id` dicen quién
+confirmó la última.
+
+La traducción usa la IA activa y por ello no puede iniciar si la instalación está en estado de IA
+requerida. No se mandan destinatarios, direcciones ni datos reales de tickets: sólo asuntos, cuerpos
+y marcadores de las plantillas. Restaurar y editar manualmente continúan disponibles.
+
+Con un proveedor externo, antes de traducir se muestran las veintidós solicitudes —asunto y cuerpo
+de cada plantilla— y una estimación de tokens y costo. Si el Administrador no la acepta, no se hace
+ninguna llamada: los once destinos quedan disponibles para editarlos manualmente. **Aplicar idioma**
+se habilita cuando las once plantillas destino pasan su validación, procedan de la IA, del destino
+existente o de la edición manual.
+
+El responsable eligió traducción por IA con borrador revisable y aplicación atómica el 2026-10-06.
+En el repaso decidió conservar y comparar cualquier destino personalizado, con elección o mezcla
+explícita. El 2026-10-07 corrigió que la confirmación comercial se limita a estas plantillas y que
+rechazarla conserva el camino manual. No quedan decisiones abiertas; corrección aprobada explícitamente.
+
+### 11.1 Implementación verificada
+
+`POST /api/mail/language/drafts` devuelve las once comparaciones sin persistir; protege etiquetas y
+marcadores y exige confirmación antes de las 22 llamadas de un proveedor. El modo manual devuelve el
+destino editable sin llamar a la IA. `POST /api/mail/language/apply` valida las once y, en una única
+transacción, guarda plantillas, idioma y versión global. Se verificó el recorrido manual en PC y móvil.

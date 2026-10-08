@@ -34,6 +34,7 @@ type ProberDeIA interface {
 	// Probar comprueba que el motor de esa dirección contesta. Se le pasa la dirección a propósito:
 	// la prueba es de **lo que hay en pantalla**, y no de lo que esté guardado.
 	Probar(url string) error
+	ProbarConfiguracion(url, model, provider, authType, authHeader, credential, language string) error
 }
 
 // ProberDeCorreo es lo que este módulo necesita para **probar el correo saliente sin mandar ningún
@@ -64,6 +65,7 @@ type CorreoSaliente struct {
 // sólo se dice **si** hay una puesta, que es lo que la pantalla necesita para no pedirla de nuevo.
 type EstadoDeInstalacion struct {
 	Installed    bool
+	AIRequired   bool
 	Name         string
 	Language     string
 	EntryMethod  string
@@ -82,9 +84,10 @@ type EstadoDeInstalacion struct {
 	MailFromName  string
 	MailFromEmail string
 
-	// AiAvailable lo pone el cableado: si el motor de IA responde. Es opcional, y la instalación
-	// funciona entera sin él (docs/modules/ai.md).
+	// AiAvailable es el estado actual del motor. Una caída posterior no deshace la activación válida
+	// guardada ni impide sellar la instalación (docs/primer-arranque.md, sección 11).
 	AiAvailable bool
+	AI          AIConfigurationView
 }
 
 // PasoDeInstalacion es lo que trae **un paso** del asistente. Cada paso usa lo suyo y deja lo demás
@@ -102,6 +105,8 @@ type PasoDeInstalacion struct {
 	PublicAppURL string
 	// Paso 4: el correo saliente.
 	Mail MailInput
+	// Paso 5: el motor de IA. Se prueba y activa como una sola operación.
+	AI AIConfigurationInput
 }
 
 // MailInput es el correo saliente tal y como llega de la pantalla. `Password` vacío quiere decir
@@ -168,6 +173,18 @@ func (s *Service) EstadoDeInstalacion() (EstadoDeInstalacion, error) {
 	}
 	if s.ia != nil {
 		estado.AiAvailable = s.ia.Disponible()
+	}
+	if _, ok := s.repo.(aiRepository); ok {
+		estado.AI, err = s.AIConfiguration()
+		if err != nil {
+			return EstadoDeInstalacion{}, err
+		}
+		if estado.Installed {
+			estado.AIRequired, err = s.AIConfigurationRequired()
+			if err != nil {
+				return EstadoDeInstalacion{}, err
+			}
+		}
 	}
 
 	return estado, nil
@@ -319,6 +336,8 @@ func (s *Service) GuardarPasoDeInstalacion(paso int, entrada PasoDeInstalacion) 
 		err = s.guardarPasoDeDondeEsta(entrada)
 	case 4:
 		err = s.guardarPasoDelCorreo(entrada)
+	case 5:
+		_, err = s.TestAndActivateAI(entrada.AI, nil, true)
 	default:
 		err = ErrPasoIncompleto
 	}
@@ -353,6 +372,31 @@ func (s *Service) TerminarInstalacion() (EstadoDeInstalacion, error) {
 
 	if err := s.metodoEstaConfigurado(instalacion.EntryMethod, directorioDe(directorio), keycloakDe(keycloak)); err != nil {
 		return EstadoDeInstalacion{}, err
+	}
+	if strings.TrimSpace(instalacion.InstallationName) == "" || !contiene(languages, instalacion.Language) {
+		return EstadoDeInstalacion{}, ErrPasoIncompleto
+	}
+	if strings.TrimSpace(instalacion.TimeZone) == "" {
+		return EstadoDeInstalacion{}, ErrPasoIncompleto
+	}
+	if _, err := time.LoadLocation(instalacion.TimeZone); err != nil {
+		return EstadoDeInstalacion{}, ErrTimeZoneUnknown
+	}
+	if strings.TrimSpace(instalacion.PublicAppURL) == "" {
+		return EstadoDeInstalacion{}, ErrPasoIncompleto
+	}
+	if err := validarDireccionPublica(instalacion.PublicAppURL); err != nil {
+		return EstadoDeInstalacion{}, err
+	}
+	if strings.TrimSpace(instalacion.SMTPHost) == "" || strings.TrimSpace(instalacion.SMTPPort) == "" || !strings.Contains(instalacion.SMTPFromEmail, "@") {
+		return EstadoDeInstalacion{}, ErrCorreoIncompleto
+	}
+	ai, err := s.AIConfiguration()
+	if err != nil {
+		return EstadoDeInstalacion{}, err
+	}
+	if !ai.Tested || ai.Mode == "" {
+		return EstadoDeInstalacion{}, ErrPasoIncompleto
 	}
 
 	if err := s.repo.UpdateInstallation(map[string]any{"installed_at": time.Now()}, nil); err != nil {
@@ -438,9 +482,7 @@ func (s *Service) guardarPasoDelCorreo(entrada PasoDeInstalacion) error {
 	puesto := strings.TrimSpace(correo.FromEmail)
 
 	if anfitrion == "" {
-		// **Se puede dejar el correo sin poner**: hay instalaciones que no mandan correo todavía, y el
-		// asistente no puede obligar a tener un servidor a mano. Se dice, y se sigue.
-		return nil
+		return ErrCorreoIncompleto
 	}
 	if !strings.Contains(puesto, "@") || strings.TrimSpace(correo.Port) == "" {
 		return ErrCorreoIncompleto

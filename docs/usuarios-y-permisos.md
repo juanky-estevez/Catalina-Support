@@ -1,7 +1,15 @@
 # Usuarios y permisos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-10-08
+>
+> **Enmienda implementada y verificada el 2026-10-08.** Únicamente Soporte y Desarrollo pueden
+> mejorar con IA los borradores de los editores que ya tienen permitidos. El backend lo exige y la
+> interfaz lo oculta al Usuario y al Administrador; no concede permisos nuevos sobre tickets.
+>
+> **Enmendado el 2026-10-07**, conforme a la propuesta aprobada del 2026-10-06: el idioma dejó de
+> pertenecer a las cuentas. Es único para toda la instalación y sólo el Administrador lo cambia
+> desde Configuración. Datos, API, sesión y pantallas ya cumplen esta regla.
 >
 > **Enmendado el 2026-09-29 (segunda vez)**: **la contraseña sólo se cambia en las cuentas locales**
 > (decisión del responsable). El botón de mandar el enlace pasa a llamarse **«Cambiar contraseña»** —es lo
@@ -18,9 +26,9 @@
 >
 > **Enmendado el 2026-09-27 (tercera vez)**: las **etiquetas también se mantienen** —crear y renombrar,
 > Soporte y Administrador; **retirar, sólo el Administrador**—, con las dos filas nuevas de la matriz
-> (decisión 73 de `docs/modules/tickets.md`: **propuesta mía, implementada el 2026-09-28 y pendiente de
-> que el responsable la corrija** si no es lo que quiere; el responsable pidió poder crearlas y
-> corregirlas, y no dijo quién).
+> (decisión 73 de `docs/modules/tickets.md`). Esta fue la regla implementada inicialmente; la
+> enmienda del 2026-09-29 que aparece justo arriba la sustituyó por la decisión 83 y cerró el asunto:
+> hoy sólo el Administrador mantiene todo el catálogo.
 >
 > **Enmendado el 2026-09-27 (segunda vez)**, al entrar **las categorías y las etiquetas**: la matriz
 > estrena tres filas —elegirlas, mantener el catálogo y **retirar una categoría, que es sólo del
@@ -369,3 +377,31 @@ desbloquea:
 
 Con `modules/tickets.md` y `flujos.md` aprobados, **`auth` y `users` son los primeros módulos que se pueden
 implementar**, porque no dependen de ninguna decisión pendiente del producto.
+
+## 12. El idioma no es un permiso ni una preferencia personal
+
+- Todas las cuentas ven la aplicación y reciben correos en el idioma global de la instalación.
+- Crear, sincronizar o editar una cuenta no recibe ni devuelve idioma. Cambiar el perfil propio queda
+  limitado a nombre y apellidos.
+- El selector desaparece de entrada, menú, perfil, alta y ficha. Sólo el Administrador cambia el
+  idioma global, y la cuenta de fábrica puede hacerlo cuando una actualización exige configurar IA.
+- La columna personal existente se retira del modelo y de las API; no se copia el idioma global en
+  cada cuenta.
+- El idioma global no modifica papeles, permisos, método de entrada, sesiones ni ciclo de vida.
+
+Esta propuesta sustituye únicamente las reglas que atribuían idioma y correo a cada cuenta. El
+responsable la confirmó el 2026-10-06. El repaso confirmó que las sesiones abiertas adoptan el idioma
+global en su siguiente petición, sin cambiar permisos ni cerrar sesión. La regla se implementó y
+verificó el 2026-10-07.
+
+## 13. Implementación: permiso para mejorar un borrador con IA
+
+| Acción | Usuario | Soporte | Desarrollo | Administrador |
+| --- | --- | --- | --- | --- |
+| Mejorar con IA una descripción o comentario que ya puede escribir | No | Sí | Sí | No |
+
+El permiso exige las dos condiciones: papel admitido y permiso vigente sobre el ticket y el editor.
+No permite ver un ticket, conversación o campo que la cuenta no pudiera consultar antes. El backend
+lo comprueba en cada solicitud y responde 403 cuando falla; el frontend sólo evita ofrecer una acción
+que será rechazada. La cuenta de fábrica conserva las capacidades del Administrador y no obtiene
+este permiso operativo.

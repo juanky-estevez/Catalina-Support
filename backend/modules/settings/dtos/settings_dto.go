@@ -28,9 +28,10 @@ type SettingsResponse struct {
 	InternalNotification string       `json:"internalNotification"`
 	UpdatedAt            string       `json:"updatedAt"`
 	// AIURL y AIModel son **el motor de IA**: su dirección y su modelo. Vacíos es «no integrado».
-	AIURL   string   `json:"aiUrl"`
-	AIModel string   `json:"aiModel"`
-	Brand   BrandDto `json:"brand"`
+	AIURL   string                  `json:"aiUrl"`
+	AIModel string                  `json:"aiModel"`
+	AI      AIConfigurationResponse `json:"ai"`
+	Brand   BrandDto                `json:"brand"`
 }
 
 // BrandDto es el estado de la marca: los dos huecos.
@@ -110,6 +111,37 @@ type AITestRequest struct {
 	URL string `json:"url"`
 }
 
+type AIConfigurationRequest struct {
+	Mode             string `json:"mode"`
+	Provider         string `json:"provider"`
+	BaseURL          string `json:"baseUrl"`
+	Model            string `json:"model"`
+	AuthType         string `json:"authType"`
+	AuthHeader       string `json:"authHeader"`
+	Credential       string `json:"credential"`
+	PrivacyConfirmed bool   `json:"privacyConfirmed"`
+	Language         string `json:"language"`
+}
+
+type AIConfigurationResponse struct {
+	Mode             string `json:"mode"`
+	Provider         string `json:"provider"`
+	BaseURL          string `json:"baseUrl"`
+	Model            string `json:"model"`
+	AuthType         string `json:"authType"`
+	AuthHeader       string `json:"authHeader"`
+	CredentialSet    bool   `json:"credentialSet"`
+	PrivacyConfirmed bool   `json:"privacyConfirmed"`
+	Tested           bool   `json:"tested"`
+}
+
+func NewAIConfigurationInput(in AIConfigurationRequest) services.AIConfigurationInput {
+	return services.AIConfigurationInput{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, Credential: in.Credential, PrivacyConfirmed: in.PrivacyConfirmed, Language: in.Language}
+}
+func NewAIConfigurationResponse(in services.AIConfigurationView) AIConfigurationResponse {
+	return AIConfigurationResponse{Mode: in.Mode, Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, AuthType: in.AuthType, AuthHeader: in.AuthHeader, CredentialSet: in.CredentialSet, PrivacyConfirmed: in.PrivacyConfirmed, Tested: in.Tested}
+}
+
 // BrandResponse es lo que la aplicación necesita **antes de que nadie haya entrado**: el color
 // institucional ya resuelto para los dos temas de fábrica, y si hay logo propio.
 type BrandResponse struct {
@@ -121,11 +153,13 @@ type BrandResponse struct {
 	// Version es la versión del software, **sin la `v`**: la `v` la pone la interfaz. Va aquí porque
 	// la marca es lo que la aplicación pide al arrancar, y así el menú y la pantalla de entrada la
 	// tienen sin una segunda llamada (docs/modules/settings.md, sección 5.9).
-	Version      string    `json:"version"`
-	PrimaryColor string    `json:"primaryColor"`
-	Colors       ColorsDto `json:"colors"`
-	Logo         BrandDto  `json:"logo"`
-	LogoVersion  string    `json:"logoVersion"`
+	Version         string    `json:"version"`
+	Language        string    `json:"language"`
+	SettingsVersion int64     `json:"settingsVersion"`
+	PrimaryColor    string    `json:"primaryColor"`
+	Colors          ColorsDto `json:"colors"`
+	Logo            BrandDto  `json:"logo"`
+	LogoVersion     string    `json:"logoVersion"`
 }
 
 // ColorsDto son los cuatro valores del color institucional, ya resueltos.
@@ -174,6 +208,7 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 		UpdatedAt:            config.UpdatedAt.UTC().Format(time.RFC3339),
 		AIURL:                config.AIURL,
 		AIModel:              config.AIModel,
+		AI:                   NewAIConfigurationResponse(config.AI),
 		Brand: BrandDto{
 			Light: newLogoDto(config.Brand.Light),
 			Dark:  newLogoDto(config.Brand.Dark),
@@ -184,10 +219,12 @@ func NewSettingsResponse(config services.Config) SettingsResponse {
 // NewBrandResponse arma lo que se enseña en la pantalla de entrada.
 func NewBrandResponse(public services.Public) BrandResponse {
 	return BrandResponse{
-		Name:         public.Name,
-		Version:      public.Version,
-		TimeZone:     public.TimeZone,
-		PrimaryColor: public.Colors.Light,
+		Name:            public.Name,
+		Version:         public.Version,
+		Language:        public.Language,
+		SettingsVersion: public.SettingsVersion,
+		TimeZone:        public.TimeZone,
+		PrimaryColor:    public.Colors.Light,
 		Colors: ColorsDto{
 			Light:     public.Colors.Light,
 			Dark:      public.Colors.Dark,

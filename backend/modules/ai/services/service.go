@@ -1,5 +1,5 @@
 // Package services es el módulo ai: los dos resúmenes que redacta el motor de inteligencia
-// artificial —**el motivo del ticket** y **su última acción**— en español y en inglés
+// artificial —**el motivo del ticket** y **su última acción**— en el idioma global
 // (docs/modules/ai.md).
 //
 // El motor vive en un contenedor aparte y **puede estar caído**: por eso todo se pide en segundo
@@ -68,13 +68,12 @@ type Entrada struct {
 	Texto string
 }
 
-// Resumen es lo que hay de un campo: su estado y sus dos redacciones.
-//
-// **Los dos idiomas viajan juntos** porque el motor los devuelve en la misma respuesta (decisión 3), y
-// porque la pantalla enseña el del idioma de quien mira: traducir al vuelo sería pedir dos veces lo
-// mismo.
+// Resumen es lo que hay de un campo. Text y Language son el contrato actual de idioma global; Es y
+// En sólo permiten leer filas creadas antes de la actualización.
 type Resumen struct {
 	Estado     Estado
+	Text       string
+	Language   string
 	Es         string
 	En         string
 	ErrorKey   string
@@ -99,7 +98,8 @@ type Ajustes struct {
 	// Palabras es el tope de cada redacción. Se le pide al motor y, si se pasa, se recorta.
 	Palabras int
 	// Espera es el tiempo máximo de **una** llamada al motor.
-	Espera time.Duration
+	Espera                                                     time.Duration
+	Mode, Provider, AuthType, AuthHeader, Credential, Language string
 }
 
 // Configurado dice si hay motor al que preguntar.
@@ -118,7 +118,8 @@ type AIDatos struct {
 	URL    string
 	Modelo string
 	// Hay en falso quiere decir «esta instalación no tiene motor»: se usa el respaldo del entorno.
-	Hay bool
+	Hay                                                        bool
+	Mode, Provider, AuthType, AuthHeader, Credential, Language string
 }
 
 // Configuracion es lo que este módulo necesita de la configuración de la instalación: **el motor**.
@@ -288,6 +289,12 @@ func (s *Service) ajustesDeAhora() Ajustes {
 	if modelo := strings.TrimSpace(datos.Modelo); modelo != "" {
 		ajustes.Modelo = modelo
 	}
+	ajustes.Provider = datos.Provider
+	ajustes.Mode = datos.Mode
+	ajustes.AuthType = datos.AuthType
+	ajustes.AuthHeader = datos.AuthHeader
+	ajustes.Credential = datos.Credential
+	ajustes.Language = datos.Language
 
 	return ajustes
 }
@@ -352,6 +359,19 @@ func (s *Service) De(numeros []string) (map[string]DosResumenes, error) {
 			En:       textoDe(fila.TextEn),
 			ErrorKey: textoDe(fila.ErrorKey),
 		}
+		if fila.Text != nil {
+			resumen.Text = *fila.Text
+			resumen.Language = textoDe(fila.Language)
+		} else if resumen.Es != "" || resumen.En != "" {
+			// Compatibilidad de lectura durante la actualización: el idioma global decide cuál de las
+			// dos columnas anteriores sale por el contrato nuevo.
+			resumen.Language = s.ajustesDeAhora().Language
+			if resumen.Language == "en" {
+				resumen.Text = resumen.En
+			} else {
+				resumen.Text = resumen.Es
+			}
+		}
 		if fila.GeneratedAt != nil {
 			resumen.GeneradoEn = *fila.GeneratedAt
 		}
@@ -376,11 +396,11 @@ func (s *Service) De(numeros []string) (map[string]DosResumenes, error) {
 // eso está «Regenerar»—, y reiniciar el backend no puede ser la forma de saltarse el tope de
 // intentos de un motor que no contesta.
 func (s *Service) Retomar() {
-	if !s.ajustesDeAhora().Configurado() {
+	ajustes := s.ajustesDeAhora()
+	if !ajustes.Configurado() {
 		logs.LogInfo("el motor de IA no está configurado: no hay nada que retomar")
 		return
 	}
-
 	pendientes, err := s.store.Pendientes(intentosMotor)
 	if err != nil {
 		logs.LogError("no se pudieron leer los resúmenes que quedaron a medias: " + err.Error())
@@ -428,6 +448,77 @@ func (s *Service) Disponible() bool {
 	return s.motor.disponible(s.ctx, ajustes)
 }
 
+// Configurado indica si hay un motor efectivo sin hacer ninguna petición de red. Una caída temporal
+// no cambia esta respuesta: la interfaz usa esta condición para ofrecer la ayuda de redacción y deja
+// que el intento muestre el error dentro de su modal.
+func (s *Service) Configurado() bool { return s.ajustesDeAhora().Configurado() }
+
+// Traducir traduce un texto administrativo, como una plantilla de correo, con la configuración
+// activa. Los marcadores protegidos los prepara y valida el módulo que conoce la plantilla.
+func (s *Service) Traducir(texto, idioma string) (string, error) {
+	ajustes := s.ajustesDeAhora()
+	if !ajustes.Configurado() {
+		return "", ErrSinMotor
+	}
+	ajustes.Language = idioma
+	// Una plantilla puede ser bastante más larga que un resumen. El contexto sigue poniendo el
+	// límite real; este tope evita recortarla con las cuarenta palabras de los tickets.
+	ajustes.Palabras = 2000
+	ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
+	defer cancelar()
+	traducido, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{
+		sistema: "Translate the supplied email template faithfully. Preserve every protected token exactly, including its position. Return no explanations.",
+		texto:   texto,
+	})
+	return traducido, err
+}
+
+// MejorarRedaccion revisa un borrador ya autorizado por el módulo que conoce el ticket. No guarda
+// entrada ni salida: devuelve texto plano para que la persona lo revise antes de decidir si lo usa.
+func (s *Service) MejorarRedaccion(borrador, tono, destinatario, tipo, idioma string) (string, error) {
+	ajustes := s.ajustesDeAhora()
+	if !ajustes.Configurado() {
+		return "", ErrSinMotor
+	}
+	ajustes.Language = idioma
+	ajustes.Palabras = 2000
+
+	tonalidades := map[string]string{
+		"professional": "professional",
+		"friendly":     "friendly and approachable",
+		"brief":        "brief and direct",
+		"empathetic":   "empathetic and respectful",
+		"technical":    "precise and technical",
+	}
+	estilo, ok := tonalidades[tono]
+	if !ok {
+		return "", ErrRespuestaInvalida
+	}
+
+	clase := "main support ticket"
+	if tipo == "internal" {
+		clase = "internal ticket between Support and Development"
+	}
+	prompt := "Draft:\n" + borrador + "\n\nRecipient name: " + destinatario +
+		"\nTicket type: " + clase + "\nTone: " + estilo
+	ctx, cancelar := context.WithTimeout(context.Background(), ajustes.Espera)
+	defer cancelar()
+	mejorado, _, err := s.motor.pedirGlobal(ctx, ajustes, encargo{
+		sistema: "Improve the supplied support message. Correct spelling and clarity while preserving every fact, name, number and technical detail. Do not invent information. Use the recipient name only when it sounds natural. Return plain text without Markdown, HTML, mentions or explanations.",
+		texto:   prompt,
+	})
+	if err != nil {
+		return "", err
+	}
+	mejorado = strings.TrimSpace(mejorado)
+	if mejorado == "" {
+		return "", ErrRespuestaInvalida
+	}
+	return mejorado, nil
+}
+
+func (s *Service) EsProveedorComercial() bool { return s.ajustesDeAhora().Mode == "provider" }
+
 // Probar comprueba que el motor de esa dirección contesta, para el botón de «Probar la conexión» de
 // Configuración.
 //
@@ -444,6 +535,14 @@ func (s *Service) Probar(url string) error {
 	defer cancelar()
 
 	return s.motor.probar(ctx, direccion)
+}
+
+// ProbarConfiguracion realiza una generación real artificial para validar protocolo, credencial,
+// modelo y formato antes de activar una integración.
+func (s *Service) ProbarConfiguracion(url, model, provider, authType, authHeader, credential, language string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), s.ajustes.Espera)
+	defer cancel()
+	return s.motor.probarConfiguracion(ctx, url, model, provider, authType, authHeader, credential, language)
 }
 
 // Parar apaga la cola: los trabajadores terminan lo que están haciendo y se van, y la llamada al

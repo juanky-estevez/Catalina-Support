@@ -1,7 +1,43 @@
 # Ambientes: despliegue y pruebas
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-04
+> **Última actualización:** 2026-10-08
+>
+> **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** La sección 17 define el entorno y la matriz de
+> verificación del repaso integral de formato. Lo existente continúa as-built y producción permanece
+> aparcada. El responsable aprobó explícitamente esta enmienda el 2026-10-08.
+>
+> **Hallazgo corregido y verificado el 2026-10-08.** La instancia real quedó detenida conservando sólo
+> sus volúmenes aislados después de reproducir el rechazo 1.5B→3B. La sección 16 define las pruebas
+> de la corrección 15A–22A y la reanudación con los GGUF ya verificados. No se toca desarrollo ni
+> producción; la corrección fue aprobada explícitamente el 2026-10-08.
+>
+> **Hallazgo y enmienda propuesta el 2026-10-07 (bloque 5).** Las pruebas aisladas cubren el motor
+> con procesos y GGUF falsos, pero falta validar el catálogo real sin alterar desarrollo. La sección
+> 15 define un proyecto Compose desechable, mediciones reproducibles y limpieza completa. Las
+> decisiones 1A–14A quedaron cerradas por el responsable. La propuesta fue aprobada explícitamente
+> el 2026-10-08; lo existente continúa as-built mientras se ejecuta la validación.
+>
+> **Hallazgo y enmienda propuesta el 2026-10-07.** El bloque 4 necesita completar las pruebas
+> aisladas prometidas para adaptadores, redirecciones, límites del contenedor y supervisión del
+> motor local. Lo existente continúa as-built. La sección 14 recoge la corrección elegida por el
+> responsable (4A). El repaso terminó con 5A, 6A, 7A y 8A, sin decisiones abiertas. El responsable
+> aprobó explícitamente la enmienda, que se implementó y verificó el 2026-10-07.
+>
+> **Implementado y verificado el 2026-10-07.** Los proveedores y el administrador se probaron con
+> servidores, procesos, archivos y límites falsos, sin proveedores comerciales ni GGUF reales. La
+> pasada canónica terminó con 180 casos E2E aprobados y 38 omisiones previstas, en PC y móvil; la
+> instancia se eliminó con sus volúmenes al cerrar.
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. La sección 13 incorpora la
+> IA como requisito de instalación, separa su motor local por entorno y añade las variables de
+> cifrado y administración. El repaso quedó cerrado, la propuesta fue aprobada y la implementación
+> fue verificada.
+>
+> **Enmendado el 2026-10-06**, aprobado explícitamente por el responsable, implementado y verificado:
+> la suite aislada ejecuta su backend con `go run .`, conserva `./backend:/app:ro` y retira el montaje
+> anidado `backend_tmp:/app/tmp`. El recorrido canónico terminó con salida 0 y la limpieza eliminó
+> todos los recursos de la instancia.
 >
 > **Enmendado el 2026-10-04**, conforme a la sección 12 aprobada de `docs/prueba-local.md`:
 > `dev.yml` ejecuta la migración automáticamente y `backend` espera a que termine correctamente.
@@ -10,7 +46,7 @@
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El recorrido vigente es
 > instalación vacía con `docker compose -f dev.yml up -d --build` y `docker compose -f dev.yml run
-> --rm migrate`, asistente y admin/admin. El seeder es opcional: conserva las cuatro tablas de
+> --rm migrate`, asistente y admin/admin. El seeder es opcional: conserva las cinco tablas de
 > ajustes de una instalación sellada; una instalación sin sellar recibe la demo local y queda
 > sellada. Las pruebas usan exclusivamente `tests.yml`; los comandos anteriores sobre el entorno de
 > desarrollo quedan sustituidos por el procedimiento de abajo.
@@ -22,7 +58,7 @@
 > debe ajustarse para usar los enlaces en localhost. Se reporta el contexto de construcción del
 > script de producción como bloqueo para reproducirlo desde cero; no se cambia código ni se despliega.
 > Comprobado en una copia aislada de Linux: esquema sobre base nueva (0 cuentas y 0 tickets),
-> los cuatro pasos del asistente en navegador, prueba SMTP con Mailpit, entrada con `admin`/`admin`,
+> los cinco pasos del asistente en navegador, prueba SMTP e IA, entrada con `admin`/`admin`,
 > bloqueo 409 tras sellar, alta de cuenta y apertura del enlace del buzón. Después, el seeder dejó
 > 11 cuentas de ejemplo, 25 tickets y 5 adjuntos; las entradas en navegador de fábrica, Usuario,
 > Soporte y Desarrollo funcionaron. No se han ejecutado estas comprobaciones en
@@ -376,37 +412,37 @@ conexión» contesta que sí; sin ellos, contesta que no, que es la verdad.
   guarda como lo escribe quien lo escribe, y sin eso una cuenta de ejemplo con mayúsculas sobrevivía
   a la limpieza y el entorno dejaba de estar en el estado conocido que promete este guion.
 
-### 3.4 El motor de IA: su propio compose, compartido por los dos entornos
+### 3.4 El motor local de IA: su propio compose y recursos por entorno
 
 El motor que redacta el **motivo** y la **última acción** de los tickets (`docs/modules/ai.md`) **no
-vive en `dev.yml` ni en `prod.yml`**, sino en **`ai.yml`**, y hay que levantarlo aparte:
+vive en `dev.yml` ni en `prod.yml`**, sino en **`ai.yml`**. Sólo se levanta cuando se elige la
+modalidad local:
 
 ```bash
-docker compose -f ai.yml up -d      # la primera vez descarga el modelo (~1,1 GB) y tarda
+docker compose -f ai.yml up -d --build
 docker compose -f ai.yml ps
 docker compose -f ai.yml logs -f ai
 docker compose -f ai.yml down       # el volumen del modelo se queda
 ```
 
-**Por qué aparte**: es **uno solo para los dos entornos**, porque no caben dos —el modelo ocupa
-~1,1 GB y la máquina tiene 1,8 GB libres, sin GPU—. Los backends de desarrollo y de producción **entran
-en su red** (`catalina-support-ai`): **`dev.yml` y `prod.yml` la crean** —con su nombre fijo y sin
-`external`— y **`ai.yml` la declara externa**, para que el motor no intente recrearla. Le hablan por su
-nombre, `http://catalina_support_ai:8080`. **No publica ningún puerto**: el motor no se alcanza desde la
-máquina ni desde fuera.
+**Por qué aparte**: el administrador descarga, activa y supervisa `llama-server` sin acceder al
+socket de Docker. `dev.yml` crea `catalina-support-ai-dev` y `prod.yml` crea
+`catalina-support-ai-prod`; `ai.yml` entra en la red correspondiente mediante `AI_NETWORK_NAME`.
+Sus proyectos y volúmenes también llevan nombre por entorno (`AI_PROJECT_NAME` y
+`AI_MODELS_VOLUME`), por lo que desarrollo y producción no comparten modelos ni secretos. El
+backend lo alcanza por el nombre de servicio y el administrador no publica puertos hacia la
+máquina.
 
-- **El modelo se descarga una vez** a un volumen con nombre (`ai_modelos`), así que sobrevive a `down`
-  y a recrear el contenedor; sólo `down -v` lo borra. A partir de ahí el motor funciona **sin salida a
-  internet**.
-- **Es opcional, y a propósito**: **su dirección y su modelo se configuran en Configuración** —con su
-  botón de probar la conexión— y `AI_URL`/`AI_MODEL` quedan **como respaldo**; sin motor configurado
-  —o con el contenedor parado— los dos campos se quedan sin texto y **todo lo demás funciona igual**.
-  Un motor caído no puede parar la mesa de ayuda (`docs/modules/settings.md`, decisión 16, y
-  `docs/modules/ai.md`, decisión 2).
+- **El modelo se descarga desde `/setup` o `/settings`** al volumen del entorno; la descarga se puede
+  reanudar y sólo `down -v` borra el volumen. La interfaz ofrece los modelos 1.5B, 3B y 7B con sus
+  estimaciones de disco y RAM.
+- **La IA es obligatoria para instalar**, pero la modalidad local no lo es: también se puede elegir
+  un servidor propio o un proveedor externo. Si el motor configurado cae después, los resúmenes
+  quedan pendientes y la mesa de ayuda continúa funcionando.
 - **La red la crea el entorno**, así que **el motor se puede levantar después, con el entorno en
   marcha**: `docker compose -f dev.yml up -d` funciona en una máquina nueva sin crear nada a mano.
-- Antes de desplegar a producción, `docker compose -f ai.yml up -d` en el servidor: los dos entornos lo
-  comparten.
+- La operación de producción sigue aparcada hasta el cierre de la versión 1.0.0. Cuando se retome,
+  Compose se ejecutará con los nombres y secretos de producción documentados en la sección 13.
 
 ### 3.5 Dónde queda lo que no es código
 
@@ -834,6 +870,25 @@ y 24 omitidos por servicios ausentes, salida 0. La detección de LDAP ausente se
 encontrar que su función de comprobación no se llamaba. Go y vet pasan; frontend: 216 pruebas.
 No se han ejecutado estas comprobaciones en Windows o macOS.
 
+### 9.4 Arranque del backend aislado sin montaje anidado
+
+La enmienda as-built de `docs/prueba-local.md`, sección 13, conserva los comandos de esta sección.
+Sólo cambia cómo arranca internamente el servicio `backend` de `tests.yml`: `go run .` en lugar del
+comando de Air de la imagen, sin `backend_tmp`. Esto evita escribir dentro del bind de código de sólo
+lectura y no cambia la preparación, los perfiles, los informes ni la limpieza.
+
+La verificación parte siempre de `down -v`, reconstruye los servicios, espera la salud del backend,
+ejecuta al menos los recorridos afectados y termina con otro `down -v`. El compose final debe
+funcionar directamente, sin archivos de sobreescritura temporales.
+
+El repaso confirmó que no habrá recarga, volúmenes temporales ni cachés adicionales. No quedan
+decisiones abiertas propias del runbook.
+
+Verificado en Linux el 2026-10-06 con el compose definitivo: desde una limpieza completa, los
+servicios `database`, `migrate`, `backend`, `frontend` y `mail` arrancaron sin el error OCI; la suite
+sin perfiles opcionales terminó con 177 casos aprobados y 39 omitidos, salida 0, y el `down -v` final
+eliminó contenedores, red y volúmenes. `docker compose -f tests.yml ps -a` quedó vacío.
+
 ## 10. Lo que se decidió al repasar este documento
 
 | # | Decisión | Quedó así |
@@ -863,3 +918,161 @@ No se han ejecutado estas comprobaciones en Windows o macOS.
 Con `ambientes.md` aprobado, **la cadena de documentos está completa** y se puede empezar a
 implementar, en el orden que fija `docs/modules/tickets.md`: `auth`, `users` y `tickets`, con sus pruebas. El
 `scripts/prod-build.sh` y el de copias se escriben entonces, no antes.
+
+## 13. Operación implementada para la IA obligatoria
+
+### 13.1 Variables y secretos
+
+- `AI_CREDENTIAL_KEY`: 32 bytes aleatorios codificados en base64, distintos de `TOKEN_SECRET` y
+  obligatorios al arrancar el backend. Desarrollo tiene un valor local versionado. Cada producción
+  genera el suyo, por ejemplo con `openssl rand -base64 32`, y lo guarda en `config/env/prod.env`.
+- `AI_MANAGER_TOKEN`: secreto compartido entre backend y administrador local. Es obligatorio cuando
+  se usa la modalidad local y no llega al navegador.
+- `AI_URL` y `AI_MODEL` dejan de ser respaldo de una configuración vacía: la base probada es la
+  fuente única. `AI_PALABRAS` y el tiempo máximo pueden conservarse como límites operativos.
+
+La ausencia o formato inválido de `AI_CREDENTIAL_KEY` impide arrancar el backend. Una clave válida
+que no descifra una credencial existente deja la instalación en «IA requiere configuración» para
+que la cuenta de fábrica la reemplace. Las copias de PostgreSQL llevan el cifrado, pero no la clave
+maestra; ambas piezas se respaldan por separado.
+
+### 13.2 Motor local por entorno
+
+`ai.yml` se parametriza con el proyecto y la red del entorno, sin nombres globales compartidos.
+Desarrollo y producción tienen volúmenes de modelos distintos. Levantarlo no descarga nada hasta que
+`/setup` o `/settings` lo solicite; el 1.5B aparece seleccionado por defecto. En una máquina que no
+puede mantener ambos motores, el runbook indica apagar uno antes de levantar el otro.
+
+La operación habitual sigue siendo Compose: levantar, ver logs y bajar sin borrar modelos. La
+interfaz administra archivos dentro del volumen, no contenedores. Una descarga incompleta queda con
+nombre parcial, se reanuda y nunca se activa. Borrar el volumen sigue siendo una acción manual y
+destructiva fuera de la aplicación.
+
+### 13.3 Arranque nuevo y actualización
+
+La aplicación principal puede arrancar antes que el motor local para mostrar `/setup`. Si se elige
+local, el administrador debe estar accesible y completar descarga/activación antes de sellar. Si se
+elige proveedor o servidor propio, `ai.yml` no se levanta.
+
+En una actualización, la migración conserva una configuración existente que supere la generación de
+prueba. Una instalación sin ella queda restringida hasta que Administrador o cuenta de fábrica la
+configure; no se inventa una credencial ni se presupone que el contenedor local existe.
+
+### 13.4 Pruebas
+
+Las pruebas unitarias y de integración usan servidores HTTP falsos para los proveedores y archivos
+GGUF diminutos de prueba para el administrador. Playwright ofrece un servicio falso dentro de
+`tests.yml`, de modo que `/setup` pueda completar obligatoriamente el paso de IA sin internet,
+credenciales comerciales ni descargas de gigabytes. También prueba caída y recuperación.
+
+La verificación manual del catálogo real descarga y mide cada modelo por separado y registra tamaño,
+RAM, tiempo de carga y generación en `docs/modules/ai.md` antes de cerrar como as-built. No se prueba
+contra cuentas comerciales del proyecto.
+
+La operación local recupera trabajos acumulados automáticamente. Un proveedor comercial requiere
+que el Administrador confirme cada lote de recuperación después de ver su volumen estimado; las
+pruebas verifican que ninguna llamada del lote ocurra antes de esa confirmación.
+
+### 13.5 Fuera de alcance
+
+No se automatizan compra de créditos, límites de gasto, GPU, copias del volumen de modelos ni alta
+disponibilidad del motor. Los GGUF pueden volver a descargarse; el backup obligatorio sigue centrado
+en PostgreSQL y los adjuntos. El responsable decidió este alcance el 2026-10-06. El repaso cerró la
+generación y recuperación comercial, la clave obligatoria y la aceptación de licencias; no quedan
+decisiones abiertas; propuesta aprobada explícitamente.
+
+## 14. Verificación aislada implementada para el bloque 4
+
+Las pruebas unitarias levantan servidores `httptest` distintos para OpenAI, DeepSeek, compatible con
+OpenAI y Claude. Verifican ruta, cuerpo, autenticación, idioma, respuesta válida, respuesta demasiado
+grande y rechazo de redirecciones. No usan DNS público, internet, tokens ni cuentas comerciales.
+
+El administrador local admite sustitutos sólo dentro de sus pruebas para ejecutable, reloj/espera,
+memoria y descarga. Así se verifican reinicio con espera creciente, cancelación al cambiar de modelo,
+cgroup v1/v2, disco restante, parcial inválido, reanudación, checksum y límite de redirecciones. Los
+GGUF de prueba son mínimos y temporales.
+
+La prueba del supervisor usa esperas sustituibles y comprueba la serie 1, 2, 4… 60 segundos sin
+esperar tiempo real. La descarga falsa permite hasta cinco redirecciones HTTP/HTTPS, rechaza la sexta
+y cualquier otro esquema. Un archivo con tamaño correcto y checksum incorrecto se elimina antes del
+siguiente intento.
+
+`tests.yml` conserva su servidor compatible falso para `/setup`. Playwright no simula muerte de
+procesos ni descarga modelos reales; esas condiciones quedan en pruebas Go deterministas. El cierre
+ejecuta backend completo, `ai-manager`, las pruebas del frontend y Playwright en PC y móvil, y termina
+con `down -v --remove-orphans`. Los recuentos se anotan con el resultado real. Producción continúa
+aparcada hasta cerrar la versión 1.0.0.
+
+El responsable cerró el repaso el 2026-10-07 con 5A, 6A, 7A y 8A. No quedan decisiones abiertas en
+esta enmienda.
+
+## 15. Entorno desechable usado para modelos reales
+
+La validación usa nombres propios para proyecto, red y volumen, además de una base desechable para
+los recorridos de navegador. No cambia la configuración, el volumen de modelos ni los datos del
+desarrollo habitual. La aplicación y el administrador local se ejecutan con el mismo código e
+imágenes que se están validando.
+
+El recorrido comprueba `/setup` y `/settings` en PC y móvil. En `/setup` descarga, activa y prueba el
+modelo predeterminado antes de sellar. En `/settings` verifica catálogo, estados activo/sano,
+cambio entre 1.5B y 3B, prueba de generación y mensajes de error. El 7B se descarga y valida, pero
+la interfaz debe impedir su activación al no cumplirse la RAM requerida.
+
+La medición separa memoria de `llama-server` y memoria total del contenedor. Los tiempos se toman
+desde la solicitud hasta la salud y alrededor de cada petición de generación. Para probar el
+supervisor se termina sólo el proceso hijo; el administrador debe permanecer vivo y recuperar el
+modelo en no más de cinco minutos.
+
+Al cerrar, se guardan únicamente el informe y los comandos documentados. Se eliminan contenedores,
+red, base, adjuntos, logs y volumen de modelos del proyecto temporal. Un inventario posterior debe
+demostrar que no queda ningún recurso con sus nombres. Desarrollo y producción permanecen intactos;
+producción continúa aparcada hasta cerrar la versión 1.0.0.
+
+## 16. Reanudación completada después del hallazgo de memoria
+
+Las pruebas unitarias sustituyen lecturas de RSS, memoria efectiva, proceso y salud. Verifican que un
+destino imposible no detiene el origen y que cualquier fallo posterior a la parada lo restaura sano.
+Backend y frontend prueban el error estructurado y su toast con requerida/disponible.
+
+Después se reconstruye únicamente la imagen del administrador del proyecto
+`catalina-support-ai-block5` y se reutiliza `catalina_support_ai_models_block5`. Se activa 3B, se
+miden memoria, tiempos, doce generaciones y recuperación. Se comprueba el rechazo de 7B conservando
+3B sano y se repiten `/setup` o `/settings` sólo donde la corrección cambie el resultado, en PC y
+móvil.
+
+Al terminar se ejecuta la limpieza aprobada sobre los nombres explícitos del bloque 5. No se usa
+`down -v` sobre el proyecto habitual de pruebas. Los GGUF no se vuelven a descargar y producción
+permanece aparcada.
+
+La reanudación pasó las suites completas de `ai-manager` y backend, 220 pruebas unitarias del
+frontend y el recorrido afectado de `/settings` en PC y móvil. El entorno aislado se retiró al
+terminar y el inventario final no dejó contenedores, redes ni volúmenes con `block5`.
+
+## 17. Verificación aislada del bloque 6
+
+La revisión usa `tests.yml` y datos desechables. `/setup` se recorre desde una instalación vacía;
+después, una instancia reiniciada con los seeders opcionales aporta listas, estados, adjuntos,
+usuarios y tickets variados para el resto de pantallas. No se leen ni modifican los datos de
+desarrollo y no se usa producción.
+
+La matriz combina español e inglés, claro y oscuro de fábrica, y 1440×900, 768×1024 y 412×915. Los
+seis temas fijos pasan sus comprobaciones comunes de variables y contraste. Chromium es el navegador
+de ejecución; el código sigue usando HTML y CSS compatibles, pero Firefox y WebKit no forman parte
+del criterio de cierre de este bloque.
+
+El inventario se obtiene primero, sin corregir mientras se recorre una pantalla. Después se corrige
+por prioridad y se repite la matriz afectada. Las comprobaciones estables entran en las pruebas de
+componentes o Playwright; la revisión manual registra lo que no pueda expresarse con una aserción
+fiable. El cierre exige frontend unitario, Playwright en la matriz aprobada, `git diff --check` y
+cero hallazgos visuales o de accesibilidad abiertos.
+
+La limpieza final usa los nombres explícitos del proyecto desechable y retira contenedores, red,
+base, adjuntos, logs y cachés. No se ejecuta despliegue, no se abre el dominio y no se corrige el
+hallazgo conocido de `prod-build.sh` en este bloque.
+
+La ejecución real usó el proyecto Compose `catalina-support-block6`. Primero recorrió `/setup` sobre
+una base vacía y después aplicó el seeder oficial: 11 cuentas, 25 tickets y 5 adjuntos. La auditoría
+reproducible encontró y permitió corregir un único desbordamiento en `/users`; la repetición afectada
+y las 220 pruebas unitarias pasaron. La ejecución canónica terminó con **180 casos E2E aprobados y
+38 omisiones previstas**. El proyecto aislado se eliminó con sus volúmenes y producción permaneció
+sin tocar.

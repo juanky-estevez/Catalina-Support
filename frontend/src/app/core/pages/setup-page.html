@@ -14,7 +14,11 @@
   </header>
 
   @if (mensaje(); as aviso) {
-    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+    <app-toast
+      [mensaje]="aviso"
+      [etiquetaCerrar]="t().comun.cerrar"
+      (cerrado)="mensaje.set(null)"
+    />
   }
 
   @if (cargando()) {
@@ -51,27 +55,34 @@
 
           <div class="flex flex-wrap justify-between gap-4">
             <dt class="text-apagado">{{ t().instalacion.paso4 }}</dt>
-            <!-- El correo, si no se puso, se dice: es opcional y hay que saber lo que eso significa. -->
             <dd class="font-medium text-texto">
-              {{
-                configuracion.mail.host
-                  ? t().instalacion.correoPuesto
-                  : t().instalacion.correoSinPoner
-              }}
+              {{ t().instalacion.correoPuesto }}
             </dd>
           </div>
+
+          <div class="flex flex-wrap justify-between gap-4">
+            <dt class="text-apagado">{{ t().instalacion.paso5 }}</dt>
+            <dd class="text-right font-medium text-texto">
+              {{ iaModo() === 'local' ? t().configuracion.iaLocal : iaModo() === 'remote' ? t().configuracion.iaRemota : t().configuracion.iaProveedor }}
+              · {{ iaProveedor() }} · {{ iaModelo() }}
+            </dd>
+          </div>
+
+          <div class="flex flex-wrap justify-between gap-4">
+            <dt class="text-apagado">{{ t().configuracion.iaCredencial }}</dt>
+            <dd class="font-medium text-texto">{{ estado()?.ai?.credentialSet ? t().instalacion.credencialPuesta : t().instalacion.sinCredencial }}</dd>
+          </div>
+
+          @if (iaModo() === 'provider') {
+            <div class="flex flex-wrap justify-between gap-4">
+              <dt class="text-apagado">{{ t().instalacion.confirmacionExterna }}</dt>
+              <dd class="font-medium text-texto">{{ t().instalacion.confirmacionAceptada }}</dd>
+            </div>
+          }
         </dl>
 
-        <!-- El motor de IA es opcional a propósito: se dice si responde, sin más. -->
         <div class="mt-4">
-          <app-aviso
-            forma="informacion"
-            [texto]="
-              configuracion.aiAvailable
-                ? t().instalacion.motorResponde
-                : t().instalacion.motorNoEsta
-            "
-          />
+          <app-aviso forma="informacion" [texto]="t().instalacion.motorResponde" />
         </div>
       }
 
@@ -91,7 +102,7 @@
       </div>
     </app-tarjeta>
   } @else {
-    <!-- ----------------------------------------------------- el avance y los cuatro pasos -->
+    <!-- ----------------------------------------------------- el avance y los cinco pasos -->
     <nav aria-label="{{ t().instalacion.titulo }}" class="flex flex-col gap-2">
       <p class="text-sm font-medium text-texto">{{ pasoDeCuatro() }}</p>
 
@@ -464,7 +475,7 @@
       <app-tarjeta
         nivel="h2"
         [titulo]="t().instalacion.paso4"
-        [descripcion]="t().instalacion.correoOpcional"
+        [descripcion]="t().instalacion.correoObligatorio"
       >
         <div class="flex flex-col gap-4">
           <div class="grid gap-4 sm:grid-cols-2">
@@ -552,6 +563,117 @@
               (pulsado)="probarCorreo()"
             />
           </div>
+        </div>
+      </app-tarjeta>
+    }
+
+    @if (paso() === 5) {
+      <!-- ---------------------------------------------- 5 · la IA obligatoria -->
+      <app-tarjeta
+        nivel="h2"
+        [titulo]="t().configuracion.motorDeIA"
+        [descripcion]="t().configuracion.motorDeIAAyuda"
+      >
+        <div class="flex flex-col gap-4">
+          <app-selector
+            identificador="ia-modo-setup"
+            [etiqueta]="t().configuracion.motorDeIA"
+            [opciones]="opcionesDeModoIA()"
+            [valor]="iaModo()"
+            (valorChange)="cambiarModoIA($event)"
+          />
+
+          @if (iaModo() === 'provider') {
+            <app-selector
+              identificador="ia-proveedor-setup"
+              [etiqueta]="t().configuracion.iaProveedor"
+              [opciones]="opcionesDeProveedorIA()"
+              [valor]="iaProveedor()"
+              (valorChange)="iaProveedor.set($event)"
+            />
+          }
+
+          <app-campo
+            identificador="ia-direccion-setup"
+            [etiqueta]="t().configuracion.iaDireccion"
+            [ayuda]="t().configuracion.iaDireccionAyuda"
+            [ejemplo]="t().configuracion.iaDireccionEjemplo"
+            [valor]="iaDireccion()"
+            (valorChange)="iaDireccion.set($event)"
+          />
+
+          @if (iaModo() === 'local') {
+            <app-selector
+              identificador="ia-modelo-local-setup"
+              [etiqueta]="t().configuracion.iaModelo"
+              [opciones]="opcionesDeModeloLocal()"
+              [valor]="iaModelo()"
+              (valorChange)="iaModelo.set($event)"
+            />
+            <div class="flex flex-col gap-3 rounded-md border border-borde p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3><app-boton forma="secundario" [texto]="t().configuracion.iaCargarCatalogo" [trabajando]="guardando()" (pulsado)="cargarCatalogoIA()" /></div>
+              @if (catalogoIA(); as catalogo) {
+                <p class="text-xs text-apagado">{{ interpolar(t().configuracion.iaDiscoDisponible, { cantidad: formatoBytes(catalogo.diskAvailableBytes) }) }}</p>
+                @for (modelo of catalogo.models; track modelo.id) {
+                  <article class="flex flex-col gap-2 rounded-md bg-superficie-suave p-3 text-sm">
+                    <div class="flex flex-wrap justify-between gap-2"><strong>{{ modelo.name }}</strong><span>{{ modelo.active ? t().configuracion.iaActivo + ' · ' + (modelo.healthy ? t().configuracion.iaSaludable : t().configuracion.iaNoSaludable) : modelo.installed ? t().configuracion.iaInstalado : modelo.downloading ? t().configuracion.iaDescargando : '' }}</span></div>
+                    @if (modelo.error) { <p class="text-xs text-error">{{ modelo.error }}</p> }
+                    <p class="text-apagado">{{ interpolar(t().configuracion.iaRecursos, { disco: formatoBytes(modelo.downloadBytes), ram: formatoBytes(modelo.ramBytes) }) }}</p>
+                    <p class="break-all text-xs text-apagado">SHA-256: {{ modelo.checksum }}</p><a class="text-primario underline" [href]="modelo.source" target="_blank" rel="noopener">{{ modelo.license }}</a>
+                    @if (!modelo.installed && !modelo.downloading) { <label class="flex gap-2"><input type="checkbox" [checked]="licenciasAceptadas().has(modelo.id)" (change)="aceptarLicencia(modelo.id, $any($event.target).checked)" />{{ t().configuracion.iaAceptarLicencia }}</label><app-boton forma="secundario" [texto]="t().configuracion.iaDescargar" [deshabilitado]="!licenciasAceptadas().has(modelo.id)" (pulsado)="descargarModelo(modelo.id)" /> }
+                    @if (modelo.installed && !modelo.active) { <div class="flex gap-2"><app-boton [texto]="t().configuracion.iaActivar" (pulsado)="activarModelo(modelo.id)" /><app-boton forma="secundario" [texto]="t().configuracion.iaEliminar" (pulsado)="eliminarModelo(modelo.id)" /></div> }
+                  </article>
+                }
+              }
+            </div>
+          } @else {
+            <app-campo
+              identificador="ia-modelo-setup"
+              [etiqueta]="t().configuracion.iaModelo"
+              [ayuda]="t().configuracion.iaModeloAyuda"
+              [valor]="iaModelo()"
+              (valorChange)="iaModelo.set($event)"
+            />
+
+            <app-selector
+              identificador="ia-auth-setup"
+              [etiqueta]="t().configuracion.iaAutenticacion"
+              [opciones]="opcionesDeAuthIA()"
+              [valor]="iaAutenticacion()"
+              (valorChange)="iaAutenticacion.set($any($event))"
+            />
+
+            @if (iaAutenticacion() === 'header') {
+              <app-campo
+                identificador="ia-cabecera-setup"
+                [etiqueta]="t().configuracion.iaCabecera"
+                [valor]="iaCabecera()"
+                (valorChange)="iaCabecera.set($event)"
+              />
+            }
+            @if (iaAutenticacion() !== 'none') {
+              <app-campo
+                identificador="ia-credencial-setup"
+                tipo="password"
+                autocomplete="new-password"
+                [etiqueta]="t().configuracion.iaCredencial"
+                [valor]="iaCredencial()"
+                (valorChange)="iaCredencial.set($event)"
+              />
+            }
+
+            <label class="flex items-start gap-2 text-sm text-texto">
+              <input
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 rounded border-borde-fuerte"
+                [checked]="iaPrivacidad()"
+                (change)="iaPrivacidad.set($any($event.target).checked)"
+              />
+              <span>{{ iaModo() === 'provider' ? t().configuracion.iaPrivacidadCosto : t().configuracion.iaPrivacidad }}</span>
+            </label>
+          }
+
+          <app-aviso forma="informacion" [texto]="t().configuracion.motorOk" />
         </div>
       </app-tarjeta>
     }

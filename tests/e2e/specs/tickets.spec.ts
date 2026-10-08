@@ -98,10 +98,10 @@ async function detalleDe(
 ): Promise<{
   ticket: {
     number: string;
-    /** Los dos campos del motor de IA, con su estado y sus dos idiomas (`docs/modules/ai.md`). */
+    /** Los dos campos del motor de IA, con su estado y el idioma global (`docs/modules/ai.md`). */
     insights?: {
-      motivo: { state: string; es?: string; en?: string };
-      ultimaAccion: { state: string; es?: string; en?: string };
+      motivo: { state: string; text?: string; language?: string };
+      ultimaAccion: { state: string; text?: string; language?: string };
     };
   };
   comments: { id: number; body: string }[];
@@ -231,6 +231,48 @@ test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 test.describe('El recorrido de un ticket', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se pueden crear cuentas');
+  });
+
+  test('Soporte revisa una mejora de IA antes de aplicarla y el usuario no recibe el botón', async ({
+    page,
+    request,
+  }) => {
+    const solicitante = await crearCuentaLista(request, { name: 'Lucía', lastName: 'Solicitante' });
+    const soporte = await crearCuentaLista(request, { role: 'soporte', name: 'Mateo', lastName: 'Soporte' });
+    const tokenSolicitante = await tokenDe(request, solicitante.email);
+    const { numero } = await ticketDePrueba(
+      request,
+      tokenSolicitante,
+      'Ayuda de redacción',
+      '<p>La conexión se interrumpe cada pocos minutos.</p>',
+    );
+
+    await entrarComo(page, soporte.email);
+    await page.goto(`/tickets/${numero}`);
+    const editor = page.getByLabel('Escribe un comentario');
+    await editor.fill('hola lucía mandame el error que aparece');
+
+    const abrir = page.getByRole('button', { name: 'Mejorar con IA' });
+    await expect(abrir).toBeVisible();
+    await abrir.click();
+    const dialogo = page.getByRole('dialog', { name: 'Mejorar la redacción con IA' });
+    await expect(dialogo.getByLabel('Borrador')).toHaveValue('hola lucía mandame el error que aparece');
+    await dialogo.getByLabel('Tonalidad').selectOption('empathetic');
+    await dialogo.getByRole('button', { name: 'Mejorar', exact: true }).click();
+
+    await expect(dialogo.getByLabel('Borrador')).toHaveValue('connection ok');
+    // La propuesta permanece en el modal hasta que la persona la acepta.
+    await expect(editor).toHaveText('hola lucía mandame el error que aparece');
+    await dialogo.getByRole('button', { name: 'Usar este texto' }).click();
+    await expect(editor).toHaveText('connection ok');
+
+    // Aplicarla sólo cambia el borrador: todavía no existe ningún comentario nuevo en la API.
+    expect((await detalleDe(request, tokenSolicitante, numero)).comments).toHaveLength(0);
+
+    await salir(page);
+    await entrarComo(page, solicitante.email);
+    await page.goto(`/tickets/${numero}`);
+    await expect(page.getByRole('button', { name: 'Mejorar con IA' })).toHaveCount(0);
   });
 
   test('el usuario abre un ticket, lo sigue, lo cierra y lo reabre', async ({ page, request }, info) => {
@@ -1766,7 +1808,7 @@ test.describe('Los resúmenes del motor de IA', () => {
     if (alLlegar.ticket.insights?.motivo.state === 'pendiente') {
       await expect(fila).toContainText('Generando…');
     } else {
-      await expect(fila).toContainText(alLlegar.ticket.insights?.motivo.es ?? '');
+      await expect(fila).toContainText(alLlegar.ticket.insights?.motivo.text ?? '');
     }
 
     await page.getByRole('link', { name: numero }).click();
@@ -1798,20 +1840,28 @@ test.describe('Los resúmenes del motor de IA', () => {
     }
 
     if (!fallo) {
-      expect(listo.ticket.insights?.motivo.es?.length ?? 0).toBeGreaterThan(10);
-      expect(listo.ticket.insights?.motivo.en?.length ?? 0).toBeGreaterThan(10);
-      expect(listo.ticket.insights?.ultimaAccion.es?.length ?? 0).toBeGreaterThan(10);
-      expect(listo.ticket.insights?.ultimaAccion.en?.length ?? 0).toBeGreaterThan(10);
+      expect(listo.ticket.insights?.motivo.text?.length ?? 0).toBeGreaterThan(10);
+      expect(listo.ticket.insights?.ultimaAccion.text?.length ?? 0).toBeGreaterThan(10);
+      expect(listo.ticket.insights?.motivo.language).toBe('es');
+      expect(listo.ticket.insights?.ultimaAccion.language).toBe('es');
     }
 
     await page.goto('/tickets/main');
     await buscarEnLaLista(page, numero);
-    await expect(fila).toContainText(listo.ticket.insights?.motivo.es ?? '');
-    await expect(fila).toContainText(listo.ticket.insights?.ultimaAccion.es ?? '');
+    await expect(fila).toContainText(listo.ticket.insights?.motivo.text ?? '');
+    await expect(fila).toContainText(listo.ticket.insights?.ultimaAccion.text ?? '');
 
     await page.getByRole('link', { name: numero }).click();
-    await expect(page.getByText(listo.ticket.insights?.motivo.es ?? '')).toBeVisible();
-    await expect(page.getByText(listo.ticket.insights?.ultimaAccion.es ?? '')).toBeVisible();
+    const textoMotivo = listo.ticket.insights?.motivo.text ?? '';
+    const textoUltima = listo.ticket.insights?.ultimaAccion.text ?? '';
+    if (textoMotivo === textoUltima) {
+      // El doble de pruebas responde el mismo texto artificial para ambos encargos. La ficha debe
+      // mostrarlo una vez en cada campo; un locator estricto sin acotar sería ambiguo.
+      await expect(page.getByText(textoMotivo, { exact: true })).toHaveCount(2);
+    } else {
+      await expect(page.getByText(textoMotivo, { exact: true })).toBeVisible();
+      await expect(page.getByText(textoUltima, { exact: true })).toBeVisible();
+    }
 
     // Si alguno falló, la pantalla lo dice en castellano y no enseña ninguna clave (sección 8 de
     // `docs/interfaz-y-experiencia.md`).

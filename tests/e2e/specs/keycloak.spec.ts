@@ -238,7 +238,6 @@ test.describe('El camino de Keycloak', () => {
         email: NURIA.email,
         role: 'usuario',
         origin: 'local',
-        language: 'es',
       },
     });
     expect(alta.status(), await alta.text()).toBe(201);

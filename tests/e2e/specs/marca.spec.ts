@@ -257,8 +257,7 @@ test.describe('La marca', () => {
       expect(oscuro).toBe('#ffff00');
 
       // Y sigue leyéndose: el texto del botón sobre su color.
-      const boton = await page.evaluate(() => {
-        const nodo = document.querySelector('button[type="submit"]')!;
+      const boton = await page.locator('button[type="submit"]').evaluate((nodo) => {
         const estilo = getComputedStyle(nodo);
         return { color: estilo.color, fondo: estilo.backgroundColor };
       });

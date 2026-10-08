@@ -10,7 +10,6 @@ export interface Cuenta {
   readonly email: string;
   readonly role: string;
   readonly origin: string;
-  readonly language: string;
   readonly isActive: boolean;
   /** Si tiene contraseña propia. En las cuentas de directorio es falsa: la suya no es nuestra. */
   readonly hasPassword: boolean;
@@ -62,8 +61,6 @@ export interface AltaDeCuenta {
   readonly email: string;
   readonly role: string;
   readonly origin: string;
-  /** Vacío quiere decir **el idioma de la instalación**, que es el que pone el backend. */
-  readonly language: string;
 }
 
 /** Lo que un Administrador puede cambiar de una cuenta. */
@@ -72,14 +69,12 @@ export interface CambiosDeCuenta {
   readonly lastName?: string;
   readonly email?: string;
   readonly role?: string;
-  readonly language?: string;
 }
 
-/** Lo que cualquiera cambia de su propio perfil: su nombre, sus apellidos y su idioma. */
+/** Lo que cualquiera cambia de su propio perfil: su nombre y sus apellidos. */
 export interface CambiosDePerfil {
   readonly name?: string;
   readonly lastName?: string;
-  readonly language?: string;
 }
 
 /**

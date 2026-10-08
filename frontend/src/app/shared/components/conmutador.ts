@@ -25,7 +25,7 @@ export interface OpcionConmutador {
     <div
       role="group"
       [attr.aria-label]="etiqueta()"
-      class="inline-flex rounded-md border border-borde bg-superficie-suave p-0.5"
+      class="inline-flex max-w-full flex-wrap rounded-md border border-borde bg-superficie-suave p-0.5"
     >
       @for (opcion of opciones(); track opcion.valor) {
         <button

@@ -15,6 +15,7 @@ type repoDePrueba struct {
 	instalacion repositories.InstallationSettings
 	directorio  repositories.DirectorySettings
 	keycloak    repositories.KeycloakSettings
+	ia          repositories.AISettings
 }
 
 func (r *repoDePrueba) Installation() (repositories.InstallationSettings, error) {
@@ -33,10 +34,62 @@ func (r *repoDePrueba) Keycloak() (repositories.KeycloakSettings, error) {
 	return r.keycloak, nil
 }
 
+func (r *repoDePrueba) AI() (repositories.AISettings, error) { return r.ia, nil }
+
 func (r *repoDePrueba) UpdateInstallation(map[string]any, *int64) error { return nil }
 func (r *repoDePrueba) UpdateDirectory(map[string]any, *int64) error    { return nil }
 func (r *repoDePrueba) UpdateKeycloak(map[string]any, *int64) error     { return nil }
 func (r *repoDePrueba) UpdateTickets(map[string]any, *int64) error      { return nil }
+func (r *repoDePrueba) UpdateAI(map[string]any, *int64) error           { return nil }
+
+func TestTerminarInstalacionExigeLosCincoPasosSinReprobarIA(t *testing.T) {
+	probada := time.Now()
+	completa := func() *repoDePrueba {
+		return &repoDePrueba{
+			instalacion: repositories.InstallationSettings{
+				InstallationName: "Catalina Support", Language: "es", EntryMethod: auth.MethodLocal,
+				TimeZone: "America/Guayaquil", PublicAppURL: "https://soporte.example.com",
+				SMTPHost: "smtp.example.com", SMTPPort: "587", SMTPFromEmail: "soporte@example.com",
+			},
+			ia: repositories.AISettings{Mode: "remote", TestedAt: &probada},
+		}
+	}
+
+	t.Run("una activación guardada permite sellar sin probar otra vez", func(t *testing.T) {
+		repo := completa()
+		servicio := NewService(repo, t.TempDir())
+		if _, err := servicio.TerminarInstalacion(); err != nil {
+			t.Fatalf("una instalación completa no debería volver a probar la IA: %v", err)
+		}
+	})
+
+	t.Run("sin correo no se sella", func(t *testing.T) {
+		repo := completa()
+		repo.instalacion.SMTPHost = ""
+		servicio := NewService(repo, t.TempDir())
+		if _, err := servicio.TerminarInstalacion(); !errors.Is(err, ErrCorreoIncompleto) {
+			t.Fatalf("sin correo se esperaba %v y llegó %v", ErrCorreoIncompleto, err)
+		}
+	})
+
+	t.Run("sin ubicación no se sella", func(t *testing.T) {
+		repo := completa()
+		repo.instalacion.PublicAppURL = ""
+		servicio := NewService(repo, t.TempDir())
+		if _, err := servicio.TerminarInstalacion(); !errors.Is(err, ErrPasoIncompleto) {
+			t.Fatalf("sin dirección se esperaba %v y llegó %v", ErrPasoIncompleto, err)
+		}
+	})
+
+	t.Run("sin activación de IA no se sella", func(t *testing.T) {
+		repo := completa()
+		repo.ia.TestedAt = nil
+		servicio := NewService(repo, t.TempDir())
+		if _, err := servicio.TerminarInstalacion(); !errors.Is(err, ErrPasoIncompleto) {
+			t.Fatalf("sin IA probada se esperaba %v y llegó %v", ErrPasoIncompleto, err)
+		}
+	})
+}
 
 // proberDePrueba apunta si le han llamado y con qué, y **no sale a la red**.
 type proberDePrueba struct {

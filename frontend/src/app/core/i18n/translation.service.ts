@@ -9,8 +9,6 @@ export type Idioma = 'es' | 'en';
 const IDIOMAS: readonly Idioma[] = ['es', 'en'];
 
 /** Dónde se recuerda lo que alguien eligió en el conmutador. */
-const CLAVE_GUARDADA = 'catalina-support.idioma';
-
 /**
  * Decide en qué idioma se entra (docs/modules/auth.md, decisión 25):
  *
@@ -51,6 +49,7 @@ function esIdioma(valor: string): valor is Idioma {
 @Injectable({ providedIn: 'root' })
 export class TranslationService {
   private readonly idiomaActual = signal<Idioma>(leerIdiomaInicial());
+  private readonly versionGlobal = signal(0);
 
   /** El idioma de ahora mismo. */
   readonly idioma = this.idiomaActual.asReadonly();
@@ -64,29 +63,20 @@ export class TranslationService {
     document.documentElement.lang = this.idiomaActual();
   }
 
-  /** Cambia el idioma y lo recuerda en este navegador. */
+  /** Cambia el idioma visible. La elección pertenece a la instalación y no se guarda por persona. */
   cambiar(idioma: Idioma): void {
     this.idiomaActual.set(idioma);
     document.documentElement.lang = idioma;
-
-    try {
-      localStorage.setItem(CLAVE_GUARDADA, idioma);
-    } catch {
-      // Sin almacenamiento (modo privado, por ejemplo) se cambia igual: sólo no se recuerda.
-    }
   }
 
-  /**
-   * Adopta el idioma de la cuenta que acaba de entrar.
-   *
-   * Dentro de la aplicación manda el idioma de la cuenta, porque es el que decide también en qué
-   * idioma se le escriben los correos (docs/modules/auth.md, sección 7).
-   */
-  usarIdiomaDeCuenta(idioma: string): void {
+  /** Adopta una versión global más nueva anunciada por el backend. */
+  adoptarGlobal(idioma: string, version: number): void {
     const base = idioma?.toLowerCase().split('-')[0];
-    if (base && esIdioma(base)) {
-      this.cambiar(base);
+    if (!base || !esIdioma(base) || !Number.isFinite(version) || version < this.versionGlobal()) {
+      return;
     }
+    this.versionGlobal.set(version);
+    this.cambiar(base);
   }
 
   /**
@@ -102,13 +92,5 @@ export class TranslationService {
 }
 
 function leerIdiomaInicial(): Idioma {
-  let guardado: string | null = null;
-  try {
-    guardado = localStorage.getItem(CLAVE_GUARDADA);
-  } catch {
-    guardado = null;
-  }
-
-  const preferidos = navigator.languages?.length ? navigator.languages : [navigator.language];
-  return idiomaElegido(preferidos, guardado);
+  return 'en';
 }

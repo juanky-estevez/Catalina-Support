@@ -42,8 +42,8 @@ const FactorySubject = "admin"
 // Identity es quién hace la petición: lo que el middleware deja en el contexto y leen los
 // controladores.
 //
-// Lleva el papel y el idioma resueltos porque se leen de la cuenta **en cada petición**: así, dar de
-// baja a alguien o cambiarle el papel surte efecto en la siguiente llamada, sin esperar a que caduque
+// Lleva el papel resuelto porque se lee de la cuenta **en cada petición**: así, dar de baja a alguien
+// o cambiarle el papel surte efecto en la siguiente llamada, sin esperar a que caduque
 // su token (docs/usuarios-y-permisos.md, sección 6).
 type Identity struct {
 	// ID es el identificador de la cuenta. Cero en la cuenta de fábrica.
@@ -55,7 +55,6 @@ type Identity struct {
 	Email    string
 	Role     string
 	Origin   string
-	Language string
 	IsActive bool
 	Subject  string
 }

@@ -9,15 +9,12 @@ import (
 )
 
 // CreateUserRequest es lo que llega para dar de alta una cuenta.
-//
-// El idioma es opcional: si no se elige, se le escriben los correos en español.
 type CreateUserRequest struct {
 	Name     string `json:"name"`
 	LastName string `json:"lastName"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
 	Origin   string `json:"origin"`
-	Language string `json:"language"`
 	// ExternalID sólo tiene sentido en las cuentas de directorio.
 	ExternalID string `json:"externalId"`
 }
@@ -33,7 +30,6 @@ type UserResponse struct {
 	Email       string `json:"email"`
 	Role        string `json:"role"`
 	Origin      string `json:"origin"`
-	Language    string `json:"language"`
 	IsActive    bool   `json:"isActive"`
 	HasPassword bool   `json:"hasPassword"`
 	ExternalID  string `json:"externalId,omitempty"`
@@ -68,16 +64,14 @@ type UpdateUserRequest struct {
 	LastName *string `json:"lastName"`
 	Email    *string `json:"email"`
 	Role     *string `json:"role"`
-	Language *string `json:"language"`
 	IsActive *bool   `json:"isActive"`
 }
 
-// UpdateProfileRequest es lo que puede cambiar cualquiera de su propio perfil: su nombre, sus
-// apellidos y su idioma, y nada más (docs/modules/users.md, sección 8).
+// UpdateProfileRequest es lo que puede cambiar cualquiera de su propio perfil: su nombre y sus
+// apellidos, y nada más (docs/modules/users.md, sección 8).
 type UpdateProfileRequest struct {
 	Name     *string `json:"name"`
 	LastName *string `json:"lastName"`
-	Language *string `json:"language"`
 }
 
 // OriginRequest es el cambio de origen de una cuenta.
@@ -111,7 +105,6 @@ func NewUserResponse(account auth.Account) UserResponse {
 		Email:       account.Email,
 		Role:        account.Role,
 		Origin:      account.Origin,
-		Language:    account.Language,
 		IsActive:    account.IsActive,
 		HasPassword: account.HasPassword(),
 		ExternalID:  account.ExternalID,

@@ -175,6 +175,32 @@ test.describe('Configuración', () => {
     await expect(page).toHaveTitle('Catalina Support');
   });
 
+  test('el idioma se aplica sólo después de revisar manualmente las once plantillas', async ({ page }) => {
+    await page.locator('#idioma-instalacion').selectOption('en');
+    await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(11);
+    await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+    // Las cinco opciones del papel son más largas en inglés. En 412 px antes obligaban al documento
+    // a medir 424 px; el conmutador compartido debe partirlas sin crear desplazamiento horizontal.
+    await page.goto('/users');
+    await expect(page.getByRole('group', { name: 'Role' })).toBeVisible();
+    const ancho = await page.evaluate(() => ({
+      contenido: document.documentElement.scrollWidth,
+      ventana: document.documentElement.clientWidth,
+    }));
+    expect(ancho.contenido).toBeLessThanOrEqual(ancho.ventana);
+
+    await page.goto('/settings');
+
+    await page.locator('#idioma-instalacion').selectOption('es');
+    await page.getByRole('button', { name: /Editar manualmente|Edit manually/ }).first().click();
+    await expect(page.locator('textarea[id^="translation-body-"]')).toHaveCount(11);
+    await page.getByRole('button', { name: /Aplicar idioma|Apply language/ }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  });
+
   /**
    * **Cómo se entra**: el método que está puesto y las dos configuraciones, con su botón de probar la
    * conexión (decisión del responsable, 2026-09-25).
@@ -190,22 +216,25 @@ test.describe('Configuración', () => {
     await page.reload();
 
     const metodo = page.getByLabel('Método de entrada');
+    const autenticacion = page.locator('app-tarjeta').filter({
+      has: page.getByRole('heading', { name: 'Método de autenticación' }),
+    });
     await expect(metodo).toHaveValue('local');
 
     // **Con «Cuentas de la aplicación» no se enseña ninguna de las dos configuraciones** (decisión del
     // responsable, 2026-09-27): cada panel sale al elegir su método, porque el que no se usa no es
     // trabajo que toque hacer.
-    await expect(page.getByLabel('Servidor')).toHaveCount(0);
-    await expect(page.getByLabel('Emisor del reino')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Servidor')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveCount(0);
 
     // Se elige AD y aparece **su** configuración —la prepara la suite aislada—, sin su secreto.
     await metodo.selectOption('ad');
-    await expect(page.getByLabel('Servidor')).toHaveValue('ldap');
+    await expect(autenticacion.getByLabel('Servidor')).toHaveValue('ldap');
     // **El secreto no llega nunca**: el campo está vacío y lo que se cuenta es que hay uno guardado.
     await expect(page.getByLabel('Contraseña de la cuenta de servicio')).toHaveValue('');
     await expect(page.getByText('Hay una contraseña guardada. Déjalo vacío para no cambiarla.')).toBeVisible();
     // Y la de Keycloak sigue sin verse: cada método enseña la suya y ninguna más.
-    await expect(page.getByLabel('Emisor del reino')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveCount(0);
 
     // Con Keycloak, al revés: sale su panel y se va el del directorio.
     await metodo.selectOption('keycloak');
@@ -213,13 +242,13 @@ test.describe('Configuración', () => {
     const ajustes = await (
       await request.get('/api/settings', { headers: { Authorization: `Bearer ${token}` } })
     ).json();
-    await expect(page.getByLabel('Emisor del reino')).toHaveValue(
+    await expect(autenticacion.getByLabel('Emisor del reino')).toHaveValue(
       ajustes.keycloak.issuer,
     );
     await expect(page.getByLabel('Dirección interna del reino (opcional)')).toHaveValue(
       ajustes.keycloak.internalIssuer,
     );
-    await expect(page.getByLabel('Servidor')).toHaveCount(0);
+    await expect(autenticacion.getByLabel('Servidor')).toHaveCount(0);
 
     // Y se vuelve a AD para guardar: vale desde la próxima entrada, sin reiniciar nada.
     await metodo.selectOption('ad');
@@ -422,6 +451,30 @@ test.describe('Configuración', () => {
         aiModel: 'qwen2.5-1.5b-instruct',
       },
     });
+  });
+
+  test('el resultado de una conexión se mantiene visible en un toast', async ({ page }) => {
+    const direccion = page.getByLabel('Dirección del motor');
+    await direccion.fill('http://no-existe-de-verdad:8080');
+    await page.getByRole('button', { name: 'Probar la conexión' }).last().click();
+
+    const toast = page.locator('app-toast');
+    await expect(toast).toContainText('El motor de IA no ha contestado');
+    expect(await toast.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('fixed');
+
+    const caja = await toast.boundingBox();
+    const ventana = page.viewportSize();
+    expect(caja).not.toBeNull();
+    expect(ventana).not.toBeNull();
+    expect(caja!.x).toBeGreaterThanOrEqual(0);
+    expect(caja!.y).toBeGreaterThanOrEqual(0);
+    expect(caja!.x + caja!.width).toBeLessThanOrEqual(ventana!.width);
+
+    // Es error: cinco segundos no lo retiran. Se conserva hasta que la persona lo cierre.
+    await page.waitForTimeout(5_500);
+    await expect(toast).toBeVisible();
+    await toast.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(toast).toHaveCount(0);
   });
 
   test('las tarjetas de Configuración están en su orden y cada cosa en la suya', async ({ page }) => {

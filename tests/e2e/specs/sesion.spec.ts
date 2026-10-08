@@ -61,8 +61,9 @@ test.describe('Entrar y salir', () => {
     expect(logo, 'el logo tiene que medir lo mismo que el formulario').toBe(tarjeta);
     expect(controles, 'los controles también').toBe(tarjeta);
 
-    // Y los dos desplegables, **a medias**: es lo que se pidió por «simétrico».
-    expect(await ancho('#idioma')).toBe(await ancho('#tema'));
+    // Sólo queda el tema como preferencia del navegador; el idioma es global.
+    await expect(page.locator('#idioma')).toHaveCount(0);
+    expect(await ancho('#tema')).toBeLessThanOrEqual(controles);
   });
 
   test('la cuenta de fábrica entra, se la reconoce y sale', async ({ page }) => {

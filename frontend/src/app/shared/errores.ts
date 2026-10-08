@@ -18,3 +18,12 @@ export function claveDelError(error: unknown): string {
 
   return 'error interno';
 }
+
+export function memoriaDelError(error: unknown): { requiredBytes: number; availableBytes: number } | null {
+  if (!(error instanceof HttpErrorResponse)) return null;
+  const requiredBytes = error.error?.requiredBytes;
+  const availableBytes = error.error?.availableBytes;
+  if (typeof requiredBytes !== 'number' || requiredBytes < 0 ||
+      typeof availableBytes !== 'number' || availableBytes < 0) return null;
+  return { requiredBytes, availableBytes };
+}

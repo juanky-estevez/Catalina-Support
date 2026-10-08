@@ -1,7 +1,59 @@
 # Arquitectura
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-04
+> **Última actualización:** 2026-10-08
+>
+> **Bloque 7 implementado y verificado, 2026-10-08.** La sección 18 cierra las dos deudas técnicas
+> declaradas en la sección 12: automatizar las fronteras de los módulos del frontend y decidir que
+> el navegador no tendrá un sistema de logging de aplicación. Incluye una auditoría de todos los
+> documentos `as-built`, porque la revisión encontró afirmaciones vigentes que contradicen el código
+> actual. El responsable eligió 1A–15A y aprobó explícitamente el documento. El comprobador, sus
+> pruebas, la integración con los comandos normales y la auditoría documental quedaron terminados.
+>
+> **Hallazgo de implementación del bloque 7, 2026-10-08.** El primer recorrido del comprobador
+> encontró que la prueba del interceptor de `core` importaba la tabla raíz de rutas sólo para crear
+> el `Router`, aunque ninguno de sus casos usa esas rutas. Es una dependencia `core → app` contraria
+> a la regla aprobada. Se corrige proporcionando un router vacío en esa prueba; no cambia código de
+> producto ni el comportamiento comprobado.
+>
+> **Enmienda implementada y verificada el 2026-10-08 (bloque 6).** El “repaso de formato” de la sección 13 era el
+> único fleco técnico sin definición. La sección 17 lo coordina con interfaz y pruebas conforme a
+> 1A–14C. Lo existente continúa as-built; el responsable aprobó explícitamente la propuesta el
+> 2026-10-08.
+>
+> **Hallazgo corregido y verificado el 2026-10-08.** El bloque 5 encontró que la activación local no
+> es transaccional al cambiar entre modelos con memoria ajustada. La sección 16 define preflight,
+> segunda medición y restauración del modelo sano conforme a 15A–22A. Lo existente continúa
+> as-built; la corrección fue aprobada explícitamente el 2026-10-08.
+>
+> **Hallazgo y enmienda propuesta el 2026-10-07.** Al revisar el bloque 4 se comprobó que los
+> clientes de IA todavía siguen redirecciones automáticamente, el administrador local no supervisa
+> un `llama-server` que muera después de arrancar y sus cálculos de disco y RAM no consideran bien
+> una descarga parcial ni el límite del contenedor. Lo existente continúa as-built. La sección 15
+> propone corregir esas diferencias; el responsable eligió 1A, 2A, 3A y 4A. El repaso cerró las
+> decisiones 5A, 6A, 7A y 8A y no dejó asuntos abiertos. El responsable aprobó explícitamente la
+> enmienda, que se implementó y verificó el 2026-10-07.
+>
+> **Implementado y verificado el 2026-10-07.** Los clientes de generación rechazan 3xx, limitan el
+> cuerpo y fueron comprobados contra los cuatro contratos falsos. El administrador local supervisa
+> el hijo, publica `active` y `healthy`, reanuda según bytes pendientes, elimina parciales corruptos
+> y toma el menor límite de memoria entre máquina y cgroup. Pasaron todo el backend, `ai-manager`,
+> 218 pruebas del frontend y Playwright completo (180 aprobadas y 38 omitidas).
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. La sección 14 separa el
+> motor local por entorno, añade un administrador sin socket Docker, adaptadores externos, secretos
+> cifrados e idioma global. El repaso quedó cerrado, la propuesta fue aprobada y la implementación
+> fue verificada.
+>
+> **Enmendado el 2026-10-06**, aprobado explícitamente por el responsable, implementado y verificado.
+> La instancia desechable conserva el bind de código de sólo lectura, retira el volumen hijo de
+> `/app/tmp` y arranca el backend de pruebas con `go run .`. La pasada canónica sin servicios
+> opcionales terminó con 177 casos aprobados y 39 omitidos, y la limpieza no dejó recursos.
+>
+> **Enmendado el 2026-10-06**, conforme a la enmienda aprobada de
+> `docs/interfaz-y-experiencia.md`: el frontend incorpora el toast compartido de `/settings` y
+> `/setup`. En ese cierre pasaron las suites completas de frontend y de interfaz; las cifras
+> históricas quedan en el registro del bloque correspondiente, no como inventario vigente.
 >
 > **Enmendado el 2026-10-04**, conforme a `docs/prueba-local.md` aprobado: en desarrollo,
 > `backend` depende de `migrate` con `service_completed_successfully`; así nunca consulta
@@ -66,10 +118,11 @@
 > **Enmendado el 2026-09-30**: **la sección 13 se pone al día**. Lo que ha cambiado este mes y no estaba
 > contado: **la pantalla de Configuración está entera** —con **el motor de IA** y su prueba de conexión,
 > la región horaria y la dirección pública, y **el correo saliente**—; hay **vista de primer arranque**
-> (`/setup`, cuatro pasos y el sello en `installation_settings.installed_at`, con su API en **409**
+> (`/setup`, entonces cuatro pasos y hoy cinco tras la enmienda del 2026-10-06, y el sello en
+> `installation_settings.installed_at`, con su API en **409**
 > después); **el motor de IA vive aparte y se configura desde Configuración**; y **los recuentos** quedan
-> en Go **14 paquetes**, frontend **215 pruebas** (20 ficheros) e interfaz **214 casos** (196 en verde, 18
-> saltados, 0 rojos). **El despliegue a producción queda aparcado** hasta que el producto esté terminado
+> en Go **14 paquetes**; los recuentos del frontend de esa fecha quedaron superados por la enmienda
+> del 2026-10-06. **El despliegue a producción queda aparcado** hasta que el producto esté terminado
 > (decisión del responsable, 2026-09-30), así que no entra en esta puesta al día. Lo que falta está dicho
 > abajo.
 >
@@ -327,7 +380,7 @@ Las rutas están en **dos grupos**: las pantallas de la sesión van a pantalla c
 va dentro del armazón, con su menú. **El menú enseña sólo lo que existe**, y lo que le toca a cada
 papel: las listas de tickets, Usuarios y, para un Administrador, su bandeja y Configuración.
 
-**Lo que falta del frontend**: un repaso de formato. **Las pantallas de producto —usuarios, tickets y
+**El repaso integral de formato del frontend está cerrado**. **Las pantallas de producto —usuarios, tickets y
 el editor de los correos— están hechas**, y **el inicio provisional desapareció**: la raíz es un
 reparto —el Administrador a los usuarios, los demás a su bandeja—.
 
@@ -455,7 +508,7 @@ entrada. No hace falta Go ni Node instalados en la máquina: sólo Docker y ngin
 ├── dev.yml                          # compose de desarrollo (los servicios; la red del entorno es suya
 │                                    # y las de interfaz van detrás de un perfil)
 ├── prod.yml                         # compose de producción (imágenes construidas)
-├── ai.yml                           # el motor de IA (opcional)
+├── ai.yml                           # el motor local de IA, requerido sólo para la modalidad local
 ├── active-directory.yml             # el directorio de pruebas (OpenLDAP; opcional)
 ├── keycloak.yml                     # Keycloak de pruebas (opcional)
 ├── config
@@ -656,7 +709,7 @@ docker compose -f dev.yml exec database psql -U catalina_support -d catalina_sup
 
 docker compose -f active-directory.yml up -d    # el directorio de pruebas (opcional; tras el entorno)
 docker compose -f keycloak.yml up -d            # Keycloak (opcional; tras el entorno)
-docker compose -f ai.yml up -d                  # el motor de IA (opcional)
+docker compose -f ai.yml up -d                  # motor requerido si se eligió IA local
 ```
 
 En desarrollo se entra por **https://dev.catalina-support.example.com** (nginx → contenedores).
@@ -713,13 +766,14 @@ máquina tenga instalado.
 | Notificaciones y correo | `docs/modules/mail.md` y, para qué se manda en cada momento, `docs/flujos.md` |
 | Runbook de despliegue, migraciones y copias | `docs/ambientes.md` |
 | Qué se prueba y con qué | `docs/ambientes.md`, sección 9: tres capas (`go test`, `npm test` y Playwright) |
-**Pendiente de decidir** (queda poco, y ninguna de las dos bloquea la 1.0.0):
+**Cerrado en el bloque 7** (sección 18):
 
-- **Logs del frontend**: no hay paquete decidido y el hermano es de NestJS, no sirve en navegador.
-  Hoy el frontend no registra nada, y hasta que se decida, así se queda.
-- **Una prueba que falle si un módulo del frontend llama a un prefijo ajeno**: la regla de la
-  sección 4 se sostiene hoy en la revisión, y **ningún documento ha decidido todavía cómo se
-  automatiza**. No es un olvido de esta sección: es que no está decidido en ningún sitio.
+- **Logs del frontend**: no se incorpora un sistema de logging. El navegador sólo conserva el
+  reporte del fallo fatal durante el arranque; la aplicación no registra actividad, cuerpos,
+  credenciales ni errores funcionales.
+- **Fronteras del frontend**: un comprobador propio, sin dependencias nuevas, hará fallar pruebas y
+  compilación ante importaciones entre módulos, dependencias en sentido contrario entre capas o
+  llamadas de un módulo a un prefijo API ajeno.
 
 **Fuera de alcance de esta versión**: microservicios, colas, caché distribuida, SSR,
 multi-tenant y aplicación móvil.
@@ -727,9 +781,9 @@ multi-tenant y aplicación móvil.
 ## 13. Estado de implementación
 
 Lo que existe hoy en el repositorio y lo que se ha comprobado de verdad. La última pasada es del
-**2026-09-30**: **la pantalla de Configuración entera** —con el motor de IA, la región horaria, la
-dirección pública y el correo saliente—, **la vista de primer arranque** y **las rutas relativas de
-producción**.
+**2026-10-08**: suites completas de backend y frontend, compilación de producción del frontend y
+fronteras modulares automáticas. La última matriz visual completa también es del 2026-10-08. La
+operación de producción continúa aparcada y no forma parte de esta evidencia.
 
 ### Existe y está verificado
 
@@ -743,20 +797,20 @@ producción**.
 | `go mod tidy` | Genera `go.sum`; el `go.mod` sólo lleva las dependencias reales |
 | Frontend Angular 22 | El servidor de desarrollo sirve `index.html` y el bundle en 11001, y **reenvía `/api` al backend** (`frontend/proxy.conf.json` → `http://backend:11002`): `GET /api/auth/methods`, `GET /api/health` y `POST /api/auth/login` con `admin`/`admin` responden **200 por la 11001** (sin nginx), y el recorrido de entrar y salir pasa **en un navegador de verdad** |
 | El armazón de la sesión en el navegador | Las seis rutas se sirven por nginx (200) y el CSS de Tailwind llega compilado. Y **probado en un navegador de verdad** con Playwright, en PC y en móvil: se entra con la cuenta de fábrica, se la reconoce, se cambia de pantalla y se sale |
-| Pruebas de interfaz con Playwright | `docker compose -f tests.yml run --rm e2e` —con el perfil `directory`, en la instancia desechable— → **214 casos: 194 verificados y 20 omitidos**; un acceso de PC cancelado durante una recarga se verificó después en una instalación nueva, en PC y móvil (los saltados son las herramientas de diagnóstico, lo que es de un dispositivo concreto y **los de los caminos de directorio que se prueban una sola vez**, porque no dependen del ancho, más alguna prueba que necesita un servicio que no esté levantado): la aplicación abre, el CSS se aplica, los campos tienen nombre accesible, el idioma, los ocho temas con su contraste medido, entrar y salir, el enlace del correo leído del buzón, el armazón con su menú, los permisos del menú, la pantalla de Configuración —**con el método de entrada y las dos pruebas de conexión**—, **las tres pantallas de usuarios** —la lista con sus filtros, el alta con su correo, desactivar y reactivar, la edición en línea de Soporte, el perfil propio y que nadie se desactive a sí mismo—, **las de tickets** —el recorrido entero de un ticket con su adjunto, Soporte preguntando y escalando, Desarrollo devolviendo, el aspecto medido y el Administrador leyendo sin botones—, **el camino de AD** —una persona del directorio **entra sin que nadie le dé de alta nada** y su cuenta aparece con origen `ad`, quien ya es del directorio vuelve a entrar, la contraseña equivocada la rechaza el directorio, y una cuenta local **se vincula** al entrar por su camino y su contraseña local deja de servir— y **el de Keycloak**: el botón está en la pantalla de entrada y lleva a Keycloak, una persona entra por el reino **sin que nadie le dé de alta nada**, quien ya es de Keycloak vuelve a entrar, una cuenta local **se vincula** al entrar por allí, y **el fragmento con el token se borra de la dirección** en cuanto se usa. Y **las tres acciones del directorio en `users`**: la ficha de una cuenta de AD desactivada ofrece reactivarla y la reactivación pregunta al directorio, y la de una cuenta de Keycloak no ofrece el botón y cuenta que vuelve sola al entrar. Y **las listas de tickets** (2026-09-26): que «Mis tickets» sea **lo mío** —el que no lo tiene asignado no lo ve, y el que lo tiene sí—, que las dos listas del «todo» enseñen lo que hay, que **la reasignación se haga dentro del ticket** y mueva el ticket de una bandeja a la otra (un técnico se lo pasa a otro, que es el ejemplo del responsable), que el chip de tipo lleve a los internos, que desde las listas del «todo» no se cree un ticket, y que **el desplegable del idioma mida lo mismo que el del tema** (medido). Y **los adjuntos con tope y con visor** (2026-09-26): que una captura de **900 × 700** se pinte **dentro de 480 × 360 sin deformarse** —se mide, y con la captura de las otras pruebas, que mide justo 480 × 300, la comprobación pasaría sin que hubiera tope—, que al pulsarla se abra el visor con la imagen entera, que **el vídeo se vea como miniatura sin controles** y que al pulsarlo se abra el visor **con su reproductor y Descargar**, y que **un `.sql` se adjunte, se guarde y se descargue** mientras el `.svg` **se sigue rechazando**. Y **la vista de primer arranque** (el candado: una instalación ya terminada no la enseña y `/setup` lleva a la entrada) y **la tarjeta del motor de IA en Configuración, con su prueba de conexión** |
-| Pruebas del frontend | `npm test` → **215 pruebas en verde, en 20 ficheros**: el idioma de arranque (incluidas las variantes como `es-MX` y el caso de un idioma que no es ninguno de los dos), el servicio de sesión, el interceptor (cabecera, 401 con y sin sesión, servidor caído), **el tema** (los ocho, el sistema en vivo, lo elegido manda), el armazón, las entradas del menú por papel, **el módulo `users`** —su servicio y sus etiquetas— y **el módulo `tickets`**: su servicio (cada acción a su ruta, la lista de responsables pedida a su propia API) y sus etiquetas (los estados del usuario sin jerga, lo que se previsualiza, las frases del historial). Y **los caminos de entrada**: que la sesión pregunte cuáles hay, que sin respuesta se quede con el local —y no ofrezca un botón que no puede comprobar— y que adopte el token que trae la vuelta de Keycloak. Y de las pantallas de usuarios, **cuáles se reactivan solas**: una cuenta de Keycloak desactivada no ofrece el botón y las demás sí. Y **la marca**: que el nombre de la instalación sea el configurado, que sin backend quede el de fábrica —y la pestaña no se quede sin nombre—, que **la versión del sistema se enseñe con su `v`** y que **sin versión no se enseñe ningún número** —inventarse uno sería peor que no decir ninguno—, y que el título de la pestaña cambie al guardarlo. Y **las listas de tickets**, desde el 2026-09-26: que cada papel tenga **sus entradas del menú** —Mis tickets para el usuario, y las dos del «todo» sólo para Soporte y Desarrollo—, que **crear un ticket no esté en el menú para nadie** y que «lo mío» viaje como `mine=1` y sólo cuando se pide. Y **el editor con adjuntos** (`shared/components/editor-con-adjuntos.spec.ts`, **24 pruebas**): los cinco botones de formato sobre lo seleccionado, **la lista cerrada de lo que se puede guardar** —el saneador del editor quita `src`, `class`, `style` y `on…`, y no deja etiquetas vacías— y **qué extensiones se admiten**: el texto y el código que entraron el 2026-09-26 —`sql`, `json`, `xml`, `yml`, `sh`, `py`, `htaccess`, `tar`…—, y que lo que no se admite sigue sin admitirse (`svg`, `exe`, `html`). Y **la configuración y el primer arranque**, desde el 2026-09-30: el servicio de `settings` y **la guarda de instalación** (sin sellar lleva a `/setup`; sellada, no) |
+| Pruebas de interfaz con Playwright | `docker compose -f tests.yml run --rm e2e`, con el perfil `directory` cuando corresponde, recorre la instancia desechable en PC y móvil. La última matriz completa terminó correctamente el **2026-10-08** y limpió sus recursos; `docs/ambientes.md` conserva el alcance y `docs/prueba-local.md`, la evidencia histórica de cada recorrido. Incluye instalación desde una base vacía, sesión, marca, configuración, usuarios, tickets, correo, AD y Keycloak |
+| Pruebas del frontend | `npm test -- --watch=false` ejecuta primero el comprobador de fronteras y sus casos aislados, y después toda la suite Angular. Terminó correctamente el **2026-10-08**. Cubre idioma global, sesión, temas, armazón, configuración, primer arranque, usuarios, tickets, correo, adjuntos, toasts y ayuda de redacción |
 | Tailwind v4 y los temas | Instalado y compilando: el CSS servido lleva **las utilidades generadas** y las variables del tema, y **ningún componente escribe un color a mano**. Las fuentes se declaran a mano en `styles.css` (`@source './app'`), y hay un caso de Playwright que **falla si la hoja llega sin utilidades** |
 | El tema | **Ocho temas** (dos de fábrica con `light-dark()` y el color institucional, y seis fijos con su paleta y su acento), elegidos con un atributo en `html` y el tema elegido con un atributo en `html`. **De fábrica sigue al sistema** —que es no haber elegido, y por eso **«automático» no se muestra ni se elige**—, el sistema manda en vivo mientras nadie haya elegido, la elección se recuerda en el navegador y se aplica **antes de arrancar** desde `main.ts` (no con un script incrustado: la CSP de producción no lo admite). Probado en un navegador **midiendo el color de fondo**, en claro, en oscuro y con la elección ganando al sistema |
 | Build de producción del frontend | `npm run build` → `dist/catalina-support/browser`, que es la ruta que espera `prod.yml` |
 | Vhost de desarrollo | `https://dev.catalina-support.example.com` sirve la aplicación (200) y `GET /api/health` devuelve `{"database":"ok","status":"ok"}` **a través de nginx** |
 | TLS de los dos dominios | Certificados de Let's Encrypt emitidos el 2026-09-22 (caducan el 2026-12-21), con renovación automática configurada por `webroot` |
 | Cabeceras de seguridad y CSP | Presentes en la respuesta de desarrollo (`nosniff`, `SAMEORIGIN`, `Referrer-Policy` y CSP de desarrollo) |
-| Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea **18 tablas** —`mail_templates` (con sus **22 plantillas** sembradas: once correos en dos idiomas), `users`, `password_tokens`, las **cuatro tablas de configuración de una fila** —`installation_settings` (con el nombre, el método de entrada, **la región horaria, la dirección pública, el motor de IA, el correo saliente `smtp_*` y el sello `installed_at`**), `directory_settings`, `keycloak_settings` y `ticket_settings`—, **las diez de los tickets** y `ai_insights`—, con sus índices y sus restricciones. Lleva además su **puesta al día** (`ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT`), que es lo que permite aplicarla sobre una base que ya existía, y **la conversión del texto plano a HTML** de los tickets y los comentarios que ya existían: **aplicada dos veces seguidas, las dos conversiones dan `UPDATE 0`** y un cuerpo con un adjunto dentro —lo que escribe el editor— **no se toca** (la condición se corrigió el 2026-09-26, porque con la anterior el segundo pase estropeaba lo que el editor escribe; `docs/ambientes.md`, sección 5) |
+| Migración `v1.0.0.sql` | Aplicada con `psql -v ON_ERROR_STOP=1` **dos veces seguidas** y sin error: crea **21 tablas** —plantillas, cuentas y tokens; las **cinco tablas de configuración de una fila** (`installation_settings`, `ai_settings`, `directory_settings`, `keycloak_settings` y `ticket_settings`); dos auxiliares de IA; las diez de tickets; y `ai_insights`— con sus índices y restricciones. Incluye su puesta al día idempotente y la conversión histórica de texto plano a HTML sin tocar un cuerpo que ya contiene adjuntos. |
 | Los datos de ejemplo, con su guion | `./scripts/dev-seed.sh` aplica el esquema, aplica `v1.0.0_dev.sql` y **copia los archivos de los adjuntos** a `_files/`, en la carpeta de su ticket. Deja **once cuentas** (`user1`…`user5`, `support1`…`support3`, `dev1`…`dev3`, todas con la contraseña de las pruebas) y **25 tickets** con su historia: **123 filas de historial y 27 comentarios**, siete con **ticket interno** (uno esperando a Desarrollo, otro resuelto, otro devuelto a Soporte), **cinco adjuntos que se descargan idénticos** a los del repositorio, y el contador de la numeración en 25. Comprobado entrando por la API con `user1` (ve sus cinco tickets) y con `support1` (la bandeja entera) |
 | `shared/auth` | Firma y valida el token de sesión (HS256, 10 horas, `sub`), saca el `Bearer` de la cabecera y compara secretos en tiempo constante. **20 pruebas en verde**, incluidas la caducidad, otro secreto, el algoritmo `none`, los dos secretos vacíos y las cinco del `state` de OIDC |
 | `shared/authz` | Comprueba el papel y responde 403 con `auth.forbidden`. **5 pruebas en verde**, incluido el caso de una ruta montada sin autenticación |
 | Middleware de autenticación | Lee la cuenta **en cada petición**, deja la identidad en el contexto y responde 401 (`auth.session.invalid`/`auth.session.expired`) o 503 si la base no responde. **8 pruebas en verde** |
-| `go test ./...` | Todo en verde, en **14 paquetes** y **209 pruebas**: **20 en `shared/auth`** —cinco del `state` de OIDC—, 5 en `shared/authz`, 8 en `shared/middleware`, 12 en `mail/services`, 6 en `mail/controllers`, **39 en `auth/services`** —doce del camino de AD, once del de Keycloak y cuatro del método que está puesto, con un directorio, un reino y un módulo de cuentas de mentira—, **13 en `users/services`**, 15 en `settings/services`, **2 en `settings/dtos`** —la versión que sale en la marca pública—, **6 en `tickets/controllers`**, **6 en `tickets/repositories`** y **46 en `tickets/services`** —incluidos los cuatro del saneador del cuerpo: lo que se admite tal cual, el texto plano que sale del HTML, el texto convertido a HTML y las extensiones de vídeo—, y el módulo `ai`: **6 en `ai/repositories`** y **28 en `ai/services`**, con `gofmt` limpio y `go vet` sin quejas |
+| `go test ./...` | La suite completa del backend terminó correctamente el **2026-10-08**. Cubre autenticación y autorización, correo, configuración, usuarios, tickets, IA, persistencia y middleware; los registros de cada módulo conservan los casos particulares sin duplicar aquí un recuento volátil |
 | Los cuatro endpoints de `mail` | Probados de extremo a extremo contra desarrollo, con un token de fábrica firmado a mano (todavía no hay endpoint de entrada): sin cabecera, con un token con basura y con un token de otro secreto → **401 `auth.session.invalid`**; con token válido → **200** y las 22 plantillas; marcador inventado → **422 `mail.marker.unknown`**; asunto vacío → **422 `mail.subject.required`**; guardar sin el enlace → **200** con `missing: ["enlace"]`; restaurar → vuelve el texto de fábrica y `edited` pasa a `false`; prueba desde la cuenta de fábrica → **422 `mail.test.noEmail`**; clave o idioma que no existen → **404** |
 | La cuenta se lee en cada petición | El middleware la resuelve con el cargador de `main.go`: la cuenta de fábrica tiene su identidad propia y cualquier otra se lee **de la tabla de cuentas en cada petición**, así que desactivar o cambiar un papel valen al instante |
 | El log tras las pruebas | Ni una coincidencia de `Bearer`, `eyJ` ni la palabra `token`: los tokens no se registran |
@@ -790,10 +844,10 @@ producción**.
 | La región horaria y la dirección pública | En **Configuración**, desde el 2026-09-29: **la zona horaria** se elige de una lista de zonas (IANA) con buscador —y se enseña la hora que es en ella y su desfase— y **la dirección pública** (esquema, host y puerto, `localhost` incluido), con el aviso de que **si no es https la sesión y la contraseña viajan sin cifrar**. **La zona decide cómo se leen todas las fechas**, en la interfaz y en los correos, y **las guardadas siguen en UTC**: cambiarla no mueve ningún ticket. **La dirección es la base de los enlaces de los correos y de la vuelta de Keycloak**; `PUBLIC_APP_URL` queda como respaldo (`docs/modules/settings.md`, decisiones 14 y 15) |
 | El correo saliente, en la base | Las variables `SMTP_*` **se retiraron del entorno**: el SMTP vive en `installation_settings.smtp_*` y se configura en **el paso 4 de la vista de primer arranque** o, después, en **Configuración**. Comprobado en desarrollo: el archivo de datos de ejemplo deja puesto el buzón de pruebas (`smtp_host='mail'`, `smtp_port='1025'`) y el correo sale por él (`docs/primer-arranque.md`, sección 5) |
 | El motor de IA, configurable desde la pantalla | **Su dirección y su modelo se configuran en Configuración**, con **su tarjeta y su botón de «Probar la conexión»** (prueba `<dirección>/health` con un tiempo corto y **no guarda nada**): el módulo `ai` los lee **en cada petición**, y `AI_URL`/`AI_MODEL` quedan **como respaldo**. La prueba se salta sola si el motor no está levantado (`docs/modules/settings.md`, decisión 16, sección 5.13) |
-| La vista de primer arranque (`/setup`) y el sello | En una instalación **sin sellar** —`installation_settings.installed_at` nulo— la aplicación lleva a **`/setup`**, que pide **en cuatro pasos** la instalación, cómo se entra, dónde está (región y dirección) y el correo saliente, y al terminar **sella** la instalación: la vista no vuelve y su API contesta **409 `setup.alreadyInstalled`**. **Una instalación que ya estaba configurada queda sellada al actualizar**, y en desarrollo **el archivo de ejemplos sella**, para que el asistente no salga en cada arranque. Comprobado en el navegador (el candado: una instalación terminada lleva `/setup` a la entrada) y por la API a mano (los cuatro pasos y el 409). `docs/primer-arranque.md` |
+| La vista de primer arranque (`/setup`) y el sello | En una instalación **sin sellar** —`installation_settings.installed_at` nulo— la aplicación lleva a **`/setup`**, que pide **en cinco pasos** instalación, entrada, ubicación, correo e IA, y al terminar **sella** la instalación: la vista no vuelve y su API contesta **409 `setup.alreadyInstalled`**. **Una instalación que ya estaba configurada queda sellada al actualizar**, y en desarrollo **el archivo de ejemplos sella**, para que el asistente no salga en cada arranque. Comprobado en navegador y por la API, incluido el 409. `docs/primer-arranque.md` |
 | Los endpoints de `users` | Probados de extremo a extremo: la lista con filtros y búsqueda, la ficha, los cambios, el perfil propio, desactivar y reactivar. Y los límites: Soporte no cambia el papel ni el correo de otro (**403**) ni ve la ficha de nadie, nadie se desactiva a sí mismo (**403 `users.selfDeactivation`**), el estado no se cambia por el `PATCH` (**422**), el origen inventado (**422**) y pasar a directorio se rechaza mientras no exista su consulta (**422**) |
 | El editor de los correos | La pantalla del módulo `mail`: los once correos a la izquierda, **los dos idiomas al lado** —apilados en móvil, medido por la prueba—, el cuerpo con sus botones de formato **envolviendo lo seleccionado**, los marcadores que **se insertan al pulsarlos**, la **vista previa que renderiza el backend** con los datos de ejemplo de la prueba, y los botones de guardar, volver al de fábrica y **enviarme una prueba**, que se lee en el buzón. Probado de extremo a extremo |
-| El idioma de la instalación | Se configura en Configuración y **es el que se le pone a una cuenta nueva cuando quien la da de alta no elige otro**: probado con la instalación en inglés y un alta sin idioma |
+| El idioma de la instalación | Es global para interfaz, correos y nuevos resúmenes; las cuentas no guardan idioma propio |
 | Las pantallas de tickets | La **bandeja** —una sola con tres nombres, tabla en PC y tarjetas en móvil, con chips de estado, búsqueda, paginación y el chip de tipo del Administrador—, el **alta** con arrastrar y soltar, y el **detalle**: una línea de tiempo con los comentarios y lo que hizo el sistema, la ficha con las acciones —a la derecha en PC y debajo en móvil, medido por la prueba—, **la vista doble** cuando hay interno y los adjuntos **con vista previa**. Probado en PC y en móvil, incluido que **el usuario no ve el interno**, que **Desarrollo no escribe en el principal** y que **al Administrador no se le ofrece ningún botón** |
 | El reparto y el prefijo, desde Configuración | La pantalla de Configuración tiene ya el **prefijo** —con el aviso de que no cambia los números ya emitidos— y el **reparto y el aviso** de cada tipo de ticket, con la opción «al asignado» desactivada cuando no se reparte |
 | Las tres pantallas de usuarios | La **lista** (tabla en PC y tarjetas en móvil, con los chips de papel, origen y estado, la búsqueda y la paginación), **la ficha** y **el perfil propio**, probados en PC y en móvil. Soporte **edita en línea** desde la lista y no tiene ficha de nadie; no se le ofrece desactivarse a sí mismo; la cuenta de fábrica no tiene perfil ni enlace a él, y su nombre en el menú no es un enlace |
@@ -802,7 +856,7 @@ producción**.
 
 | Las diez tablas de `tickets` | Creadas en `v1.0.0.sql` y aplicadas **dos veces seguidas** sin error: los dos tipos de ticket, la conversación, los adjuntos, el historial y el contador de la numeración, con sus restricciones (el interno no puede estar `escalado`, exactamente un destino en lo que cuelga de un ticket, el motivo del escalado no puede estar vacío) |
 | Las extensiones del texto y el código | Comprobado de punta a punta por la pantalla: un `.sql` **se coge** —sin el aviso de rechazo—, **se guarda** su referencia en el comentario, **queda entre los adjuntos del ticket** y **al pulsarlo se descarga** con su nombre; y un `.svg` **se sigue rechazando** antes de subirlo. Las **cuarenta y dos** extensiones nuevas son las mismas en los dos sitios —el editor y el backend—, y el editor lo comprueba por su lado con sus pruebas de unidad |
-| El módulo `ai`, con el motor de verdad | **Comprobado de punta a punta contra el contenedor**: al crear un ticket, `Pedir` vuelve en milisegundos y los dos campos quedan **`pendiente`**; entre 20 y 40 segundos después están **`listo`**, en español y en inglés, y con contenido razonable (`El usuario está experimentando problemas al intentar iniciar sesión…` / `The user is experiencing issues trying to log in…`). En la pantalla: la lista enseña el motivo y la última acción, la ficha los enseña enteros con su botón, y **el interno no pide motivo** —el suyo es el del escalado—. Y **sin motor configurado** los campos quedan `sin_motor` y la aplicación funciona entera, que es la condición de la decisión 2 |
+| El módulo `ai`, con el motor de verdad | **Comprobado de punta a punta contra el contenedor**: al crear un ticket, `Pedir` vuelve sin esperar la generación y los resúmenes pasan de `pendiente` a `listo`. En la pantalla, la lista y la ficha muestran motivo y última acción; el interno conserva como motivo el escalado. La IA es obligatoria para completar una instalación. Si el motor configurado cae después, los trabajos quedan `sin_motor` o pendientes y la mesa de ayuda sigue operando mientras el monitor intenta recuperarlo |
 | El motor de IA, medido | El contenedor `catalina_support_ai` (llama.cpp `server-b11206` + Qwen2.5-1.5B-Instruct Q4_K_M) tiene un **tope de 1500 MiB** (`mem_limit: 1500m` en `ai.yml`) y **sin tope de CPU** —el compose no limita CPU—, **sin publicar ningún puerto**. Medido en marcha: **~1,44 GiB**, el **98% del tope** (`docker stats` da 1.441-1.448 GiB; el `VmRSS` del proceso, 1,51 GB). **Tarda entre 12 y 24 segundos por campo** y unos 95 s en un ticket de 6 000 caracteres; la segunda llamada del mismo ticket es ~7 veces más rápida (caché de prefijo). Su comprobación de salud contesta en 325 ms mientras está generando |
 | El JSON del modelo, sin creérselo | **Con `response_format` y la exigencia escrita al final del mensaje, 4 de 4 respuestas válidas** con un ticket de 6 000 caracteres; con sólo una de las dos vías, el modelo envuelve la respuesta en un bloque de código, se inventa las claves o contesta en un solo idioma. El módulo rescata el primer objeto JSON y reintenta; cuando no vale, el log dice **la forma** de lo que llegó (claves y longitudes) y nunca su contenido |
 | Las categorías y las etiquetas | **Comprobado por las tres capas**: la migración crea «General» y se la pone a todo lo que existe —simulando una base vieja, el ticket sin categoría acaba en «General» y la columna queda `NOT NULL`—; el alta **sin categoría se rechaza** (`tickets.category.required`) y **un usuario no puede crear ni retirar** categorías; las etiquetas sucias se guardan normalizadas (`["Red Wifi","  Licencias  ","red-wifi","Ñoño_Ütil"]` → `['red-wifi','licencias','nonoutil']`); un ticket con 40 caracteres de etiqueta se rechaza; retirar la última activa se rechaza; `?category=` y `?tag=` filtran; y **buscar «red» encuentra la categoría «Red» y la etiqueta `red`**. En la pantalla: el alta pide la categoría, las fichas se normalizan al escribirlas, los chips salen en el renglón, hay filtros de las dos y el catálogo lo mantiene quien toca |
@@ -815,9 +869,6 @@ producción**.
 
 ### Existe pero NO está verificado
 
-- **El asistente completo desde una base vacía no está automatizado en Playwright**: hay pruebas
-  unitarias de sus endpoints y cobertura de la instalación sellada. Las pruebas de conexión del
-  paso 2 y del paso 4 sí existen; el resumen consulta la disponibilidad de IA automáticamente.
 - **La reproducción del despliegue actual desde cero queda bloqueada**: el script publica el
   compose en `/srv/catalina-support` y usa esa carpeta como contexto de construcción, pero
   los Dockerfiles necesitan `frontend/package*.json`, las fuentes del frontend y las del backend.
@@ -830,17 +881,8 @@ producción**.
   producto esté terminado** (decisión del responsable, 2026-09-30), así que el vhost público y
   `config/nginx/frontend.prod.conf` sirviendo la aplicación no se han probado.
 
-### Todavía no existe
+### Limitaciones y trabajos aplazados
 
-- **Los caminos de AD y de Keycloak ya no están aquí**: los dos existen y están verificados, cada uno
-  con su servicio de pruebas en su archivo (`active-directory.yml` y `keycloak.yml`), con sus
-  personas en el repositorio (`config/ldap/`, `config/keycloak/`) y con pruebas de interfaz.
-  **`docs/modules/auth.md` no tiene nada pendiente.**
-- **`scripts/prod-build.sh` y el script de copias ya están** (`scripts/backup-db.sh`, en el `cron` de
-  esta máquina), y lo que no está probado de este último es su rama de producción
-  (`docs/ambientes.md`, sección 6).
-- **Lo que falta**, sólo flecos técnicos:
-  - **Un repaso de formato en el frontend**, pendiente.
 - **Aparcado a propósito** (decisión del responsable, 2026-09-30): **el despliegue a producción y abrir el
   dominio no se retoman hasta que el producto esté terminado**. El despliegue del 2026-09-25 está hecho y
   verificado por dentro, y el dominio sigue en 503 a propósito (`docs/ambientes.md`, sección 4).
@@ -852,11 +894,11 @@ producción**.
 - **PKCE en el camino de Keycloak**, propuesto y no hecho: el cliente es confidencial y el secreto ya
   protege el canje, así que no estaba en el documento aprobado. Si se hace, el `code_verifier` viaja
   dentro del `state` firmado (`docs/modules/auth.md`, decisión 40).
-- **Logs del frontend**: sin paquete decidido (el hermano es de NestJS y no sirve en navegador).
 
 ### Pendiente de decidir
 
-La lista vive en un solo sitio: **sección 12**, para que no haya dos listas que puedan divergir.
+No quedan decisiones arquitectónicas abiertas. Los trabajos de producción están aplazados por una
+decisión ya tomada, no pendientes de diseño.
 
 ## Instancia desechable de pruebas (`tests.yml`, 2026-10-03)
 
@@ -867,3 +909,297 @@ en sólo lectura. No hay puertos publicados ni red de IA compartida. LDAP y Keyc
 con el perfil `directory`. Los informes de Playwright se escriben en `tests/e2e/resultados/`,
 que se conserva después de `docker compose -f tests.yml --profile directory down -v`.
 El recorrido de preparación, ejecución y limpieza está en `docs/ambientes.md`, sección 9.3.
+
+### Proceso del backend corregido (2026-10-06)
+
+El código permanece montado en `/app:ro`. La suite sustituye el comando de la imagen —Air, útil para
+desarrollo— por `go run .`, apropiado para una ejecución inmutable. Go usa `backend_go_mod` y
+`backend_go_build`; su artefacto temporal queda fuera de `/app`. Desaparecen el montaje
+`backend_tmp:/app/tmp` y el volumen `backend_tmp`.
+
+No cambia la imagen compartida de desarrollo, `.air.toml`, la dependencia de la migración, las redes,
+los datos ni ningún contenedor de desarrollo o producción.
+
+El repaso confirmó una sola compilación por pasada, únicamente las dos cachés de Go ya existentes y
+limpieza completa con `down -v`. No quedan decisiones arquitectónicas abiertas.
+
+La implementación se verificó desde volúmenes nuevos: la migración terminó antes del backend, el
+servicio compiló con `go run .`, respondió salud y permitió completar los 216 casos de la pasada sin
+perfiles opcionales —177 aprobados y 39 omitidos—. El `down -v` posterior retiró todos los recursos y
+`docker compose -f tests.yml ps -a` quedó vacío.
+
+## 14. Arquitectura implementada: IA obligatoria y un idioma global
+
+### 14.1 Componentes y dependencias
+
+`tickets` mantiene su interfaz de resúmenes y no conoce proveedores. `ai` conserva cola,
+normalización y persistencia y añade adaptadores para OpenAI/DeepSeek/OpenAI-compatible y Claude.
+`settings` es dueño de la configuración, cifrado, confirmación de privacidad y estado requerido.
+`mail` es dueño de plantillas y validación de sus borradores. `main.go` conecta las interfaces sin
+importaciones cruzadas nuevas.
+
+El motor local sigue en `ai.yml`, pero su proceso 1 es un administrador pequeño que descarga modelos
+y supervisa un proceso hijo `llama-server`. No monta `/var/run/docker.sock`, no publica su API y
+exige `AI_MANAGER_TOKEN`. Backend sólo puede pedir catálogo, progreso, descarga, activación, prueba y
+borrado mediante la red privada del entorno.
+
+### 14.2 Aislamiento local
+
+Desarrollo y producción usan proyectos, redes y volúmenes distintos. El nombre del contenedor deja de
+ser global y la URL interna se resuelve por servicio. El catálogo es el mismo, pero cada volumen
+decide qué archivos conserva y cuál está activo. El techo de memoria es 8 GB y el administrador hace
+la comprobación de RAM/disco antes de iniciar el modelo.
+
+El modelo local predeterminado continúa siendo Qwen2.5-1.5B-Instruct Q4_K_M. `ai.yml` ya no fija la
+ruta del modelo en `command`; el administrador la elige después de validar el catálogo versionado en
+el repositorio y el checksum fijado allí.
+
+### 14.3 Datos
+
+La configuración detallada de IA sale de las dos columnas de `installation_settings` y pasa a una
+fila propia de `settings`. La credencial se guarda como cifrado autenticado, con versión, nonce y
+texto cifrado; la clave maestra `AI_CREDENTIAL_KEY` vive sólo en el entorno. Nunca se usa
+`TOKEN_SECRET` para cifrarla. Son 32 bytes aleatorios codificados en base64 y el proceso rechaza el
+arranque si falta o tiene formato inválido. Una clave válida que no abre datos existentes pone la
+instalación en estado de configuración requerida.
+
+`users.language` desaparece. `installation_settings.language` queda como única fuente. La marca
+pública incluye ese idioma para pintar entrada y armazón antes de tener sesión.
+
+La instalación guarda además una versión creciente de su configuración global. Todas las respuestas
+autenticadas publican `X-Catalina-Language` y `X-Catalina-Settings-Version`; el interceptor actualiza
+la señal de idioma cuando observa una versión nueva. No se invalida el token, no se añade sondeo y
+una pestaña adopta el cambio en su siguiente petición.
+
+`ai_insights` deja de guardar dos textos por campo: guarda uno, su idioma, proveedor y modelo. Al
+cambiar el idioma, una actualización marca para regenerar los textos de otro idioma sin borrar el
+histórico de ticket del que se reconstruye el encargo.
+
+### 14.4 Disponibilidad y actualización
+
+La IA es requisito de configuración, no dependencia síncrona de cada acción. Una instalación
+configurada sigue guardando tickets durante una caída. Un monitor de salud con espera creciente
+reactiva la cola cuando vuelve. Con motor local o servidor propio procesa el acumulado; con proveedor
+deja el lote pausado hasta que el Administrador vea el volumen y confirme el posible costo. Sólo el
+estado de configuración inicial bloquea la entrada.
+
+Las instalaciones selladas se migran sin abrir `/setup`. Si no hay configuración probada, el
+middleware permite salud, marca, entrada/salida y las rutas mínimas de Configuración para
+Administrador/cuenta de fábrica; las demás rutas informan que falta IA.
+
+### 14.5 Seguridad y pruebas
+
+Los clientes HTTP limitan tiempo, cuerpo de respuesta y redirecciones; nunca registran prompts,
+respuestas o cabeceras secretas. El servidor propio permite autenticación sin relajar TLS. Los
+adaptadores se prueban contra servidores falsos y el administrador contra archivos pequeños de
+prueba; CI y la suite local no llaman a proveedores ni descargan los GGUF reales. El catálogo fija
+fuente, licencia, tamaño y checksum, y registra la aceptación por versión antes de descargar.
+
+Esta propuesta afecta backend, frontend, migración abierta `v1.0.0.sql`, `ai.yml`, configuración de
+entornos y pruebas. No cambia nginx público, los caminos ni tokens de autenticación, ni el contenido
+de adjuntos.
+Fue decidida por el responsable el 2026-10-06. El repaso cerró claves, plantillas personalizadas,
+costos de recuperación, licencias y propagación del idioma a sesiones abiertas. No quedan decisiones
+abiertas; propuesta aprobada.
+
+## 15. Cierre implementado del bloque 4
+
+### 15.1 Redirecciones y credenciales
+
+Las generaciones y pruebas que llevan Bearer, cabecera propia, Basic o clave de Claude **no siguen
+redirecciones**. Una respuesta 3xx se trata como conexión fallida y obliga a configurar la URL final.
+La regla se aplica a OpenAI, DeepSeek, Claude y compatible con OpenAI, al probar y al resumir.
+
+Las descargas públicas de GGUF sí pueden seguir redirecciones porque Hugging Face las necesita, pero
+con un máximo finito y sin credenciales de Catalina Support. Cada salto sólo puede usar `http` o
+`https`; el cliente limita conexión y cabeceras, y la descarga no supera el tamaño declarado.
+
+### 15.2 Supervisión del proceso local
+
+Después de activar un modelo, el administrador espera al proceso hijo. Si `llama-server` termina
+mientras ese modelo sigue activo, lo reinicia indefinidamente con esperas de 1, 2, 4, 8, 16, 32 y
+después 60 segundos entre intentos. Sólo
+existe un supervisor por modelo activo. Cambiar de modelo o apagar el administrador cancela el
+supervisor anterior; una terminación provocada por ese cambio no cuenta como fallo.
+
+El catálogo expone por separado `active` y `healthy` y muestra el último error operativo. El
+endpoint de salud del administrador sigue indicando que el administrador vive; la generación de
+prueba confirma que el modelo atiende.
+
+### 15.3 Disco y memoria efectivos
+
+Para descargar se suman únicamente los bytes que faltan de cada archivo, contando sus `.partial`,
+más 256 MiB de margen. Un parcial mayor que el tamaño declarado se descarta y se reinicia desde cero.
+Si alcanza el tamaño esperado pero falla formato o checksum, también se elimina para que el siguiente
+intento descargue un archivo limpio.
+
+La memoria disponible es el menor valor entre `MemAvailable` y la capacidad restante del cgroup v2
+o v1 cuando haya un límite finito. Si no hay cgroup se usa `MemAvailable`. El modelo no arranca
+cuando su estimación supera esa capacidad efectiva.
+
+### 15.4 Criterios de aceptación
+
+1. Los cuatro proveedores se prueban con servidores HTTP falsos y sin red comercial.
+2. Una respuesta 3xx no provoca otra solicitud ni reenvía credenciales.
+3. Una respuesta mayor al límite se rechaza sin crecer indefinidamente en memoria.
+4. La autenticación llega sólo al servidor falso configurado.
+5. El administrador reanuda un parcial válido y reserva sólo los bytes pendientes.
+6. Los límites simulados de cgroup prevalecen sobre la memoria de la máquina.
+7. La muerte inesperada del hijo inicia la espera creciente; activar otro modelo cancela el
+   supervisor anterior sin dejar dos procesos.
+
+Quedan fuera redirecciones configurables, socket Docker, GPU, límites de gasto y llamadas a
+proveedores reales.
+
+### 15.5 Decisiones y repaso
+
+El responsable eligió el 2026-10-07: rechazar redirecciones en llamadas con credenciales (1A),
+supervisar y reiniciar el motor local (2A), medir disco pendiente y memoria efectiva del cgroup (3A)
+y cubrir todo con pruebas aisladas (4A). En el repaso eligió reintento indefinido con espera máxima de
+60 segundos (5A), estados `active` y `healthy` separados (6A), eliminar parciales corruptos (7A) y
+permitir como máximo cinco saltos HTTP/HTTPS en descargas públicas (8A). No quedan decisiones
+abiertas. Producción y cualquier descarga real permanecen fuera de este bloque.
+
+## 16. Activación local transaccional implementada
+
+El administrador trata el cambio de modelo como una transacción operativa: origen sano, preflight,
+parada, medición real, arranque y confirmación del destino. Conserva identificador y especificación
+del origen hasta que el destino está sano. El archivo `active` representa el último modelo sano, no
+el último intento.
+
+El preflight suma memoria efectiva disponible y RSS del hijo actual. No cuenta la memoria del propio
+administrador. Después de terminar el hijo vuelve a leer host y cgroup; si el requisito no se cumple,
+restaura el origen. Cualquier error de proceso o salud sigue el mismo rollback y espera su salud antes
+de responder.
+
+El contrato de error de memoria transporta una clave estable, bytes requeridos y bytes disponibles.
+No expone PID, rutas ni detalles del host. La misma regla sirve a `/setup` y `/settings` mediante el
+adaptador actual. No se añade concurrencia de modelos, reserva de memoria, GPU ni uso forzado de swap.
+
+La prueba real cambió 1.5B→3B aprovechando el RSS recuperable del origen. El intento de 7B devolvió
+6.442.450.944 bytes requeridos y alrededor de 5,07 GiB disponibles sin interrumpir el 3B sano. Las
+pruebas deterministas cubren además la segunda medición insuficiente y el fallo de salud, con
+restauración del origen antes de responder.
+
+## 17. Bloque 6: repaso integral del frontend
+
+El bloque elimina el fleco “repaso de formato” mediante un inventario completo de todas las pantallas
+y su corrección total. La implementación permanece en Angular, Tailwind y los componentes propios;
+un patrón repetido se resuelve en la capa compartida y una composición singular en su pantalla. No
+se incorporan dependencias visuales ni una herramienta de comparación por capturas.
+
+La frontera arquitectónica es estricta: sólo presentación, semántica, accesibilidad y responsive.
+No cambian API, backend, base, permisos, estados ni recorridos. Un hallazgo que necesite uno de esos
+cambios se documenta en otro ciclo antes de escribir ese código. La evidencia usa la instancia
+desechable, Chromium y pruebas estables; producción y el defecto conocido de reproducción de
+`prod-build.sh` permanecen fuera.
+
+El responsable eligió 1A–14C y aprobó la propuesta sin decisiones abiertas. La implementación
+encontró un único desbordamiento: el selector compartido de papeles en `/users` no cabía en 412 px
+con los textos ingleses. `Conmutador` ahora limita su ancho y distribuye opciones en varias líneas.
+La corrección pasó las tres resoluciones, ambos temas de fábrica y los papeles que usan esa lista.
+
+La validación final pasó 220 pruebas unitarias del frontend y Playwright completo: 180 casos
+aprobados y 38 omisiones previstas. Los ocho temas conservaron su medición de contraste y no quedan
+hallazgos visuales o de accesibilidad abiertos. No cambiaron backend, API, datos, permisos ni flujos.
+
+## 18. Bloque 7 implementado: coherencia documental y fronteras del frontend
+
+### 18.1 Hallazgos que motivan el bloque
+
+El producto y la ayuda de redacción del bloque anterior están implementados, pero el inventario
+arquitectónico no describe todo el estado vigente de forma coherente:
+
+- la sección 13 decía que una instalación funcionaba entera sin IA configurada, aunque la IA
+  es obligatoria y el middleware limita una instalación sellada que no la tenga;
+- presentaba como no automatizado el recorrido completo de `/setup`, pese a que la suite desechable ya
+  lo recorre;
+- conservaba como actuales cifras y fechas de pruebas anteriores a los bloques 5, 6 y a la ayuda de
+  redacción;
+- algunos registros históricos llamaban «pendiente» a una decisión reemplazada y cerrada;
+- la sección 12 declaraba sin resolver el logging y la automatización de fronteras, aunque el
+  responsable ya decidió ambos en el repaso de este bloque.
+
+Estos hallazgos se corrigen de forma visible. No se reescribe la historia: se conservan decisiones y
+enmiendas, se marca cuál las sustituyó y se eliminan afirmaciones que aparentan seguir vigentes.
+
+### 18.2 Comprobador de fronteras
+
+El frontend incorpora `scripts/check-boundaries.mjs`, propio y versionado, sin paquete adicional,
+que revisa todos los
+archivos TypeScript de `frontend/src/app`, incluidas sus pruebas. Ignora dependencias y artefactos
+generados. Aplica estas direcciones:
+
+1. la raíz de `app` puede componer `core`, `shared` y cualquier módulo;
+2. cada carpeta de `modules/*` puede depender de sí misma, de `core` y de `shared`, pero no de otro
+   módulo;
+3. `core` puede depender de `shared`, pero no de un módulo;
+4. `shared` no puede depender de `core` ni de un módulo.
+
+Además, cada módulo sólo puede consumir su prefijo homónimo bajo `/api`: `mail` usa `/api/mail`;
+`tickets`, `/api/tickets`; y `users`, `/api/users`. El comprobador reconoce literales de texto y
+plantillas interpoladas. Las rutas transversales de `core` quedan fuera de esa correspondencia
+homónima porque allí viven sesión, instalación y configuración.
+
+Existe una lista explícita de excepciones, inicialmente vacía. Una excepción futura debe indicar
+origen, destino y motivo, y cambiarla requerirá mantener este documento. Cada infracción informa
+archivo, línea, regla incumplida y corrección esperada; se muestran todas en una ejecución y el
+proceso termina con un código distinto de cero.
+
+El comando puede ejecutarse por separado y forma parte tanto de `npm test` como de `npm run build`.
+`scripts/check-boundaries.test.mjs` demuestra una importación cruzada, una dependencia de
+capa invertida, una ruta API ajena, una plantilla interpolada y un conjunto válido.
+
+### 18.3 Logging del navegador
+
+No se añade servicio, dependencia ni proveedor de logging al frontend. Los errores funcionales se
+presentan mediante los componentes y mensajes existentes. El único uso técnico de consola permitido
+es el fallo fatal que impide arrancar Angular, en `main.ts`. El comprobador de fronteras no se
+convierte en una regla general sobre llamadas a consola.
+
+### 18.4 Auditoría documental
+
+Se revisan todos los documentos con estado `as-built`, no sólo este archivo. La corrección:
+
+- alinea la obligatoriedad de IA y el comportamiento de una instalación sin configurar;
+- actualiza recorridos que ya están automatizados;
+- sustituye inventarios volátiles de pruebas por el comando, la fecha y el resultado global de la
+  última verificación pertinente;
+- conserva los registros históricos, señalando con claridad las decisiones reemplazadas;
+- actualiza `docs/README.md` y la tabla de correspondencia de `AGENTS.md`.
+
+Si la auditoría descubre una diferencia nueva entre documentación y código que implique cambiar
+comportamiento, se reportará y abrirá otro ciclo. No se corregirá como parte silenciosa de este
+bloque.
+
+### 18.5 Verificación y cierre
+
+Antes de volver el documento a `as-built` deben pasar:
+
+1. el comprobador por separado, incluidas sus pruebas negativas aisladas;
+2. `npm test` y `npm run build`, demostrando que ambos ejecutan la frontera;
+3. la suite completa del backend, porque el cierre describe el repositorio entero;
+4. una búsqueda final de estados documentales y de las contradicciones registradas;
+5. `git diff --check`.
+
+La evidencia se registra con fecha, comandos y resultado global, sin mantener desgloses por paquete
+o archivo que queden obsoletos con cada caso nuevo.
+
+### 18.6 Alcance y decisiones
+
+El bloque modificó `docs/`, `AGENTS.md`, los scripts del frontend y su `package.json`. No cambió API,
+backend, base de datos, permisos, interfaz, flujos de usuario ni dependencias de producción.
+
+Producción queda totalmente fuera: no se configura correo, no se abre el dominio, no se crea la
+etiqueta `v1.0.0`, no se despliega y no se corrige todavía la reproducción desde cero de
+`prod-build.sh`. Esos trabajos permanecen aparcados hasta el cierre de la versión 1.0.0.
+
+El responsable eligió 1A–5A, 6A–10A y 11A–15A el 2026-10-08 y aprobó explícitamente el documento.
+Durante la implementación apareció una dependencia `core → app` en la prueba del interceptor; quedó
+registrada en la cabecera y se corrigió usando el router vacío que esa prueba realmente necesita.
+
+La verificación del 2026-10-08 terminó correctamente: el comprobador y sus cuatro casos aislados;
+`npm test -- --watch=false`, que ejecutó primero las fronteras y después las **225 pruebas** del
+frontend; `npm run build`, también con la frontera previa; y `go test ./...` para todo el backend.
+La auditoría final no encontró documentos en `propuesta` o `aprobado`, ni contradicciones vigentes de
+las registradas en 18.1. `git diff --check` terminó limpio. No quedan decisiones abiertas.

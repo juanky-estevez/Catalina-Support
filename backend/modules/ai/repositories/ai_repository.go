@@ -41,8 +41,11 @@ type AIInsight struct {
 	Kind         string `gorm:"column:kind"`
 	State        string `gorm:"column:state"`
 	// Las dos redacciones, en la misma fila: el motor las devuelve juntas (decisión 3).
-	TextEs *string `gorm:"column:text_es"`
-	TextEn *string `gorm:"column:text_en"`
+	TextEs   *string `gorm:"column:text_es"`
+	TextEn   *string `gorm:"column:text_en"`
+	Text     *string `gorm:"column:text"`
+	Language *string `gorm:"column:language"`
+	Provider *string `gorm:"column:provider"`
 	// La clave del error (`ai.unavailable` o `ai.invalid`) cuando el estado no es `listo`.
 	ErrorKey *string `gorm:"column:error_key"`
 	// El modelo que lo escribió: dice con qué se generó.
@@ -50,6 +53,13 @@ type AIInsight struct {
 	Attempts    int        `gorm:"column:attempts"`
 	RequestedAt time.Time  `gorm:"column:requested_at"`
 	GeneratedAt *time.Time `gorm:"column:generated_at"`
+}
+
+func (r *AIRepository) GuardarResultadoGlobal(numero, tipo, text, language, provider, model string, generatedAt time.Time) error {
+	row := AIInsight{TicketNumber: numero, Kind: tipo, State: StateListo, Text: &text, Language: &language, Provider: &provider, Model: &model, RequestedAt: generatedAt, GeneratedAt: &generatedAt}
+	return r.db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "ticket_number"}, {Name: "kind"}}, DoUpdates: clause.Assignments(map[string]any{
+		"state": StateListo, "text": text, "language": language, "provider": provider, "text_es": nil, "text_en": nil, "error_key": nil, "model": model, "generated_at": generatedAt,
+	})}).Create(&row).Error
 }
 
 // TableName fija el nombre de la tabla, que no se deduce del tipo.
@@ -90,6 +100,9 @@ func (r *AIRepository) MarcarPendiente(numero, tipo string) error {
 			"state":        StatePendiente,
 			"text_es":      nil,
 			"text_en":      nil,
+			"text":         nil,
+			"language":     nil,
+			"provider":     nil,
 			"error_key":    nil,
 			"model":        nil,
 			"attempts":     0,
@@ -209,6 +222,9 @@ func (r *AIRepository) marcarFallo(numero, tipo, estado, clave string) error {
 			"error_key":    clave,
 			"text_es":      nil,
 			"text_en":      nil,
+			"text":         nil,
+			"language":     nil,
+			"provider":     nil,
 			"model":        nil,
 			"generated_at": nil,
 		}),

@@ -28,7 +28,6 @@ type User struct {
 	Role         string     `gorm:"column:role"`
 	Origin       string     `gorm:"column:origin"`
 	ExternalID   *string    `gorm:"column:external_id"`
-	Language     string     `gorm:"column:language"`
 	IsActive     bool       `gorm:"column:is_active"`
 	LastLoginAt  *time.Time `gorm:"column:last_login_at"`
 	CreatedAt    time.Time  `gorm:"column:created_at"`
@@ -50,7 +49,6 @@ func (u User) Account() auth.Account {
 		Email:       u.Email,
 		Role:        u.Role,
 		Origin:      u.Origin,
-		Language:    u.Language,
 		IsActive:    u.IsActive,
 		LastLoginAt: u.LastLoginAt,
 	}

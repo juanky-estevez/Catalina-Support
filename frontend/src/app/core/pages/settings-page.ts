@@ -4,9 +4,12 @@ import { RouterLink } from '@angular/router';
 import { TranslationService } from '../i18n/translation.service';
 import { BrandService, logoDeFabrica, type Marca } from '../services/brand.service';
 import { SessionService } from '../services/session.service';
+import { SetupService } from '../services/setup.service';
 import {
   SettingsService,
   type Configuracion,
+  type CatalogoLocalDeIA,
+  type BorradorDeIdioma,
   type DirectorioEscrito,
   type KeycloakEscrito,
 } from '../services/settings.service';
@@ -15,7 +18,8 @@ import { Boton } from '../../shared/components/boton';
 import { Campo } from '../../shared/components/campo';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
-import { claveDelError } from '../../shared/errores';
+import { Toast } from '../../shared/components/toast';
+import { claveDelError, memoriaDelError } from '../../shared/errores';
 import { interpolar } from '../../shared/textos';
 
 /**
@@ -93,19 +97,23 @@ function paraBuscar(texto: string): string {
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink, Aviso, Boton, Campo, Selector, Tarjeta],
+  imports: [RouterLink, Aviso, Boton, Campo, Selector, Tarjeta, Toast],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
+  protected readonly interpolar = interpolar;
   private readonly ajustes = inject(SettingsService);
   private readonly textos = inject(TranslationService);
   private readonly marca = inject(BrandService);
   private readonly sesion = inject(SessionService);
+  private readonly setup = inject(SetupService);
 
   protected readonly configuracion = signal<Configuracion | null>(null);
   protected readonly cargando = signal(true);
   protected readonly guardando = signal(false);
   protected readonly mensaje = signal<{ forma: 'exito' | 'error'; texto: string } | null>(null);
+  protected readonly borradoresIdioma = signal<readonly BorradorDeIdioma[]>([]);
+  protected readonly confirmacionCosto = signal(false);
 
   /** El nombre que se está escribiendo, antes de guardarlo. */
   protected readonly nombreElegido = signal('');
@@ -223,8 +231,17 @@ export class SettingsPage {
   protected readonly direccionPublica = signal('');
 
   // --- El motor de IA: la dirección y el modelo ---
-  protected readonly iaDireccion = signal('');
-  protected readonly iaModelo = signal('');
+  protected readonly iaDireccion = signal('http://ai:8080');
+  protected readonly iaModelo = signal('qwen2.5-1.5b-instruct');
+  protected readonly iaModo = signal<'local' | 'remote' | 'provider'>('local');
+  protected readonly iaProveedor = signal('local');
+  protected readonly iaAutenticacion = signal<'none' | 'bearer' | 'header' | 'basic'>('none');
+  protected readonly iaCabecera = signal('');
+  protected readonly iaCredencial = signal('');
+  protected readonly iaPrivacidad = signal(false);
+  protected readonly iaCredencialPuesta = signal(false);
+  protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
 
   /** Las zonas que se ofrecen: las del navegador, o la lista corta si no las sabe dar. */
   protected readonly zonas = signal<readonly string[]>(zonasDelNavegador());
@@ -485,17 +502,56 @@ export class SettingsPage {
       return;
     }
 
+    if (this.idioma() !== configuracion.language) {
+      if (this.nombreElegido().trim() !== configuracion.name) {
+        try {
+          const saved = await this.ajustes.guardar({ ...configuracion, name: this.nombreElegido().trim(), language: configuracion.language });
+          this.configuracion.set(saved);
+        } catch (error) {
+          this.mensaje.set({ forma:'error', texto:this.textoDelError(error) });
+          return;
+        }
+      }
+      await this.prepararIdioma(false, false);
+      return;
+    }
     await this.pedir(
       () =>
         this.ajustes.guardar({
           ...configuracion,
           name: this.nombreElegido().trim(),
-          // **El idioma va con el nombre** (decisión del responsable, 2026-09-29): los guarda el mismo
-          // botón, y sin esto se mandaría el que estaba cargado y no el que se acaba de elegir.
-          language: this.idioma(),
+          // El idioma sólo cambia mediante la aplicación atómica de las once plantillas.
+          language: configuracion.language,
         }),
       this.t().configuracion.instalacionGuardada,
     );
+  }
+
+  protected async prepararIdioma(manual: boolean, confirmarCosto: boolean): Promise<void> {
+    this.guardando.set(true); this.mensaje.set(null); this.confirmacionCosto.set(false);
+    try {
+      this.borradoresIdioma.set(await this.ajustes.borradoresDeIdioma(this.idioma(), { manual, confirmCommercialCost: confirmarCosto }));
+    } catch (error) {
+      if (claveDelError(error) === 'mail.translation.costConfirmationRequired') this.confirmacionCosto.set(true);
+      else this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
+    } finally { this.guardando.set(false); }
+  }
+
+  protected editarBorrador(index: number, field: 'subject' | 'body', value: string): void {
+    this.borradoresIdioma.update((items) => items.map((item, i) => i === index ? { ...item, [field === 'subject' ? 'draftSubject' : 'draftBody']: value } : item));
+  }
+
+  protected async aplicarCambioDeIdioma(): Promise<void> {
+    this.guardando.set(true); this.mensaje.set(null);
+    try {
+      await this.ajustes.aplicarIdioma(this.idioma(), this.borradoresIdioma().map((d) => ({ key:d.key, subject:d.draftSubject, body:d.draftBody })));
+      const current = this.configuracion();
+      if (current) this.configuracion.set({ ...current, language: this.idioma() });
+      this.borradoresIdioma.set([]);
+      await this.marca.cargar();
+      this.mensaje.set({ forma:'exito', texto: this.t().configuracion.instalacionGuardada });
+    } catch (error) { this.mensaje.set({ forma:'error', texto:this.textoDelError(error) }); }
+    finally { this.guardando.set(false); }
   }
 
   /**
@@ -519,7 +575,20 @@ export class SettingsPage {
 
   /** Guarda el motor de IA: la dirección y el modelo. */
   protected async guardarIA(): Promise<void> {
-    await this.guardarLaConfiguracion(this.t().configuracion.motorGuardado);
+    this.guardando.set(true);
+    this.mensaje.set(null);
+    try {
+      const ia = await this.ajustes.probarYActivarIA({
+        mode: this.iaModo(), provider: this.iaProveedor(), baseUrl: this.iaDireccion().trim(),
+        model: this.iaModelo().trim(), authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
+        credential: this.iaCredencial(),
+        privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(), language: this.configuracion()?.language ?? this.idioma(),
+      });
+      this.ponerConfiguracionDeIA(ia);
+      this.setup.marcarIAConfigurada();
+      this.mensaje.set({ forma: 'exito', texto: this.t().configuracion.motorGuardado });
+    } catch (error) { this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) }); }
+    finally { this.guardando.set(false); }
   }
 
   /**
@@ -538,7 +607,7 @@ export class SettingsPage {
         this.ajustes.guardar({
           ...configuracion,
           primaryColor: this.colorElegido(),
-          language: this.idioma(),
+          language: configuracion.language,
           timeZone: this.zonaElegida().trim(),
           publicAppUrl: this.direccionPublica().trim(),
           numberPrefix: this.prefijo().trim(),
@@ -713,11 +782,45 @@ export class SettingsPage {
    * comprobar el motor ya configurado sin volver a escribirlo.
    */
   protected async probarIA(): Promise<void> {
-    await this.probar(
-      () => this.ajustes.probarMotor(this.iaDireccion().trim()),
-      this.t().configuracion.motorOk,
-    );
+    await this.guardarIA();
   }
+
+  protected opcionesDeModoIA(): readonly OpcionSelector[] { return [
+    { valor: 'local', etiqueta: this.t().configuracion.iaLocal, grupo: this.t().configuracion.motorDeIA },
+    { valor: 'remote', etiqueta: this.t().configuracion.iaRemota, grupo: this.t().configuracion.motorDeIA },
+    { valor: 'provider', etiqueta: this.t().configuracion.iaProveedor, grupo: this.t().configuracion.motorDeIA },
+  ]; }
+  protected cambiarModoIA(valor: string): void {
+    const modo = valor as 'local'|'remote'|'provider';
+    this.iaModo.set(modo);
+    this.iaProveedor.set(modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai');
+    if (modo === 'local') {
+      this.iaDireccion.set('http://ai:8080');
+      this.iaModelo.set('qwen2.5-1.5b-instruct');
+      this.iaAutenticacion.set('none');
+      this.iaPrivacidad.set(false);
+    } else {
+      this.iaDireccion.set('');
+      this.iaAutenticacion.set('bearer');
+    }
+  }
+  protected opcionesDeProveedorIA(): readonly OpcionSelector[] { return ['openai','claude','deepseek','openai-compatible'].map(valor => ({valor, etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor, grupo: this.t().configuracion.iaProveedor})); }
+  protected opcionesDeModeloLocal(): readonly OpcionSelector[] { return [
+    {valor:'qwen2.5-1.5b-instruct',etiqueta:'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB',grupo:this.t().configuracion.iaLocal},
+    {valor:'qwen2.5-3b-instruct',etiqueta:'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB',grupo:this.t().configuracion.iaLocal},
+    {valor:'qwen2.5-7b-instruct',etiqueta:'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB',grupo:this.t().configuracion.iaLocal},
+  ]; }
+  protected opcionesDeAuthIA(): readonly OpcionSelector[] { const t=this.t().configuracion; return [
+    {valor:'none',etiqueta:t.iaAuth_none,grupo:t.iaAutenticacion},{valor:'bearer',etiqueta:t.iaAuth_bearer,grupo:t.iaAutenticacion},
+    {valor:'header',etiqueta:t.iaAuth_header,grupo:t.iaAutenticacion},{valor:'basic',etiqueta:t.iaAuth_basic,grupo:t.iaAutenticacion},
+  ]; }
+  protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
+  protected async cargarCatalogoIA(): Promise<void> { await this.accionIA(async()=>{this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async descargarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.descargarModelo(id,this.licenciasAceptadas().has(id));this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async activarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  protected async eliminarModelo(id: string): Promise<void> { await this.accionIA(async()=>{await this.ajustes.eliminarModelo(id);this.catalogoIA.set(await this.ajustes.modelosLocales());}); }
+  private async accionIA(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
 
   /** Lo que se ha escrito del directorio, sin los campos que la API no acepta de vuelta. */
   private directorioEscrito(): DirectorioEscrito {
@@ -790,6 +893,9 @@ export class SettingsPage {
       this.colorElegido.set(configuracion.primaryColor);
       this.ponerNumeracion(configuracion);
       this.ponerIA(configuracion);
+      if (configuracion.ai?.mode) {
+        this.ponerConfiguracionDeIA(configuracion.ai);
+      }
     } catch (error) {
       this.mensaje.set({ forma: 'error', texto: this.textoDelError(error) });
     } finally {
@@ -842,6 +948,14 @@ export class SettingsPage {
     this.iaModelo.set(configuracion.aiModel ?? '');
   }
 
+  private ponerConfiguracionDeIA(ia: import('../services/settings.service').ConfiguracionDeIA): void {
+    if (ia.mode) this.iaModo.set(ia.mode);
+    this.iaProveedor.set(ia.provider || (ia.mode === 'provider' ? 'openai' : 'local'));
+    this.iaDireccion.set(ia.baseUrl || this.iaDireccion()); this.iaModelo.set(ia.model || this.iaModelo());
+    this.iaAutenticacion.set(ia.authType); this.iaCabecera.set(ia.authHeader); this.iaCredencial.set('');
+    this.iaCredencialPuesta.set(ia.credentialSet); this.iaPrivacidad.set(ia.privacyConfirmed);
+  }
+
   /**
    * Deja los campos de cómo se entra con lo que hay guardado.
    *
@@ -878,6 +992,13 @@ export class SettingsPage {
   }
 
   private textoDelError(error: unknown): string {
-    return this.textos.error(claveDelError(error));
+    const key = claveDelError(error);
+    const memory = memoriaDelError(error);
+    if (key === 'settings.ai.insufficientMemory' && memory) {
+      return interpolar(this.textos.error(key), {
+        requerida: this.formatoBytes(memory.requiredBytes), disponible: this.formatoBytes(memory.availableBytes),
+      });
+    }
+    return this.textos.error(key);
   }
 }

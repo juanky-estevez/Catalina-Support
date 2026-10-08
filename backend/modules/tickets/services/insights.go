@@ -19,16 +19,11 @@ const (
 	TipoUltimaAccion = "ultima_accion"
 )
 
-// Resumen es un texto del motor, con lo que hace falta para pintarlo: su estado, los dos idiomas y la
-// clave del error cuando no se pudo escribir.
-//
-// **Los dos idiomas viajan juntos** porque el motor los devuelve en la misma respuesta (decisión 3) y
-// porque la lista se pinta en el idioma de quien mira: traducir al vuelo sería pedir dos veces lo
-// mismo.
+// Resumen es un texto del motor en el idioma global, con su estado y la clave del error.
 type Resumen struct {
 	Estado   string
-	Es       string
-	En       string
+	Text     string
+	Language string
 	ErrorKey string
 }
 

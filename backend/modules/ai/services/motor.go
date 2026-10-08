@@ -21,7 +21,12 @@ type motor struct {
 // nuevoMotor construye el cliente. El tiempo límite es del código: un motor que no responde no puede
 // dejar colgada una tarea de fondo.
 func nuevoMotor(espera time.Duration) *motor {
-	return &motor{cliente: &http.Client{Timeout: espera}}
+	return &motor{cliente: &http.Client{
+		Timeout: espera,
+		// Una URL de proveedor debe ser la definitiva. Seguir un 3xx podría reenviar Bearer, Basic o
+		// una cabecera privada a un destino que el Administrador nunca aprobó.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}}
 }
 
 // peticion es lo que se le manda al motor, en el formato de OpenAI.
@@ -56,12 +61,92 @@ type respuesta struct {
 	} `json:"choices"`
 }
 
+// probarConfiguracion ejecuta una generación artificial con el mismo protocolo y autenticación que
+// se usarán después. No contiene datos de tickets.
+func (m *motor) probarConfiguracion(ctx context.Context, baseURL, model, provider, authType, authHeader, credential, language string) error {
+	prompt := "Reply only with JSON: {\"text\":\"connection ok\"}."
+	endpoint := direccionDe(baseURL, "/v1/chat/completions")
+	var body any = map[string]any{"model": model, "messages": []map[string]string{{"role": "user", "content": prompt}}, "temperature": 0, "max_tokens": 64, "response_format": map[string]string{"type": "json_object"}}
+	if provider == "claude" {
+		endpoint = direccionDe(baseURL, "/v1/messages")
+		body = map[string]any{"model": model, "messages": []map[string]string{{"role": "user", "content": prompt}}, "temperature": 0, "max_tokens": 64}
+	}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return ErrRespuestaInvalida
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(encoded))
+	if err != nil {
+		return ErrSinMotor
+	}
+	req.Header.Set("Content-Type", "application/json")
+	switch authType {
+	case "bearer":
+		req.Header.Set("Authorization", "Bearer "+credential)
+	case "header":
+		req.Header.Set(authHeader, credential)
+	case "basic":
+		parts := strings.SplitN(credential, ":", 2)
+		if len(parts) != 2 {
+			return ErrSinMotor
+		}
+		req.SetBasicAuth(parts[0], parts[1])
+	}
+	if provider == "claude" {
+		req.Header.Set("x-api-key", credential)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	}
+	resp, err := m.cliente.Do(req)
+	if err != nil {
+		return ErrSinMotor
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		vaciar(resp.Body)
+		return ErrSinMotor
+	}
+	var content string
+	if provider == "claude" {
+		var out struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		}
+		data, readErr := leerRespuestaLimitada(resp.Body)
+		if readErr != nil || json.Unmarshal(data, &out) != nil || len(out.Content) == 0 {
+			return ErrRespuestaInvalida
+		}
+		content = out.Content[0].Text
+	} else {
+		var out respuesta
+		data, readErr := leerRespuestaLimitada(resp.Body)
+		if readErr != nil || json.Unmarshal(data, &out) != nil || len(out.Choices) == 0 {
+			return ErrRespuestaInvalida
+		}
+		content = out.Choices[0].Message.Content
+	}
+	obj, ok := primerObjetoJSON(content)
+	if !ok {
+		return ErrRespuestaInvalida
+	}
+	var parsed struct {
+		Text string `json:"text"`
+	}
+	if json.Unmarshal([]byte(obj), &parsed) != nil || strings.TrimSpace(parsed.Text) == "" {
+		return ErrRespuestaInvalida
+	}
+	return nil
+}
+
 // pedir hace **una** llamada al motor y devuelve las dos redacciones.
 //
 // Los dos fallos salen distintos porque el módulo los trata distinto: `ErrSinMotor` cuando no
 // contesta —que se reintenta— y `ErrRespuestaInvalida` cuando contesta algo que no vale —que se
 // reintenta una sola vez— (docs/modules/ai.md, decisión 8).
 func (m *motor) pedir(ctx context.Context, ajustes Ajustes, encargo encargo) (string, string, error) {
+	if ajustes.Provider != "" {
+		return m.pedirGlobal(ctx, ajustes, encargo)
+	}
 	cuerpo, err := json.Marshal(peticion{
 		Model: ajustes.Modelo,
 		Messages: []mensaje{
@@ -115,6 +200,115 @@ func (m *motor) pedir(ctx context.Context, ajustes Ajustes, encargo encargo) (st
 	}
 
 	return recortarPalabras(es, ajustes.Palabras), recortarPalabras(en, ajustes.Palabras), nil
+}
+
+// pedirGlobal genera una sola redacción en el idioma de la instalación y habla tanto con APIs
+// compatibles con OpenAI como con Claude. Se devuelve en los dos huecos transitorios para conservar
+// el contrato interno mientras la migración 1.0.0 retira las columnas bilingües.
+func (m *motor) pedirGlobal(ctx context.Context, ajustes Ajustes, encargo encargo) (string, string, error) {
+	idioma := "English"
+	if ajustes.Language == "es" {
+		idioma = "Spanish"
+	}
+	prompt := encargo.texto + "\n\nWrite only in " + idioma +
+		`. Return exactly {"text":"..."} and no other keys or surrounding text.`
+	endpoint := direccionDe(ajustes.URL, "/v1/chat/completions")
+	body := map[string]any{
+		"model": ajustes.Modelo, "messages": []map[string]string{
+			{"role": "system", "content": encargo.sistema}, {"role": "user", "content": prompt},
+		}, "temperature": temperatura, "max_tokens": topeDePiezas(ajustes),
+		"response_format": map[string]string{"type": "json_object"},
+	}
+	if ajustes.Provider == "claude" {
+		endpoint = direccionDe(ajustes.URL, "/v1/messages")
+		body = map[string]any{"model": ajustes.Modelo, "system": encargo.sistema,
+			"messages":    []map[string]string{{"role": "user", "content": prompt}},
+			"temperature": temperatura, "max_tokens": topeDePiezas(ajustes)}
+	}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return "", "", ErrRespuestaInvalida
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(encoded))
+	if err != nil {
+		return "", "", ErrSinMotor
+	}
+	req.Header.Set("Content-Type", "application/json")
+	aplicarCredencial(req, ajustes.Provider, ajustes.AuthType, ajustes.AuthHeader, ajustes.Credential)
+	resp, err := m.cliente.Do(req)
+	if err != nil {
+		return "", "", ErrSinMotor
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		vaciar(resp.Body)
+		return "", "", ErrSinMotor
+	}
+	content, err := contenidoDeRespuesta(resp.Body, ajustes.Provider)
+	if err != nil {
+		return "", "", err
+	}
+	obj, ok := primerObjetoJSON(content)
+	if !ok {
+		return "", "", ErrRespuestaInvalida
+	}
+	var parsed struct {
+		Text string `json:"text"`
+	}
+	if json.Unmarshal([]byte(obj), &parsed) != nil || strings.TrimSpace(parsed.Text) == "" {
+		return "", "", ErrRespuestaInvalida
+	}
+	text := recortarPalabras(strings.TrimSpace(parsed.Text), ajustes.Palabras)
+	return text, text, nil
+}
+
+func aplicarCredencial(req *http.Request, provider, authType, authHeader, credential string) {
+	switch authType {
+	case "bearer":
+		req.Header.Set("Authorization", "Bearer "+credential)
+	case "header":
+		req.Header.Set(authHeader, credential)
+	case "basic":
+		parts := strings.SplitN(credential, ":", 2)
+		if len(parts) == 2 {
+			req.SetBasicAuth(parts[0], parts[1])
+		}
+	}
+	if provider == "claude" {
+		req.Header.Set("x-api-key", credential)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	}
+}
+
+func contenidoDeRespuesta(body io.Reader, provider string) (string, error) {
+	data, err := leerRespuestaLimitada(body)
+	if err != nil {
+		return "", ErrRespuestaInvalida
+	}
+	if provider == "claude" {
+		var out struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		}
+		if json.Unmarshal(data, &out) != nil || len(out.Content) == 0 {
+			return "", ErrRespuestaInvalida
+		}
+		return out.Content[0].Text, nil
+	}
+	var out respuesta
+	if json.Unmarshal(data, &out) != nil || len(out.Choices) == 0 {
+		return "", ErrRespuestaInvalida
+	}
+	return out.Choices[0].Message.Content, nil
+}
+
+func leerRespuestaLimitada(body io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(body, maxRespuestaBytes+1))
+	if err != nil || len(data) > maxRespuestaBytes {
+		return nil, ErrRespuestaInvalida
+	}
+	return data, nil
 }
 
 // disponible pregunta si el motor responde.

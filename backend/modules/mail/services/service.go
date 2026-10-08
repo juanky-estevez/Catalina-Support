@@ -148,6 +148,13 @@ func (s *Service) MissingEssential(key, subject, body string) []string {
 // Es síncrono a propósito: lo usan la prueba del editor y quien quiera saber si salió. Para el resto
 // de los avisos está SendAsync.
 func (s *Service) Send(key, language string, to []string, data map[string]string) error {
+	// Los avisos usan siempre el idioma global. El argumento se conserva de forma transitoria para
+	// no acoplar a los módulos que todavía entregan el idioma histórico de la cuenta.
+	if global, ok := s.instalacion.(interface{ Language() (string, error) }); ok {
+		if chosen, err := global.Language(); err == nil && LanguageIsValid(chosen) {
+			language = chosen
+		}
+	}
 	if err := validateTarget(key, language); err != nil {
 		return err
 	}

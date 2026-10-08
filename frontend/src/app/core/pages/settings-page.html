@@ -2,7 +2,11 @@
   <h1 class="text-xl font-semibold text-texto">{{ t().configuracion.titulo }}</h1>
 
   @if (mensaje(); as aviso) {
-    <app-aviso [forma]="aviso.forma" [texto]="aviso.texto" />
+    <app-toast
+      [mensaje]="aviso"
+      [etiquetaCerrar]="t().comun.cerrar"
+      (cerrado)="mensaje.set(null)"
+    />
   }
 
   @if (cargando()) {
@@ -15,6 +19,15 @@
       [descripcion]="t().configuracion.instalacionAyuda"
     >
       <div class="flex flex-wrap items-end gap-3">
+        <app-selector
+          identificador="idioma-instalacion"
+          [etiqueta]="t().configuracion.idioma"
+          [ayuda]="t().configuracion.idiomaAyuda"
+          [opciones]="opcionesDeIdioma()"
+          [valor]="idioma()"
+          (valorChange)="idioma.set($event)"
+        />
+
         <div class="min-w-64 flex-1">
           <app-campo
             identificador="nombre-instalacion"
@@ -31,15 +44,6 @@
         la instalación *es*, y es el que se le pone a una cuenta nueva cuando quien la da de alta no
         elige otro, y el de los correos que se le escriben.
       -->
-        <app-selector
-          identificador="idioma-instalacion"
-          [etiqueta]="t().configuracion.idioma"
-          [ayuda]="t().configuracion.idiomaAyuda"
-          [opciones]="opcionesDeIdioma()"
-          [valor]="idioma()"
-          (valorChange)="idioma.set($event)"
-        />
-
         <app-boton
           [texto]="t().configuracion.guardarInstalacion"
           [textoTrabajando]="t().configuracion.guardando"
@@ -47,8 +51,42 @@
           [deshabilitado]="!cambioDeInstalacionPendiente()"
           (pulsado)="guardarNombre()"
         />
+        @if (cambioDeIdiomaPendiente()) {
+          <app-boton forma="secundario" [texto]="t().configuracion.editarManualmente" (pulsado)="prepararIdioma(true, false)" />
+        }
       </div>
     </app-tarjeta>
+
+    @if (confirmacionCosto()) {
+      <app-tarjeta nivel="h2" [titulo]="t().configuracion.traduccionTitulo" [descripcion]="t().configuracion.traduccionCosto">
+        <div class="flex flex-wrap gap-2">
+          <app-boton [texto]="t().configuracion.traducirConfirmando" (pulsado)="prepararIdioma(false, true)" />
+          <app-boton forma="secundario" [texto]="t().configuracion.editarManualmente" (pulsado)="prepararIdioma(true, false)" />
+        </div>
+      </app-tarjeta>
+    }
+
+    @if (borradoresIdioma().length) {
+      <app-tarjeta nivel="h2" [titulo]="t().configuracion.traduccionTitulo" [descripcion]="t().configuracion.traduccionAyuda">
+        <div class="flex flex-col gap-5">
+          @for (draft of borradoresIdioma(); track draft.key; let i = $index) {
+            <section [class]="draft.destinationCustomized ? 'grid gap-3 border-b border-borde pb-5 md:grid-cols-3' : 'grid gap-3 border-b border-borde pb-5 md:grid-cols-2'">
+              <div class="min-w-0"><h3 class="font-medium text-texto">{{ draft.key }}</h3><p class="mt-2 whitespace-pre-wrap text-sm text-apagado">{{ draft.sourceSubject }}</p><div class="mt-2 text-sm text-apagado" [innerHTML]="draft.sourceBody"></div></div>
+              @if (draft.destinationCustomized) {
+                <div class="min-w-0"><h3 class="font-medium text-texto">{{ t().configuracion.destinoExistente }}</h3><p class="mt-2 whitespace-pre-wrap text-sm text-apagado">{{ draft.existingSubject }}</p><div class="mt-2 text-sm text-apagado" [innerHTML]="draft.existingBody"></div></div>
+              }
+              <div class="flex min-w-0 flex-col gap-2">
+                <label class="text-sm font-medium text-texto" [for]="'translation-subject-'+i">{{ t().configuracion.asuntoTraducido }}</label>
+                <input class="rounded-md border border-borde bg-fondo px-3 py-2 text-texto" [id]="'translation-subject-'+i" [value]="draft.draftSubject" (input)="editarBorrador(i, 'subject', $any($event.target).value)" />
+                <label class="text-sm font-medium text-texto" [for]="'translation-body-'+i">{{ t().configuracion.cuerpoTraducido }}</label>
+                <textarea class="min-h-32 rounded-md border border-borde bg-fondo px-3 py-2 text-texto" [id]="'translation-body-'+i" [value]="draft.draftBody" (input)="editarBorrador(i, 'body', $any($event.target).value)"></textarea>
+              </div>
+            </section>
+          }
+          <div class="flex flex-wrap gap-2"><app-boton [texto]="t().configuracion.aplicarIdioma" (pulsado)="aplicarCambioDeIdioma()" /><app-boton forma="secundario" [texto]="t().comun.cancelar" (pulsado)="borradoresIdioma.set([])" /></div>
+        </div>
+      </app-tarjeta>
+    }
 
     <!-- ---------------------------------------------------------------- la marca -->
     <app-tarjeta
@@ -621,6 +659,16 @@
       [descripcion]="t().configuracion.motorDeIAAyuda"
     >
       <div class="flex flex-col gap-6">
+        <app-selector identificador="ia-modo" [etiqueta]="t().configuracion.motorDeIA"
+          [opciones]="opcionesDeModoIA()" [valor]="iaModo()"
+          (valorChange)="cambiarModoIA($event)" />
+
+        @if (iaModo() === 'provider') {
+          <app-selector identificador="ia-proveedor" [etiqueta]="t().configuracion.iaProveedor"
+            [opciones]="opcionesDeProveedorIA()" [valor]="iaProveedor()"
+            (valorChange)="iaProveedor.set($event)" />
+        }
+
         <app-campo
           identificador="ia-direccion"
           [etiqueta]="t().configuracion.iaDireccion"
@@ -630,17 +678,66 @@
           (valorChange)="iaDireccion.set($event)"
         />
 
-        <app-campo
-          identificador="ia-modelo"
-          [etiqueta]="t().configuracion.iaModelo"
-          [ayuda]="t().configuracion.iaModeloAyuda"
-          [ejemplo]="t().configuracion.iaModeloEjemplo"
-          [valor]="iaModelo()"
-          (valorChange)="iaModelo.set($event)"
-        />
+        @if (iaModo() === 'local') {
+          <app-selector identificador="ia-modelo-local" [etiqueta]="t().configuracion.iaModelo"
+            [opciones]="opcionesDeModeloLocal()" [valor]="iaModelo()"
+            (valorChange)="iaModelo.set($event)" />
+          <div class="flex flex-col gap-3 rounded-md border border-borde p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h3 class="font-medium text-texto">{{ t().configuracion.iaCatalogo }}</h3>
+              <app-boton forma="secundario" [texto]="t().configuracion.iaCargarCatalogo"
+                [trabajando]="guardando()" (pulsado)="cargarCatalogoIA()" />
+            </div>
+            @if (catalogoIA(); as catalogo) {
+              <p class="text-xs text-apagado">{{ interpolar(t().configuracion.iaDiscoDisponible, { cantidad: formatoBytes(catalogo.diskAvailableBytes) }) }}</p>
+              @for (modelo of catalogo.models; track modelo.id) {
+                <article class="flex flex-col gap-2 rounded-md bg-superficie-suave p-3 text-sm">
+                  <div class="flex flex-wrap justify-between gap-2"><strong>{{ modelo.name }}</strong><span>{{ modelo.active ? t().configuracion.iaActivo + ' · ' + (modelo.healthy ? t().configuracion.iaSaludable : t().configuracion.iaNoSaludable) : modelo.installed ? t().configuracion.iaInstalado : modelo.downloading ? t().configuracion.iaDescargando : '' }}</span></div>
+                  @if (modelo.error) { <p class="text-xs text-error">{{ modelo.error }}</p> }
+                  <p class="text-apagado">{{ interpolar(t().configuracion.iaRecursos, { disco: formatoBytes(modelo.downloadBytes), ram: formatoBytes(modelo.ramBytes) }) }}</p>
+                  <p class="break-all text-xs text-apagado">SHA-256: {{ modelo.checksum }}</p>
+                  <a class="text-primario underline" [href]="modelo.source" target="_blank" rel="noopener">{{ modelo.license }}</a>
+                  @if (!modelo.installed && !modelo.downloading) {
+                    <label class="flex gap-2"><input type="checkbox" [checked]="licenciasAceptadas().has(modelo.id)" (change)="aceptarLicencia(modelo.id, $any($event.target).checked)" />{{ t().configuracion.iaAceptarLicencia }}</label>
+                    <app-boton forma="secundario" [texto]="t().configuracion.iaDescargar" [deshabilitado]="!licenciasAceptadas().has(modelo.id)" (pulsado)="descargarModelo(modelo.id)" />
+                  }
+                  @if (modelo.installed && !modelo.active) { <div class="flex gap-2"><app-boton [texto]="t().configuracion.iaActivar" (pulsado)="activarModelo(modelo.id)" /><app-boton forma="secundario" [texto]="t().configuracion.iaEliminar" (pulsado)="eliminarModelo(modelo.id)" /></div> }
+                </article>
+              }
+            }
+          </div>
+        } @else {
+          <app-campo
+            identificador="ia-modelo"
+            [etiqueta]="t().configuracion.iaModelo"
+            [ayuda]="t().configuracion.iaModeloAyuda"
+            [ejemplo]="t().configuracion.iaModeloEjemplo"
+            [valor]="iaModelo()"
+            (valorChange)="iaModelo.set($event)"
+          />
+        }
+
+        @if (iaModo() !== 'local') {
+          <app-selector identificador="ia-auth" [etiqueta]="t().configuracion.iaAutenticacion"
+            [opciones]="opcionesDeAuthIA()" [valor]="iaAutenticacion()"
+            (valorChange)="iaAutenticacion.set($any($event))" />
+          @if (iaAutenticacion() === 'header') {
+            <app-campo identificador="ia-cabecera" [etiqueta]="t().configuracion.iaCabecera"
+              [valor]="iaCabecera()" (valorChange)="iaCabecera.set($event)" />
+          }
+          @if (iaAutenticacion() !== 'none') {
+            <app-campo identificador="ia-credencial" tipo="password"
+              [etiqueta]="t().configuracion.iaCredencial" [valor]="iaCredencial()"
+              (valorChange)="iaCredencial.set($event)" />
+          }
+          <label class="flex items-start gap-2 text-sm text-texto">
+            <input type="checkbox" class="mt-1" [checked]="iaPrivacidad()"
+              (change)="iaPrivacidad.set($any($event.target).checked)" />
+            <span>{{ t().configuracion.iaPrivacidad }}</span>
+          </label>
+        }
 
         <div class="flex flex-wrap gap-2">
-          <!-- La prueba **no guarda nada**: pregunta si el motor de esa dirección contesta. -->
           <app-boton
             forma="secundario"
             [texto]="t().configuracion.probarIA"
@@ -649,13 +746,6 @@
             (pulsado)="probarIA()"
           />
 
-          <app-boton
-            [texto]="t().configuracion.guardarIA"
-            [textoTrabajando]="t().configuracion.guardando"
-            [trabajando]="guardando()"
-            [deshabilitado]="!cambioDeIAPendiente()"
-            (pulsado)="guardarIA()"
-          />
         </div>
       </div>
     </app-tarjeta>

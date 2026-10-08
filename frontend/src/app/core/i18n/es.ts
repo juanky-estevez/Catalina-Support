@@ -54,7 +54,16 @@ export const ES = {
     colorResueltoOscuro: 'y en los oscuros',
     idioma: 'El idioma de la instalación',
     idiomaAyuda:
-      'El idioma con el que nacen las cuentas nuevas cuando quien las da de alta no elige otro, y el de los correos que se les escriben.',
+      'El idioma de toda la instalación: interfaz, fechas, correos y textos generados por IA.',
+    traduccionTitulo: 'Revisar el cambio de idioma',
+    traduccionAyuda: 'Revisa y corrige las once plantillas antes de aplicar el idioma a toda la instalación.',
+    traduccionCosto: 'El proveedor externo puede cobrar 22 solicitudes: estimación conservadora de 12 000 tokens de entrada y 8 000 de salida. Puedes aceptarlo o editar las plantillas manualmente.',
+    traducirConfirmando: 'Aceptar costo y traducir',
+    editarManualmente: 'Editar manualmente',
+    asuntoTraducido: 'Asunto',
+    cuerpoTraducido: 'Cuerpo',
+    destinoExistente: 'Versión personalizada existente',
+    aplicarIdioma: 'Aplicar idioma',
     correos: 'Los correos',
     correosAyuda:
       'Los diez correos que manda la aplicación, en los dos idiomas, se editan en su propia pantalla: es del módulo de correo, y aquí sólo se llega a ella.',
@@ -79,7 +88,7 @@ export const ES = {
       'Esta instalación no está sirviendo por https: la contraseña y la sesión viajan sin cifrar por la red. Se puede usar así —para probarla en local, por ejemplo—, y para usarla en serio conviene ponerle un certificado.',
     motorDeIA: 'El motor de IA',
     motorDeIAAyuda:
-      'El motor que redacta el «Motivo» y la «Última acción» de cada ticket. Es opcional: sin él la mesa de ayuda funciona entera, con esos dos campos sin texto. Se levanta aparte, con su propio comando, y puede estar en esta instalación o en otro servidor.',
+      'El motor que redacta el «Motivo» y la «Última acción» de cada ticket. Su configuración es obligatoria; si deja de responder, la mesa de ayuda continúa y recupera los resúmenes cuando vuelva.',
     iaDireccion: 'Dirección del motor',
     iaDireccionAyuda:
       'Dónde escucha el motor. Sirve http o https, con puerto si hace falta. Si se deja vacío, la instalación no tiene motor y el entorno hace de respaldo.',
@@ -90,6 +99,33 @@ export const ES = {
     iaModeloEjemplo: 'qwen2.5-1.5b-instruct',
     probarIA: 'Probar la conexión',
     guardarIA: 'Guardar el motor de IA',
+    iaLocal: 'En este servidor',
+    iaRemota: 'En otro servidor',
+    iaProveedor: 'Proveedor externo',
+    iaCompatible: 'Compatible con OpenAI',
+    iaAutenticacion: 'Autenticación',
+    iaAuth_none: 'Sin autenticación',
+    iaAuth_bearer: 'Token Bearer',
+    iaAuth_header: 'Clave en cabecera',
+    iaAuth_basic: 'Usuario y contraseña',
+    iaCabecera: 'Nombre de la cabecera',
+    iaCredencial: 'Credencial o token',
+    iaPrivacidad: 'Confirmo que los textos del ticket saldrán de este servidor.',
+    iaPrivacidadCosto:
+      'Confirmo que los textos del ticket saldrán de este servidor y que esta prueba puede generar costos del proveedor.',
+    iaCatalogo: 'Modelos locales',
+    iaCargarCatalogo: 'Ver y actualizar el catálogo',
+    iaAceptarLicencia: 'Acepto la licencia de esta versión.',
+    iaDescargar: 'Descargar',
+    iaActivar: 'Activar',
+    iaEliminar: 'Eliminar',
+    iaInstalado: 'Instalado',
+    iaActivo: 'Activo',
+    iaSaludable: 'Motor disponible',
+    iaNoSaludable: 'Motor reiniciándose',
+    iaDescargando: 'Descargando',
+    iaDiscoDisponible: 'Disco disponible: {cantidad}',
+    iaRecursos: 'Descarga {disco} · RAM recomendada {ram}',
     motorOk: 'El motor ha contestado: redacta los dos resúmenes del ticket.',
     motorGuardado: 'El motor de IA se ha guardado.',
     entrada: 'Método de autenticación',
@@ -182,27 +218,29 @@ export const ES = {
   instalacion: {
     titulo: 'Primer arranque',
     intro:
-      'Cuatro pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
+      'Cinco pasos para dejar esta instalación en marcha. Cada paso se guarda al avanzar, así que puedes cerrar y seguir donde lo dejaste.',
     paso1: 'La instalación',
     paso2: 'Cómo se entra',
     paso3: 'Dónde está',
     paso4: 'El correo',
+    paso5: 'La inteligencia artificial',
     pasoDeCuatro: 'Paso {paso} de {total}',
     siguiente: 'Siguiente',
     anterior: 'Anterior',
     terminar: 'Terminar la instalación',
     resumen: 'Resumen',
     motorResponde: 'El motor de IA responde: los dos resúmenes del ticket están disponibles.',
-    motorNoEsta:
-      'El motor de IA no responde. Comprueba que su contenedor está levantado; y si es la primera vez, que ha terminado de bajar el modelo. Puedes terminar sin él: la mesa de ayuda funciona, sin los dos resúmenes, y se añade después desde Configuración.',
     // La contraseña de la cuenta de fábrica **no se pide aquí**: vive en el entorno, y contarlo es
     // justo lo que evita que alguien la busque en la pantalla (sección 4 del documento).
     cuentaDeFabrica:
       'La cuenta de fábrica se llama «admin» y su contraseña es ADMIN_PASSWORD, del archivo de entorno del servidor. Es la puerta que entra siempre, sea cual sea el método elegido, y aquí no se pide: no vive en la base de datos.',
-    correoOpcional:
-      'El correo es opcional: si no pones servidor, la instalación funciona igual, pero no saldrá ningún correo —ni un alta, ni un restablecer, ni un aviso—.',
+    correoObligatorio:
+      'El correo saliente es obligatorio para completar la instalación: se usa en altas, restablecimientos y avisos.',
     correoPuesto: 'Hay un correo saliente configurado.',
-    correoSinPoner: 'No hay correo saliente configurado: no saldrá ningún correo.',
+    credencialPuesta: 'Configurada',
+    sinCredencial: 'No requerida',
+    confirmacionExterna: 'Privacidad y posible costo',
+    confirmacionAceptada: 'Aceptados',
     terminada: 'Esta instalación ya está terminada: no se configura dos veces.',
     correoHost: 'Servidor de correo',
     correoHostAyuda:
@@ -495,6 +533,22 @@ export const ES = {
     resumenSinMotor: 'Sin motor de IA',
     resumenError: 'No se pudo resumir',
     resumenVacio: '—',
+    iaRedaccionAbrir: 'Mejorar con IA',
+    iaRedaccionTitulo: 'Mejorar la redacción con IA',
+    iaRedaccionAyuda: 'Revisa el borrador y elige cómo debe sonar. La propuesta no se guardará hasta que la uses y publiques o guardes el editor principal.',
+    iaRedaccionPrivacidad: 'El motor configurado procesará este texto. Si es un servidor o proveedor externo, el texto saldrá de esta instalación conforme a la configuración aceptada por el Administrador.',
+    iaRedaccionBorrador: 'Borrador',
+    iaRedaccionTono: 'Tonalidad',
+    iaTonoProfesional: 'Profesional',
+    iaTonoCordial: 'Cordial',
+    iaTonoBreve: 'Breve',
+    iaTonoEmpatico: 'Empática',
+    iaTonoTecnico: 'Técnica',
+    iaRedaccionMejorar: 'Mejorar',
+    iaRedaccionRegenerar: 'Volver a generar',
+    iaRedaccionUsar: 'Usar este texto',
+    iaRedaccionGenerando: 'Mejorando la redacción…',
+    iaRedaccionLista: 'La propuesta está lista para revisar.',
     // --- editar donde se muestra (decisión 74) ---
     editarElAsunto: 'Editar el asunto',
     editarLaDescripcion: 'Editar la descripción',
@@ -887,6 +941,7 @@ export const ES = {
 
   comun: {
     volver: 'Volver',
+    cerrar: 'Cerrar',
     cancelar: 'Cancelar',
     cargando: 'Cargando…',
     obligatorio: 'Este campo es obligatorio.',
@@ -902,6 +957,10 @@ export const ES = {
     // El motor de IA (docs/modules/ai.md): o no está, o contestó algo que no vale.
     'ai.unavailable': 'El motor de resúmenes no está disponible. Los tickets funcionan igual.',
     'ai.invalid': 'El motor de resúmenes contestó algo que no se entiende.',
+    'mail.translation.costConfirmationRequired': 'Confirma el posible costo del proveedor o edita las plantillas manualmente.',
+    'mail.translation.incomplete': 'Revisa las once plantillas antes de aplicar el idioma.',
+    'mail.translation.protectedChanged': 'La traducción alteró el HTML o un marcador. Corrige esa plantilla manualmente.',
+    'settings.language.reviewRequired': 'Revisa las once plantillas antes de aplicar el idioma.',
     'tickets.mention.notAllowed': 'No puedes etiquetar a nadie en este ticket.',
 
     'auth.invalidCredentials': 'El correo o la contraseña no son correctos.',
@@ -962,7 +1021,6 @@ export const ES = {
     'users.name.required': 'Faltan el nombre o los apellidos.',
     'users.role.notAllowed': 'No puedes repartir ese papel.',
     'users.origin.unknown': 'Ese origen de cuenta no existe.',
-    'users.language.unknown': 'Ese idioma no existe.',
     'users.directory.notFound': 'El directorio no conoce a esa persona: ya no está allí.',
     'users.origin.byDirectory':
       'Las cuentas del directorio no se crean ni se cambian de origen a mano: quien está en el directorio entra con su cuenta y la suya se pone al día en ese acceso.',
@@ -980,6 +1038,12 @@ export const ES = {
       'La dirección del motor de IA no vale: no hay ninguna que probar, o no empieza por http:// o https:// y le falta su servidor.',
     'settings.ai.unreachable':
       'El motor de IA no ha contestado: revisa la dirección y que esté levantado.',
+    'settings.ai.managerUnavailable': 'El administrador local de modelos no está disponible.',
+    'settings.ai.insufficientMemory':
+      'El modelo requiere {requerida} de RAM y hay {disponible} disponibles. El modelo anterior continúa activo.',
+    'settings.ai.required': 'Configura y prueba el motor de IA antes de entrar al producto.',
+    'settings.unavailable': 'No se ha podido leer la configuración de la instalación.',
+    'settings.ai.licenseRequired': 'Debes aceptar la licencia antes de descargar el modelo.',
     // Las cuatro claves del asistente de primer arranque (docs/primer-arranque.md, sección 6).
     'setup.alreadyInstalled': 'Esta instalación ya está terminada: no se configura dos veces.',
     'setup.step.incomplete': 'A este paso le falta algún dato. Repásalo y vuelve a intentarlo.',
@@ -1000,6 +1064,11 @@ export const ES = {
     'tickets.notFound': 'Ese ticket no existe.',
     'tickets.subject.required': 'Escribe un asunto.',
     'tickets.description.required': 'Escribe una descripción.',
+    'tickets.writing.draft.required': 'Escribe un borrador antes de pedir una mejora.',
+    'tickets.writing.editor.invalid': 'Ese editor no admite la mejora de redacción.',
+    'tickets.writing.tone.invalid': 'Elige una tonalidad válida.',
+    'tickets.writing.unavailable': 'El motor de IA no está disponible. El borrador se conserva.',
+    'tickets.writing.invalid': 'El motor devolvió una propuesta que no se puede utilizar.',
     // El saneador del backend sólo admite las etiquetas y los atributos de su lista blanca, y lo que
     // no está **no se guarda**: se dice, porque un texto que se guarda a medias es peor que uno que se
     // rechaza (docs/modules/tickets.md, sección 2.3). Con el pegado sin formato del editor, a lo que

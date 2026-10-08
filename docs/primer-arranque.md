@@ -1,7 +1,26 @@
 # Primer arranque: la instalación desde cero
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-05
+> **Última actualización:** 2026-10-07
+>
+> **Implementado y verificado el 2026-10-07.** `/setup` exige los cinco pasos en el orden aprobado,
+> prueba y activa la IA antes de sellar, muestra una sola confirmación de privacidad y posible costo
+> para proveedores externos y conserva las descargas parciales de modelos locales para reanudarlas.
+> El cierre confía en la activación de IA guardada y no repite una llamada que podría tener costo.
+> Pasaron las pruebas de servicios, las 218 pruebas unitarias del frontend y el recorrido aislado
+> completo de Playwright: 180 casos ejecutados y 38 omisiones previstas, en PC y móvil.
+>
+> **Corrección del responsable el 2026-10-07.** Al iniciar la implementación se encontró que la
+> sección 11 aprobada colocaba la IA antes del correo, mientras el resto del documento, `AGENTS.md`,
+> el código y las pruebas conservaban Correo en el paso 4 e IA en el paso 5. El responsable eligió
+> explícitamente ese orden. Esta propuesta corregida alinea todo el documento antes de cerrar la
+> implementación; no cambia el contenido de los pasos ni abre producción. El responsable aprobó
+> explícitamente el documento corregido el 2026-10-07.
+>
+> **Enmendado el 2026-10-06**, con aprobación explícita del responsable. Los resultados de guardar y
+> probar una conexión se mostraban antes del asistente y podían quedar fuera de la ventana. Ahora usan el mismo toast de
+> `/settings` para que el resultado permanezca visible desde el paso actual, sin mover los avisos
+> informativos propios de cada paso. Se implementó y verificó en PC y móvil sin cambiar el flujo.
 >
 > **Enmendado el 2026-10-05**, con aprobación explícita del responsable. En el paso 3,
 > la zona elegida sólo se distingue por el resaltado dentro de una lista larga y puede quedar fuera
@@ -17,7 +36,7 @@
 >
 > **Enmendado el 2026-10-03**, conforme a `docs/prueba-local.md` aprobado: El paso de Keycloak
 > admite `internalIssuer` opcional. La preparación de Playwright sobre una base nueva recorre los
-> cuatro pasos en PC y móvil antes de sellar, comprueba la conexión de Mailpit y termina en móvil.
+> cinco pasos en PC y móvil antes de sellar, comprueba Mailpit y la IA y termina en móvil.
 > Esta verificación automatizada sustituye la limitación histórica del punto 3 de las desviaciones.
 >
 > **Enmendado el 2026-09-30**: **el asistente prueba lo que pide**, como prometía la §3 y la §6. Se
@@ -47,16 +66,14 @@
 >    destinatario, y en el asistente no hay ninguno. **Corregido el 2026-09-30**: el paso 4 tiene su
 >    botón y prueba **la conexión y la autenticación**, no el envío, que es lo que se puede comprobar
 >    sin destinatario (§3.1).
-> 2. **El asistente no tiene botón propio de «probar el motor de IA»**: el resumen **dice** si responde
->    —el backend lo pregunta al arrancar el paso y lo devuelve en `aiAvailable`—, que es lo que hace
->    falta saber antes de terminar.
-> 3. **Limitación histórica, corregida el 2026-10-03 en `tests.yml`:** el camino completo de instalación no estaba en la suite de interfaz. El contenedor de las pruebas
->    no habla con la base y no se puede quitar el sello desde él, así que el recorrido de los cuatro
->    pasos se verifica **por la API, a mano** (los cuatro pasos, los 422 de cada paso, las dos pruebas
->    de conexión y el 409 al volver a configurar), y lo que sí está en la suite es **el candado**: en
->    una instalación ya configurada, `/setup` lleva a la entrada y la API lo rechaza.
+> 2. **Desviación histórica, corregida el 2026-10-07:** el asistente no tenía un paso propio para
+>    probar y activar la IA. Ahora el paso 5 guarda una activación válida antes del resumen y el
+>    backend rechaza terminar si falta.
+> 3. **Limitación histórica, corregida el 2026-10-03 y ampliada el 2026-10-07 en `tests.yml`:** el
+>    recorrido completo se ejecuta sobre una instalación desechable en PC y móvil. Comprueba los
+>    cinco pasos, las conexiones, el resumen, el sello y el candado posterior.
 > 4. **Los caminos de la API son** `POST /api/setup/installation`, `/entry`, `/entry/test`, `/location`,
->    `/mail`, `/mail/test` y `/finish`.
+>    `/mail`, `/mail/test`, `/ai` y `/finish`.
 
 ## 1. Qué problema resuelve
 
@@ -89,23 +106,24 @@ aparece** en producción por el simple hecho de actualizar.
 
 ## 3. Qué pregunta, y en qué orden
 
-**Cuatro pasos**, con su línea de avance y un resumen final. Cada paso guarda al avanzar, así que
+**Cinco pasos**, con su línea de avance y un resumen final. Cada paso guarda al avanzar, así que
 cerrar el navegador a medias no pierde lo hecho: al volver, el asistente sigue donde estaba.
 
 | Paso | Qué pide | Por qué |
 | --- | --- | --- |
-| **1 · La instalación** | **El nombre** y **el idioma** | Es lo que se lee en la entrada, en el menú y en los correos |
+| **1 · La instalación** | **El idioma global**, como primer control, y **el nombre** | Es lo que se lee en la interfaz, la entrada, el menú, los correos y los nuevos resúmenes de IA |
 | **2 · Cómo se entra** | **El método** —local, Active Directory o Keycloak— y **sus datos**, **con su prueba**: el botón comprueba lo que corresponda al método elegido. **La cuenta de fábrica se explica siempre**, sea cual sea el método: cómo se llama y **de dónde sale su contraseña** (`ADMIN_PASSWORD`, del entorno) | Es la puerta: sin esto no entra nadie, y la de fábrica entra con **cualquiera** de los tres métodos. **La contraseña no se pide aquí**: sigue en el entorno, y esa regla —que la puerta de fábrica **no dependa de la base**— no se toca |
 | **3 · Dónde está** | **La región horaria** —de la lista con buscador— y **la dirección pública** —esquema, host y puerto—, con **el aviso si no es https** | Deciden cómo se leen las fechas y a dónde apuntan los enlaces de los correos |
 | **4 · El correo** | **El servidor saliente**: host, puerto, TLS, usuario, contraseña y remitente, **con su prueba** | Sin él no sale ningún correo: ni un alta, ni un restablecer, ni un aviso |
+| **5 · Inteligencia artificial** | **Motor local, servidor propio o proveedor externo**. Se elige el modelo o conexión, se aceptan licencia y privacidad cuando correspondan y se ejecuta **Probar y activar** | La IA es obligatoria y diferencial del producto; no se sella la instalación sin una generación válida en el idioma global |
 
 Una instalación nueva abre el asistente completo en **inglés** y muestra English como idioma. El
 selector del paso 1 cambia de inmediato todos los textos y `html[lang]`, y recuerda la elección. Si
 el paso ya se guardó, al volver manda el idioma persistido en la instalación.
 
-**Y el resumen**, antes de terminar: lo que se ha configurado, **con la prueba del motor de IA**
-(«responde» o «no está, la mesa de ayuda funciona igual») y un botón para **terminar la instalación**,
-que es lo que pone el sello.
+**Y el resumen**, antes de terminar: muestra la modalidad, el proveedor o servidor, el modelo y si
+hay credencial, sin enseñar secretos. En proveedor externo repite el aviso de privacidad aceptado.
+El botón **Terminar la instalación** sólo se habilita con los cinco pasos completos y pone el sello.
 
 **Los tres métodos se pueden elegir desde el principio**, sin esperar a que estén configurados: en
 Configuración un método sin sus datos se ofrece apagado, y aquí **no puede ser**, porque si no habría
@@ -139,10 +157,9 @@ en el log.
 
 ## 4. Lo que el asistente **no** pregunta, y por qué
 
-- **El modelo de IA.** Vive **en los contenedores** (`ai.yml`), y el asistente sólo **prueba** el
-  motor. El modelo ocupa ~1,1 GB y se sirve desde un volumen: es un asunto de la máquina que lo
-  levanta, no de la configuración del producto. El README dice cuál se baja por defecto, cómo
-  cambiarlo por otro `.gguf` y **qué recursos consume**.
+- **Claves comerciales, compra de créditos y GPU.** El asistente acepta una credencial que ya
+  exista y permite elegir un modelo del catálogo local, pero no contrata servicios ni configura el
+  hardware del servidor.
 - **La contraseña de la cuenta de fábrica.** Sigue siendo `ADMIN_PASSWORD` del entorno
   (`docs/usuarios-y-permisos.md`, sección 8). El asistente **cuenta de dónde sale** en lugar de
   pedirla, porque si la contraseña viviera en la base, la puerta de fábrica **dejaría de ser
@@ -175,13 +192,12 @@ Producción no declara esas sugerencias y empieza vacía. El módulo `mail` nunc
   salir a la red: el 409 con el sello puesto, la validación de los datos malos y que con datos buenos
   se llama a la prueba del módulo—, la del remitente del correo —que conecta y autentica sin mandar
   nada— y **la que más importa en la suite de interfaz**: que **una instalación ya configurada no
-  enseña el asistente y su API lo rechaza**. El recorrido de los cuatro pasos desde cero no está en la
-  suite —el contenedor de las pruebas no toca la base y no puede quitar el sello—: se verifica por la
-  API, a mano (desviación 3).
+  enseña el asistente y su API lo rechaza**. El recorrido completo de los cinco pasos se ejecuta
+  automáticamente sobre una instalación desechable, en PC y móvil, antes de la suite normal.
 
 ## 7. Lo que queda fuera, y hay que decirlo
 
-- **Elegir el modelo de IA desde la aplicación** no entra: queda dicho arriba por qué.
+- **Comprar o aprovisionar un proveedor de IA**: se configura una cuenta y credencial existentes.
 - **Reinstalar**: una vez sellada, la configuración se cambia en **Configuración**. Para volver a
   empezar de cero hay que **borrar la base** y aplicar el esquema otra vez, y eso es del servidor.
 - **Mientras el asistente esté sin terminar, la instalación no se expone**: cualquiera que llegue a
@@ -191,7 +207,7 @@ Producción no declara esas sugerencias y empieza vacía. El módulo `mail` nunc
 ## 8. Qué habilita este documento
 
 Aprobar esta propuesta habilita: la columna del sello en `v1.0.0.sql` con su relleno, la ruta
-`/setup` con sus cuatro pasos y su resumen, los endpoints `/api/setup/**` con su candado, el correo
+`/setup` con sus cinco pasos y su resumen, los endpoints `/api/setup/**` con su candado, el correo
 saliente en la base —y fuera del entorno—, y las pruebas de las tres capas. **Nada de eso se
 escribe hasta que el responsable lo apruebe.**
 
@@ -265,3 +281,89 @@ El repaso no deja decisiones abiertas. El responsable aprobó explícitamente es
   el atributo de sólo lectura.
 - Los cuatro casos de `arranque-instalacion.spec.ts` pasan en PC y móvil después de sellar esa
   instalación.
+
+## 10. Resultados visibles durante el primer arranque
+
+### 10.1 Regla
+
+El mensaje general situado antes del asistente se sustituye por el toast compartido definido en
+`docs/interfaz-y-experiencia.md`, sección 15. Lo usan los resultados transitorios de:
+
+- fallar al guardar un paso o avanzar; cuando el guardado sale bien, el asistente avanza sin añadir
+  un mensaje redundante;
+- probar Active Directory o Keycloak en el paso 2;
+- probar el correo saliente en el paso 4;
+- errores generales al cargar, guardar, probar o terminar la instalación.
+
+Los avisos que explican el paso actual permanecen dentro del contenido: la cuenta de fábrica, la
+dirección sin HTTPS y cualquier información que deba poder consultarse mientras se rellenan los
+campos. Los errores de un campo permanecen asociados al campo cuando exista esa presentación.
+
+### 10.2 Alcance y criterios de aceptación
+
+Esta enmienda visual no cambia los pasos, sus endpoints públicos, el sello, las validaciones, el
+idioma inicial, la persistencia ni el resumen final.
+
+1. El resultado de las pruebas de los pasos 2 y 4 se ve en la ventana actual en PC y móvil.
+2. Un fallo al avanzar se muestra sin llevar la ventana al principio y permanece hasta cerrarse o
+   ser sustituido.
+3. Un éxito desaparece a los 5 segundos y puede cerrarse antes.
+4. Los avisos de contexto siguen dentro del paso al cambiar de idioma o de ancho de pantalla.
+5. Las pruebas del asistente comprueban una conexión correcta, una fallida, el cierre manual y la
+   posición fija del toast.
+
+### 10.3 Decisión y repaso
+
+El responsable confirmó el 2026-10-06 que `/setup` use el mismo componente y las mismas reglas que
+`/settings`. El repaso común quedó cerrado en `docs/interfaz-y-experiencia.md`, sección 15.7, sin
+decisiones abiertas.
+
+### 10.4 Implementación y verificación
+
+`setup-page` muestra su señal general mediante `app-toast`; sus avisos explicativos permanecen dentro
+del paso correspondiente. La preparación Playwright de la instalación vacía comprobó en PC y móvil
+que la prueba del correo muestra el toast fijo dentro de la ventana y que su botón **Cerrar** lo
+retira. El recorrido vigente conserva los cinco pasos, sella la instalación y termina en la entrada.
+
+## 11. Implementación: cinco pasos con idioma global e IA obligatoria
+
+El orden nuevo es:
+
+1. **Idioma e instalación:** el idioma es el primer control y cambia inmediatamente todos los textos
+   del asistente; después se pide el nombre. Ese idioma será único para interfaz, fechas, correos e IA.
+2. **Cómo se entra:** conserva local, AD y Keycloak y sus pruebas actuales.
+3. **Dónde está:** conserva zona horaria y dirección pública.
+4. **Correo saliente:** conserva la prueba de conexión y autenticación sin enviar correo.
+5. **Inteligencia artificial:** local, servidor propio o proveedor. En local se elige el catálogo,
+   se comprueban recursos, se muestra fuente, licencia, tamaño y checksum, se acepta la licencia de
+   esa versión, se descarga con progreso y se activa. En externo se escriben conexión y secreto, y
+   se confirma qué datos saldrán del servidor.
+
+El paso 5 sólo queda completo después de **Probar y activar** con una generación artificial válida
+en el idioma global. Una descarga local incompleta **se reanuda desde el estado guardado** y el
+asistente permanece en el paso 5; cerrar o recargar el navegador no convierte una descarga parcial
+en modelo instalado ni obliga a repetir lo ya descargado. El botón de terminar permanece
+deshabilitado si falta IA, correo o cualquiera de los pasos anteriores.
+
+Una activación válida ya guardada basta para terminar. **Terminar no repite la prueba de IA**: si el
+motor deja de responder entre la activación y el sello, la instalación puede completarse y la caída
+posterior se trata como cualquier indisponibilidad del motor, dejando los trabajos pendientes. Así
+una interrupción transitoria no bloquea una instalación correctamente configurada.
+
+El resumen final muestra modalidad, proveedor o servidor, modelo y si la credencial está puesta,
+nunca el secreto. Para un proveedor externo, antes de probar se presenta **una sola confirmación**
+que reúne el aviso de privacidad y el posible costo; no se piden dos aceptaciones ni se repite la
+confirmación para la misma activación. El resumen recuerda que fue aceptada. Al terminar se sella en
+una sola operación como hoy; un fallo no deja un sello parcial.
+
+Quedan fuera pedir claves comerciales, comprar créditos y configurar GPU. La contraseña de fábrica
+continúa en `ADMIN_PASSWORD`. La propuesta sustituye la afirmación actual de que el asistente sólo
+comprueba automáticamente un motor opcional y la exclusión de elegir modelo desde la aplicación.
+
+El responsable confirmó el alcance el 2026-10-06. El repaso añadió la aceptación de licencia e
+integridad del catálogo y confirmó que los costos sólo afectan a recuperaciones posteriores, que en
+proveedor quedan bajo decisión del Administrador. El 2026-10-07 corrigió explícitamente el orden:
+Correo permanece en el paso 4 e IA ocupa el paso 5. En el repaso final del mismo día eligió que una
+activación guardada permita sellar aunque el motor caiga después, una sola confirmación conjunta de
+privacidad y costo para proveedores externos, y reanudar las descargas locales incompletas. No
+quedan decisiones abiertas.

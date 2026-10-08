@@ -1,7 +1,124 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-05
+> **Última actualización:** 2026-10-08
+>
+> **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
+> documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
+> logging en el navegador. Las suites de frontend, build y backend pasaron; producción no se tocó.
+>
+> **Actualizado el 2026-10-08 (sexta vez):** la visibilidad de «Mejorar con IA» quedó implementada.
+> El detalle devuelve `capabilities.aiWriting`; la interfaz sólo monta el botón y el modal cuando es
+> verdadera. Configuración se distingue de salud y la IA continúa obligatoria. Pasaron backend, 225
+> pruebas del frontend y Playwright en PC y móvil; los tres documentos vuelven a **as-built**, el
+> entorno desechable quedó limpio y producción no se tocó.
+>
+> **Actualizado el 2026-10-08 (quinta vez):** `modules/ai.md`, `modules/tickets.md` e
+> `interfaz-y-experiencia.md` pasan a **propuesta** para ocultar «Mejorar con IA» cuando no existe una
+> configuración activa. El responsable eligió 1A–3A: configuración y no salud, capacidad dentro del
+> detalle y actualización al recargar. No quedaron decisiones abiertas y la propuesta fue aprobada.
+> Durante la implementación se confirmó que la IA obligatoria impide abrir tickets en una instalación
+> sellada sin configurar. El responsable decidió mantener esa regla: el estado falso se probará en
+> backend y componente, y Playwright conservará el recorrido configurado. La corrección fue aprobada
+> y quedó implementada.
+>
+> **Actualizado el 2026-10-08 (cuarta vez):** el asistente de redacción aprobado quedó implementado.
+> Soporte y Desarrollo pueden mejorar descripciones y comentarios con cinco tonos, revisar la
+> propuesta y aplicarla al borrador sin publicar. El backend deriva el destinatario y aplica los
+> permisos del ticket antes de delegar en IA. Pasaron backend, 224 pruebas del frontend y Playwright
+> en PC y móvil; los cuatro documentos vuelven a **as-built** y producción no se tocó.
+>
+> **Actualizado el 2026-10-08 (tercera vez):** `modules/ai.md`, `modules/tickets.md`,
+> `usuarios-y-permisos.md` e `interfaz-y-experiencia.md` pasan a **propuesta** para añadir el
+> asistente de redacción con IA elegido en 1A–19A. Mejora borradores de Soporte y Desarrollo con
+> contexto mínimo, revisión obligatoria y sin persistir prompts ni resultados. No quedan decisiones
+> abiertas; el responsable aprobó explícitamente los cuatro documentos el 2026-10-08.
+> Al preparar el código apareció una contradicción con la frontera modular. El responsable eligió
+> 20A: la pantalla llamará a `/api/tickets/{number}/writing/improve` y `tickets` delegará en `ai`.
+> El responsable aprobó explícitamente esta corrección; `modules/ai.md` y `modules/tickets.md`
+> vuelven a **aprobado** para implementar.
+> Durante la implementación se encontró que el plazo HTTP de 60 segundos cortaría un motor autorizado
+> a tardar 240. El responsable eligió 21A: sólo la ruta de redacción dispondrá de 270 segundos. Los
+> dos documentos vuelven a **aprobado** tras su aprobación explícita.
+>
+> **Actualizado el 2026-10-08 (segunda vez):** el bloque 6 cerró el repaso de formato de todas las
+> pantallas en ambos idiomas, ocho temas y tres resoluciones. Corrigió en el componente compartido el
+> único hallazgo real, un desbordamiento de `/users` en inglés y móvil. Pasaron 220 pruebas unitarias
+> y Playwright completo (180 aprobadas y 38 omisiones previstas); quedaron cero hallazgos abiertos.
+> Los cuatro documentos vuelven a **as-built** y producción permaneció fuera del recorrido.
+>
+> **Actualizado el 2026-10-08:** el bloque 5 verificó fuente y checksum de los tres modelos, corrigió
+> el cambio 1.5B→3B y completó la validación real. La activación usa RSS recuperable, vuelve a medir,
+> restaura el origen ante fallos y rechaza 7B sin interrumpir 3B; la interfaz muestra 2/4/6 GiB y el
+> error con memoria requerida/disponible. Pasaron `ai-manager`, backend, 220 pruebas del frontend y
+> el recorrido afectado en PC y móvil. La limpieza no dejó recursos `block5`. Los seis documentos
+> del bloque vuelven a **as-built** y producción continúa aparcada hasta cerrar la versión 1.0.0.
+>
+> **Actualizado el 2026-10-07 (séptima vez):** se abre el bloque 5. `modules/ai.md`, `ambientes.md` y
+> `prueba-local.md` pasan a **propuesta** para validar los GGUF reales 1.5B, 3B y 7B en un entorno
+> desechable. El responsable eligió 1A–9A y cerró el repaso con 10A–14A: se miden recursos, tiempos,
+> contrato y recuperación; se prueban `/setup` y `/settings` en PC y móvil; el 7B no se activa por
+> falta de RAM; 3B y 7B se retiran primero, y la limpieza final destruye también el 1.5B junto con
+> todos los recursos temporales. No quedan decisiones abiertas; los tres documentos fueron
+> aprobados explícitamente el 2026-10-08 y la validación puede comenzar.
+>
+> **Actualizado el 2026-10-07 (sexta vez):** revisión de coherencia documental, sin cambios de
+> comportamiento. Se alinean los resúmenes vigentes con los cinco pasos de `/setup`, el idioma
+> global, las cinco tablas de configuración de una fila y las dos auxiliares de IA, y el motor local
+> que sólo se levanta para esa modalidad. También se cierran referencias que aún describían como
+> pendientes los cuatro bloques ya implementados y verificados. Todos sus documentos permanecen
+> **as-built** y producción continúa aparcada hasta cerrar la versión 1.0.0.
+>
+> **Actualizado el 2026-10-07 (quinta vez):** el bloque 4 detecta diferencias entre la arquitectura
+> aprobada y los clientes/administrador actuales de IA. `arquitectura.md`, `ambientes.md` y
+> `modules/ai.md` pasaron a **propuesta** para cerrar redirecciones con credenciales, supervisión de
+> `llama-server`, recursos efectivos y pruebas aisladas de los cuatro adaptadores. El responsable
+> eligió 1A, 2A, 3A y 4A; el repaso cerró 5A, 6A, 7A y 8A sin asuntos abiertos. Falta únicamente la
+> aprobación documental, concedida explícitamente el 2026-10-07. El bloque vuelve a **as-built** tras
+> pasar backend, administrador local, 218 pruebas del frontend y 180 recorridos E2E ejecutados.
+>
+> **Actualizado el 2026-10-07 (cuarta vez):** al abrir el bloque 3 se encontró una contradicción en
+> `primer-arranque.md`: la sección aprobada intercambiaba Correo e IA frente al resto del documento,
+> el código y las pruebas. El responsable corrigió el orden: Correo permanece en el paso 4 e IA en
+> el paso 5. El repaso final decidió confiar en la activación guardada al sellar, reunir privacidad
+> y costo en una sola confirmación y reanudar descargas locales. El documento vuelve a
+> **as-built** tras verificar servicios, 218 pruebas unitarias y 180 recorridos E2E ejecutados.
+>
+> **Actualizado el 2026-10-07 (tercera vez):** `flujos.md` vuelve a **as-built**. Los ocho avisos de
+> tickets y los tres correos de cuenta consultan el idioma global vigente al enviarse, sin separar
+> destinatarios por preferencias personales. Producción continúa aparcada hasta cerrar la 1.0.0.
+>
+> **Actualizado el 2026-10-07 (segunda vez):** `usuarios-y-permisos.md`, `modules/auth.md` y
+> `modules/users.md` vuelven a **as-built**. La columna `users.language`, los campos de API y el
+> estado de sesión desaparecen; los correos de cuenta consultan el idioma global. Producción sigue
+> aparcada hasta el cierre de la versión 1.0.0.
+>
+> **Actualizado el 2026-10-07:** se corrige la propuesta coordinada del idioma. Sólo las once
+> plantillas de correo se traducen; siempre pueden editarse manualmente y sólo un proveedor externo
+> exige confirmar la estimación económica. Los resúmenes existentes se conservan visibles en su
+> idioma original; los nuevos o recalculados usan el idioma global vigente. La corrección fue
+> aprobada explícitamente y habilita implementar.
+>
+> **Actualizado el 2026-10-06 (tercera vez):** pasan a **propuesta** las enmiendas coordinadas de
+> `modules/ai.md`, `modules/settings.md`, `primer-arranque.md`, `usuarios-y-permisos.md`,
+> `modules/auth.md`, `modules/users.md`, `modules/mail.md`, `modules/tickets.md`, `flujos.md`,
+> `interfaz-y-experiencia.md`, `arquitectura.md` y `ambientes.md`. Definen IA obligatoria —local,
+> servidor propio o proveedor— administrada desde
+> la interfaz, e idioma único para interfaz, correos e IA. El repaso quedó cerrado sin decisiones
+> abiertas y el responsable aprobó explícitamente la propuesta. La implementación puede comenzar.
+>
+> **Actualizado el 2026-10-06 (segunda vez):** `prueba-local.md`, `ambientes.md` y
+> `arquitectura.md` vuelven a **as-built**. La corrección conserva el código de pruebas de sólo
+> lectura, arranca su backend una vez con `go run .` y retira `backend_tmp`. La ejecución canónica
+> sin perfiles opcionales terminó con 177 casos aprobados y 39 omitidos, salida 0; `down -v` eliminó
+> todos los recursos.
+>
+> **Actualizado el 2026-10-06:** `interfaz-y-experiencia.md`, `modules/settings.md` y
+> `primer-arranque.md` vuelven a **as-built**. La enmienda sustituye los avisos generales situados al
+> principio de `/settings` y `/setup` por un toast compartido, visible desde la posición actual. Los
+> avisos permanentes permanecen en su sección. El repaso quedó cerrado, el responsable aprobó los
+> tres documentos y la implementación pasó 220 pruebas unitarias, la compilación y los recorridos
+> afectados de Playwright en PC y móvil.
 >
 > **Actualizado el 2026-10-05 (tercera vez)**: `modules/settings.md` e
 > `interfaz-y-experiencia.md` vuelven a `as-built` tras mostrar explícitamente en `/settings` la zona
@@ -145,20 +262,20 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
-| `prueba-local.md` | **as-built** (1 enmienda) | Arranque local vacío con migración automática antes del backend, ejemplos opcionales, `/setup` inicialmente en inglés con traducción inmediata, valores editables de Mailpit en desarrollo, Keycloak local y pruebas aisladas. Aprobado explícitamente, implementado y verificado en Linux |
-| `arquitectura.md` | **as-built** (9 enmiendas) | Stack, repositorio, contenedores, esquema, modularidad y estado construido. En desarrollo, la migración automática termina antes de iniciar el backend; el seeder permanece opcional |
+| `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
+| `arquitectura.md` | **as-built** | Bloque 7: coherencia documental y fronteras automáticas del frontend; sin logging de aplicación |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
-| `usuarios-y-permisos.md` | **as-built** (10 enmiendas) | La matriz papel × acción, los tres caminos de entrada (correo, AD, Keycloak), las reglas de convivencia, la sesión, el ciclo de vida de las cuentas y la cuenta de administrador de fábrica. Enmendado el 2026-09-25 con **la instalación entrando por un método a la vez** (sección 5) y con que **la cuenta de fábrica entra siempre** (sección 8) |
-| `flujos.md` | **as-built** (1 enmienda) | Los seis recorridos paso a paso (alta, triaje, escalado, trabajo de Desarrollo, cierre y reapertura), con los ocho avisos por correo |
-| `modules/settings.md` | **as-built** (11 enmiendas) | Configuración y marca de la instalación. `/settings` muestra explícitamente la zona seleccionada mediante el mismo campo de sólo lectura de `/setup`, sin cambios de persistencia |
-| `modules/mail.md` | **as-built** (6 enmiendas) | El módulo `mail`: la tabla de plantillas, los marcadores, **los veintidós textos por defecto** (once correos en dos idiomas), el envío en HTML con versión de texto, **las claves de error con su código y lo que devuelve cada endpoint** (sección 8) y el editor. **Está entero**: backend y el editor del frontend. Enmendado el 2026-09-30: estrena **`Probar`**, que **conecta y autentica sin mandar ningún correo** (`MAIL FROM`, `RCPT TO` y `DATA` no se usan) |
-| `modules/auth.md` | **as-built** (8 enmiendas) | El módulo `auth`: la tabla de tokens de enlace, el token de sesión, las contraseñas, los tres caminos de entrada, los correos de cuenta, los endpoints, las seis pantallas del armazón y los contenedores de pruebas. Enmendado tres veces el 2026-09-23 al implementarlo (las claves del token de sesión y del 403, que no tenían ninguna; el campo de entrada, la respuesta, la ruta del enlace y dónde viaja su token; y el paso 1 de la sección 13), dos veces el 2026-09-25 al terminar **el camino de AD** —con la **corrección del responsable**: quien está en el directorio entra directamente, sin alta manual— y y **el de Keycloak**: las cuatro claves de error nuevas, cómo llega el navegador a Keycloak en desarrollo (por el mismo dominio, para que el emisor sea uno solo) y cómo vuelve el token en el fragmento. **Está entero**: los tres caminos de entrada, hechos y verificados. La sexta enmienda, el 2026-09-25, es **un método de entrada a la vez** (sección 5.0): el directorio y el reino se leen de la base en cada intento, los otros dos caminos quedan apagados, y **la cuenta de fábrica entra siempre** por su puerta. La séptima, el 2026-10-01: **el directorio de pruebas y Keycloak dejan `dev.yml`** y pasan a `active-directory.yml` y `keycloak.yml`, con **su propio comando** y la red `catalina-support-dev` que posee `dev.yml`; **el perfil `auth` desaparece** (sección 11 y decisión 1) |
-| `modules/users.md` | **as-built** (5 enmiendas) | El módulo `users`: la tabla de cuentas, los endpoints, las reglas del alta, el cambio de papel, la desactivación y el perfil propio. Enmendado el 2026-09-23 (los códigos de cada clave, las claves que faltaban y el reenvío a cuentas desactivadas) y dos veces el 2026-09-24 (nadie se desactiva a sí mismo y la cuenta de fábrica no tiene perfil; y **las cinco decisiones de sus pantallas**), y dos veces el 2026-09-25: al implementar **las tres acciones que dependían del directorio** —reactivar pregunta al directorio en AD y no se hace a mano en Keycloak, y el alta y el cambio de origen hacia el directorio no se hacen a mano—. **Está entero**: backend, las tres pantallas y esas tres acciones. La última, también del 2026-09-25: la pregunta al directorio **la contesta `auth`**, que es quien tiene la configuración guardada |
-| `interfaz-y-experiencia.md` | **as-built** (41 enmiendas) | Principios, forma de la aplicación, pantallas, temas, multi-dispositivo y accesibilidad. `/setup` y `/settings` muestran explícitamente la zona seleccionada mediante el mismo patrón |
-| `primer-arranque.md` | **as-built** (4 enmiendas) | La vista de primer arranque, su sello y sus pruebas. El paso 3 muestra en un campo de sólo lectura la región seleccionada, con el identificador IANA exacto; verificado en PC y móvil |
-| `ambientes.md` | **as-built** (21 enmiendas) | Runbook de desarrollo y producción, migraciones, copias de seguridad y las tres capas de pruebas. El arranque local aplica el esquema automáticamente; los ejemplos siguen siendo opcionales |
-| `modules/ai.md` | **as-built** (2 enmiendas) | El módulo `ai`: los dos resúmenes del ticket —**«Motivo»** y **«Última acción»**— que redacta un motor de inteligencia artificial **en un contenedor aparte**, en español y en inglés. El motor y su modelo, qué texto se le manda, la tabla `ai_insights`, el contrato entre módulos, los reintentos y los estados, y lo que **no** hace. **Escrito el 2026-09-27**; **enmendado el 2026-09-30** con su dirección y su modelo **configurables desde Configuración**, y **el 2026-10-01** para corregir los recursos: **1500m de memoria**, **sin tope de CPU** y **~1,44 GiB medidos** |
-| `modules/tickets.md` | **as-built** (12 enmiendas) | Modelo de datos, numeración, transiciones de los dos ciclos de vida, adjuntos y la lista cerrada de endpoints. Aprobado tras tres repasos, y **enmendado el 2026-09-24** al empezar a implementarlo: dos erratas, entre quién se reparte un interno, quién reabre el interno, el chip de tipo de la bandeja y las cuatro decisiones que el modelo no tenía resueltas; y otra vez ese día, al construir las pantallas. **Está entero**: backend y las pantallas. El 2026-09-25 llegó **el guion de copias** y el 2026-09-26 **los adjuntos dentro del texto** (sección 2.3): el cuerpo con formato, la lista blanca de etiquetas, las cuatro extensiones de vídeo y las decisiones 45 a 49 |
+| `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
+| `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
+| `modules/settings.md` | **as-built** | Transporta memoria requerida/disponible en fallos de activación local |
+| `modules/mail.md` | **as-built** | Usa el idioma global y genera borradores revisables o manuales de las once plantillas al cambiarlo |
+| `modules/auth.md` | **as-built** | Identidad y sesión no llevan idioma personal; los correos de cuenta usan el idioma global |
+| `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
+| `interfaz-y-experiencia.md` | **as-built** | Oculta la ayuda de redacción cuando el detalle no declara una IA configurada |
+| `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
+| `ambientes.md` | **as-built** | Matriz visual aislada verificada y limpiada; producción no se tocó |
+| `modules/ai.md` | **as-built** | Expone internamente sólo si existe una configuración activa, sin comprobar salud |
+| `modules/tickets.md` | **as-built** | Lleva `capabilities.aiWriting` en el detalle y la recalcula en cada lectura |
 
 La cadena de producto **está completa**: siete documentos que cubren qué se construye, cómo se
 comporta, cómo se ve y cómo se despliega. Además, **cada módulo tiene su documento**, que se escribe

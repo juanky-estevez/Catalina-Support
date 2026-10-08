@@ -20,7 +20,6 @@ var (
 	ErrEmailDuplicated   = errors.New("users.email.duplicated")
 	ErrRoleNotAllowed    = errors.New("users.role.notAllowed")
 	ErrOriginUnknown     = errors.New("users.origin.unknown")
-	ErrLanguageUnknown   = errors.New("users.language.unknown")
 	ErrDirectoryNotFound = errors.New("users.directory.notFound")
 	// ErrPasswordNotLocal: se ha pedido cambiar la contraseña de una cuenta que **no es local**. Con
 	// Active Directory o Keycloak la contraseña la comprueba el directorio, así que un enlace nuestro no
@@ -48,15 +47,6 @@ var (
 // Se declara **aquí, en quien lo usa**, y `auth` lo cumple sin saber que existe esta interfaz: así
 // ninguno de los dos módulos importa al otro y no hay círculo que no compile. Quien los une es
 // `main.go` (docs/arquitectura.md, sección 4).
-// Installation es lo que este módulo necesita de `settings`: el idioma de la instalación.
-//
-// Es el idioma con el que nacen las cuentas a las que nadie les ha elegido uno, y con el que se les
-// escriben los correos. Se declara aquí, en quien lo usa, y `settings` lo cumple sin saber que existe
-// esta interfaz (docs/arquitectura.md, sección 4).
-type Installation interface {
-	Language() (string, error)
-}
-
 type PasswordLinks interface {
 	// Invite emite el enlace de alta (24 horas) y manda el correo.
 	Invite(account auth.Account, requestedBy *int64) error
@@ -76,10 +66,9 @@ type Directory interface {
 
 // Service son las cuentas.
 type Service struct {
-	repo         *repositories.UserRepository
-	links        PasswordLinks
-	installation Installation
-	directory    Directory
+	repo      *repositories.UserRepository
+	links     PasswordLinks
+	directory Directory
 }
 
 // NewService construye el servicio.
@@ -94,10 +83,6 @@ func NewService(repo *repositories.UserRepository) *Service {
 // SetPasswordLinks conecta el módulo de contraseñas. Se llama una vez, al arrancar.
 func (s *Service) SetPasswordLinks(links PasswordLinks) { s.links = links }
 
-// SetInstallation conecta la configuración de la instalación, de donde sale el idioma con el que
-// nacen las cuentas a las que nadie les ha elegido uno.
-func (s *Service) SetInstallation(installation Installation) { s.installation = installation }
-
 // SetDirectory conecta el directorio de la organización, que es lo que hace falta para comprobar que
 // una cuenta de AD sigue estando allí antes de reactivarla. Sin él, ese camino no existe y la
 // reactivación de una cuenta de AD se rechaza diciendo que no se puede comprobar.
@@ -110,7 +95,6 @@ type CreateInput struct {
 	Email    string
 	Role     string
 	Origin   string
-	Language string
 	// ExternalID sólo se usa en las cuentas de directorio, y lo resuelve quien las da de alta.
 	ExternalID string
 }
@@ -124,7 +108,6 @@ func (s *Service) Create(input CreateInput, actor auth.Identity) (auth.Account, 
 	input.Email = strings.TrimSpace(input.Email)
 	input.Role = strings.TrimSpace(input.Role)
 	input.Origin = strings.TrimSpace(input.Origin)
-	input.Language = strings.TrimSpace(input.Language)
 
 	if input.Name == "" || input.LastName == "" {
 		return auth.Account{}, ErrNameRequired
@@ -147,17 +130,8 @@ func (s *Service) Create(input CreateInput, actor auth.Identity) (auth.Account, 
 	if input.Origin != auth.OriginLocal {
 		return auth.Account{}, ErrOriginByDirectory
 	}
-	// El idioma es opcional: si no lo eligen, se le escriben los correos en español, que es el idioma
-	// de la instalación por defecto.
-	if input.Language == "" {
-		// **El idioma de la instalación**, y sólo si no hay ninguno, español: es el idioma con el que
-		// nacen las cuentas cuando quien da de alta no elige (docs/modules/settings.md).
-		input.Language = s.idiomaDeLaInstalacion()
-	}
-	if input.Language != "es" && input.Language != "en" {
-		return auth.Account{}, ErrLanguageUnknown
-	}
-
+	// El idioma es global. Se ignora el valor personal de clientes anteriores y se conserva en esta
+	// columna sólo mientras la migración 1.0.0 termina de retirarla.
 	repetido, err := s.repo.EmailExists(input.Email, 0)
 	if err != nil {
 		return auth.Account{}, err
@@ -172,7 +146,6 @@ func (s *Service) Create(input CreateInput, actor auth.Identity) (auth.Account, 
 		Email:    input.Email,
 		Role:     input.Role,
 		Origin:   input.Origin,
-		Language: input.Language,
 		IsActive: true,
 	}
 	if input.ExternalID != "" {
@@ -341,23 +314,6 @@ func (s *Service) TouchLastLogin(id int64) error {
 		return auth.ErrAccountNotFound
 	}
 	return err
-}
-
-// idiomaDeLaInstalacion lee el idioma de la instalación, con español como último recurso.
-//
-// Si `settings` no responde, se sigue con español: una instalación sin idioma no puede dejar sin dar
-// de alta a nadie.
-func (s *Service) idiomaDeLaInstalacion() string {
-	if s.installation == nil {
-		return "es"
-	}
-
-	idioma, err := s.installation.Language()
-	if err != nil || (idioma != "es" && idioma != "en") {
-		return "es"
-	}
-
-	return idioma
 }
 
 // CanAssignRole dice si quien da de alta puede repartir ese papel: Soporte sólo crea usuarios, y

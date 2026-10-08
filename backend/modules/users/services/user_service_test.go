@@ -109,11 +109,6 @@ func TestCreateSeCortaAntesDeLaBase(t *testing.T) {
 			ErrOriginUnknown,
 		},
 		{
-			"idioma inventado",
-			CreateInput{Name: "Ana", LastName: "Pérez", Email: "ana@ejemplo.com", Role: auth.RoleUsuario, Origin: auth.OriginLocal, Language: "fr"},
-			ErrLanguageUnknown,
-		},
-		{
 			// Las cuentas de directorio **no se dan de alta a mano**: quien está en el directorio entra
 			// solo y su cuenta nace en ese primer acceso (docs/modules/users.md, sección 5, punto 4).
 			"alta de una cuenta de AD",
@@ -195,16 +190,15 @@ func TestPatchDeSoporteSoloCambiaElNombre(t *testing.T) {
 		}
 	}()
 
-	// Lo que no puede: el correo, el papel, el idioma ni el estado.
+	// Lo que no puede: el correo, el papel ni el estado. El idioma personal ya no existe como
+	// preferencia: los clientes antiguos pueden enviarlo, pero el servicio lo ignora.
 	correo := "ana@ejemplo.com"
 	papel := auth.RoleAdministrador
-	idioma := "en"
 	activo := true
 
 	for nombreDelCaso, entrada := range map[string]PatchInput{
 		"el correo": {Email: &correo},
 		"el papel":  {Role: &papel},
-		"el idioma": {Language: &idioma},
 		"el estado": {IsActive: &activo},
 	} {
 		if _, err := servicio.Patch(7, entrada, soporte); !errors.Is(err, ErrRoleNotAllowed) {
@@ -231,26 +225,6 @@ func TestPerfilPropioNoCambiaLoAjeno(t *testing.T) {
 	if _, err := servicio.PatchOwn(PatchInput{IsActive: &desactivar}, usuario); !errors.Is(err, ErrStateHasItsOwnAction) {
 		t.Fatal("el estado se cambia con su propia acción, tampoco desde el perfil")
 	}
-}
-
-// **El límite de Soporte es para editar a otros.** De su propia cuenta, Soporte cambia lo mismo que
-// cualquiera: su nombre, sus apellidos y su idioma. Este fue un fallo de verdad: el mismo límite se
-// aplicaba al perfil propio y dejaba a Soporte sin poder cambiar su idioma.
-func TestSoporteSiCambiaSuPropioIdioma(t *testing.T) {
-	servicio := NewService(nil)
-	soporte := auth.Identity{ID: 2, Role: auth.RoleSoporte}
-
-	idioma := "en"
-
-	// Pasa la comprobación y sigue adelante: con el repositorio en nil, eso es un pánico, que es lo
-	// que demuestra que no se cortó.
-	defer func() {
-		if recover() == nil {
-			t.Fatal("Soporte debería poder cambiar su propio idioma")
-		}
-	}()
-
-	_, _ = servicio.PatchOwn(PatchInput{Language: &idioma}, soporte)
 }
 
 // La cuenta de fábrica no está en la tabla: su perfil no existe.

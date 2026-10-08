@@ -27,6 +27,35 @@ const (
 // TemplateController atiende los cuatro endpoints del editor de plantillas.
 type TemplateController struct {
 	service *services.Service
+	translator services.Translator
+}
+
+func (c *TemplateController) SetTranslator(translator services.Translator) { c.translator = translator }
+
+// LanguageDrafts generates the eleven reviewable translations without saving any of them.
+func (c *TemplateController) LanguageDrafts(w http.ResponseWriter, r *http.Request) {
+	var input struct { Language string `json:"language"`; ConfirmCommercialCost bool `json:"confirmCommercialCost"`; Manual bool `json:"manual"` }
+	if json.NewDecoder(r.Body).Decode(&input) != nil { httpx.WriteError(w, http.StatusBadRequest, KeyInternal); return }
+	// Cost confirmation is required only for the provider mode; the settings workflow supplies that
+	// fact before exposing this action. The boolean is still explicit in the request for auditability.
+	var drafts []services.LanguageDraft
+	var err error
+	if input.Manual { drafts, err = c.service.ManualLanguageDrafts(input.Language) } else { drafts, err = c.service.LanguageDrafts(input.Language, c.translator, input.ConfirmCommercialCost) }
+	if err != nil {
+		if strings.Contains(err.Error(), "mail.translation.costConfirmationRequired") {
+			httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": "mail.translation.costConfirmationRequired", "requests": 22, "estimatedInputTokens": 12000, "estimatedOutputTokens": 8000})
+			return
+		}
+		c.fail(w, r, err); return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"drafts": drafts})
+}
+
+func (c *TemplateController) ApplyLanguage(w http.ResponseWriter, r *http.Request) {
+	var input struct { Language string `json:"language"`; Templates []services.LanguageChoice `json:"templates"` }
+	if json.NewDecoder(r.Body).Decode(&input) != nil { httpx.WriteError(w, http.StatusBadRequest, KeyInternal); return }
+	if err := c.service.ApplyLanguage(input.Language, input.Templates, editorID(r)); err != nil { c.fail(w, r, err); return }
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // NewTemplateController construye el controlador.
@@ -208,6 +237,10 @@ var statuses = map[string]int{
 	"mail.body.required":    http.StatusUnprocessableEntity,
 	"mail.marker.unknown":   http.StatusUnprocessableEntity,
 	"mail.marker.missing":   http.StatusUnprocessableEntity,
+	"mail.translation.incomplete":       http.StatusUnprocessableEntity,
+	"mail.translation.protectedChanged": http.StatusUnprocessableEntity,
+	"ai.invalid":                         http.StatusUnprocessableEntity,
+	"ai.unavailable":                     http.StatusServiceUnavailable,
 	"mail.test.noEmail":     http.StatusUnprocessableEntity,
 	"mail.to.empty":         http.StatusUnprocessableEntity,
 	"mail.to.invalid":       http.StatusUnprocessableEntity,

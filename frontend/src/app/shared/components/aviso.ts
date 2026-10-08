@@ -1,4 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
+
+import { Icono } from './icono';
 
 /** Las cuatro formas de un aviso. */
 export type FormaDeAviso = 'informacion' | 'exito' | 'error' | 'atencion';
@@ -19,21 +21,38 @@ export interface MensajeDePantalla {
  * Aviso: éxito, error o información (`docs/interfaz-y-experiencia.md`, sección 6.3).
  *
  * **Nunca dice nada sólo con color**: cada forma lleva su icono y su texto, porque el color no se
- * ve igual para todo el mundo (sección 8). El aviso de error se anuncia solo
- * (`role="alert"`), que es lo que hace que un lector de pantalla lo lea sin que nadie lo busque.
+ * ve igual para todo el mundo (sección 8). Error y atención se anuncian solos con `role="alert"`;
+ * éxito e información usan `role="status"`.
  */
 @Component({
   selector: 'app-aviso',
+  imports: [Icono],
   template: `
-    <div [class]="clases()" [attr.role]="forma() === 'error' ? 'alert' : 'status'">
+    <div [class]="clases()" [attr.role]="rol()">
       <span aria-hidden="true">{{ icono() }}</span>
-      <span>{{ texto() }}</span>
+      <span class="min-w-0 flex-1">{{ texto() }}</span>
+      @if (etiquetaCerrar(); as etiqueta) {
+        <button
+          type="button"
+          class="-m-1 ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-fondo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primario"
+          [attr.aria-label]="etiqueta"
+          (click)="cerrado.emit()"
+        >
+          <app-icono nombre="cerrar" />
+        </button>
+      }
     </div>
   `,
 })
 export class Aviso {
   readonly texto = input.required<string>();
   readonly forma = input<FormaDeAviso>('informacion');
+  readonly etiquetaCerrar = input<string | null>(null);
+  readonly cerrado = output<void>();
+
+  protected rol(): 'alert' | 'status' {
+    return this.forma() === 'error' || this.forma() === 'atencion' ? 'alert' : 'status';
+  }
 
   protected icono(): string {
     const iconos: Record<string, string> = {

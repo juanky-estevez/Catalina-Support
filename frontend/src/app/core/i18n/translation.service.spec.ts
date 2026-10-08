@@ -81,26 +81,29 @@ describe('TranslationService', () => {
     expect(respuesta).toBe(textos.textos().errores['error interno']);
   });
 
-  it('cambia de idioma y lo recuerda', () => {
+  it('cambia de idioma sin crear una preferencia personal', () => {
     const textos = TestBed.inject(TranslationService);
 
     textos.cambiar('en');
     expect(textos.textos().entrada.entrar).toBe('Sign in');
-    expect(localStorage.getItem('catalina-support.idioma')).toBe('en');
+    expect(localStorage.getItem('catalina-support.idioma')).toBeNull();
 
     textos.cambiar('es');
     expect(textos.textos().entrada.entrar).toBe('Entrar');
     expect(document.documentElement.lang).toBe('es');
   });
 
-  it('adopta el idioma de la cuenta que entra, y no se deja engañar por uno que no existe', () => {
+  it('adopta sólo versiones globales válidas y nuevas', () => {
     const textos = TestBed.inject(TranslationService);
 
     textos.cambiar('es');
-    textos.usarIdiomaDeCuenta('en-GB');
+    textos.adoptarGlobal('en-GB', 2);
     expect(textos.idioma()).toBe('en');
 
-    textos.usarIdiomaDeCuenta('fr');
+    textos.adoptarGlobal('es', 1);
+    expect(textos.idioma()).toBe('en');
+
+    textos.adoptarGlobal('fr', 3);
     expect(textos.idioma()).toBe('en');
   });
 });

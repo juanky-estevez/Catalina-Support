@@ -1,7 +1,7 @@
 # =====================================================================================
 #  El directorio de pruebas (OpenLDAP) — el camino de Active Directory, en su propio archivo
 #
-#  **Va aparte y es opcional** (como el motor de IA en `ai.yml` y Keycloak en `keycloak.yml`):
+#  **Va aparte y es opcional** (como Keycloak; el motor local de `ai.yml` también va aparte):
 #  se levanta **con su propio comando**, la mesa de ayuda funciona sin él, y sólo hace falta
 #  para probar el camino de entrada por AD (`docs/modules/auth.md`, sección 11).
 #

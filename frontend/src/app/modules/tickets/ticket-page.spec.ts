@@ -119,7 +119,6 @@ describe('TicketPage', () => {
       email: 'maria@demo.com',
       role: 'soporte',
       origin: 'local',
-      language: 'es',
       factory: false,
     });
 

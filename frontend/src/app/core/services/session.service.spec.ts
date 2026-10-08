@@ -12,7 +12,6 @@ const USUARIO = {
   email: 'ana@ejemplo.com',
   role: 'usuario',
   origin: 'local',
-  language: 'es',
   factory: false,
 };
 
@@ -49,8 +48,8 @@ describe('SessionService', () => {
     expect(sesion.hayToken()).toBe(true);
     expect(localStorage.getItem('catalina-support.token')).toBe('un-token');
     expect(sesion.usuario()?.name).toBe('Ana');
-    // El idioma de la cuenta manda dentro de la aplicación.
-    expect(TestBed.inject(TranslationService).idioma()).toBe('es');
+    // Entrar no cambia el idioma global por el valor antiguo de una cuenta.
+    expect(TestBed.inject(TranslationService).idioma()).toBe('en');
   });
 
   it('no deja token si la entrada falla', async () => {
@@ -147,7 +146,6 @@ describe('SessionService', () => {
       email: '',
       role: 'administrador',
       origin: 'local',
-      language: 'en',
     });
 
     expect(sesion.usuario()?.id).toBe(1);

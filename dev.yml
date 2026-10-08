@@ -168,7 +168,7 @@ networks:
     # apuntan a la misma red, y el primero que se levanta la crea y los demás entran en ella. Así
     # `docker compose -f dev.yml up -d` **funciona en una máquina nueva** sin crear nada a mano, que
     # es lo que fallaba (y sin guiones: esto vale igual en Windows).
-    name: catalina-support-ai
+    name: catalina-support-ai-dev
 
 volumes:
   frontend_node_modules:

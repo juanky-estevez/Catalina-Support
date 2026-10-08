@@ -15,11 +15,13 @@ import { Campo } from '../../shared/components/campo';
 import { Logo } from '../components/logo';
 import { Selector, type OpcionSelector } from '../../shared/components/selector';
 import { Tarjeta } from '../../shared/components/tarjeta';
-import { claveDelError } from '../../shared/errores';
+import { Toast } from '../../shared/components/toast';
+import { claveDelError, memoriaDelError } from '../../shared/errores';
 import { interpolar } from '../../shared/textos';
+import type { CatalogoLocalDeIA } from '../services/settings.service';
 
-/** Los cuatro pasos del asistente, en orden. */
-type Paso = 1 | 2 | 3 | 4;
+/** Los cinco pasos del asistente, en orden. */
+type Paso = 1 | 2 | 3 | 4 | 5;
 
 /** Los mismos útiles de zona horaria que usa Configuración: la lista y el buscador. */
 const DESFASES_FIJOS: readonly string[] = Array.from({ length: 12 }, (_, i) => i + 1).flatMap(
@@ -73,7 +75,7 @@ interface Mensaje {
 /**
  * La vista de primer arranque: **lo que se pide antes de que la instalación tenga puerta**.
  *
- * Cuatro pasos —la instalación, cómo se entra, dónde está y el correo— más un resumen final. Cada
+ * Cinco pasos —instalación, entrada, ubicación, correo e IA— más un resumen final. Cada
  * paso **se guarda al avanzar**, así que cerrar el navegador a medias no pierde lo hecho: al volver,
  * el `GET` trae lo guardado y los campos salen rellenos
  * (`docs/primer-arranque.md`, secciones 3 y 6).
@@ -83,10 +85,11 @@ interface Mensaje {
  */
 @Component({
   selector: 'app-setup-page',
-  imports: [Aviso, Boton, Campo, Logo, Selector, Tarjeta],
+  imports: [Aviso, Boton, Campo, Logo, Selector, Tarjeta, Toast],
   templateUrl: './setup-page.html',
 })
 export class SetupPage {
+  protected readonly interpolar = interpolar;
   private readonly setup = inject(SetupService);
   private readonly textos = inject(TranslationService);
   private readonly router = inject(Router);
@@ -140,6 +143,18 @@ export class SetupPage {
   protected readonly correoNombre = signal('');
   protected readonly correoCorreo = signal('');
 
+  // --- Paso 5 · la IA obligatoria ---
+  protected readonly iaModo = signal<'local' | 'remote' | 'provider'>('local');
+  protected readonly iaProveedor = signal('local');
+  protected readonly iaDireccion = signal('http://ai:8080');
+  protected readonly iaModelo = signal('qwen2.5-1.5b-instruct');
+  protected readonly iaAutenticacion = signal<'none' | 'bearer' | 'header' | 'basic'>('none');
+  protected readonly iaCabecera = signal('');
+  protected readonly iaCredencial = signal('');
+  protected readonly iaPrivacidad = signal(false);
+  protected readonly catalogoIA = signal<CatalogoLocalDeIA | null>(null);
+  protected readonly licenciasAceptadas = signal<ReadonlySet<string>>(new Set());
+
   /** Las zonas que pasan el buscador. Sin texto se enseña la lista entera, dentro de su tope. */
   protected readonly zonasFiltradas = computed(() => {
     const texto = this.busquedaZona().trim();
@@ -188,9 +203,6 @@ export class SetupPage {
     return direccion !== '' && !direccion.toLowerCase().startsWith('https://');
   });
 
-  /** Si el correo saliente tiene servidor: es lo que decide qué se dice en el resumen. */
-  protected readonly correoPuesto = computed(() => this.correoHost().trim() !== '');
-
   constructor() {
     // Una instalación nueva empieza siempre en inglés, aunque este navegador recuerde otro idioma.
     // Al cargar un asistente empezado, ponerEstado aplica inmediatamente el valor ya guardado.
@@ -202,7 +214,7 @@ export class SetupPage {
     return this.textos.textos();
   }
 
-  /** Los cuatro pasos, para la lista de avance. */
+  /** Los cinco pasos, para la lista de avance. */
   protected pasos(): readonly { numero: Paso; titulo: string }[] {
     const t = this.t().instalacion;
     return [
@@ -210,6 +222,7 @@ export class SetupPage {
       { numero: 2, titulo: t.paso2 },
       { numero: 3, titulo: t.paso3 },
       { numero: 4, titulo: t.paso4 },
+      { numero: 5, titulo: t.paso5 },
     ];
   }
 
@@ -217,7 +230,7 @@ export class SetupPage {
   protected pasoDeCuatro(): string {
     return interpolar(this.t().instalacion.pasoDeCuatro, {
       paso: String(this.paso()),
-      total: '4',
+      total: '5',
     });
   }
 
@@ -263,6 +276,63 @@ export class SetupPage {
     ];
   }
 
+  protected opcionesDeModoIA(): readonly OpcionSelector[] {
+    const t = this.t().configuracion;
+    return [
+      { valor: 'local', etiqueta: t.iaLocal, grupo: t.motorDeIA },
+      { valor: 'remote', etiqueta: t.iaRemota, grupo: t.motorDeIA },
+      { valor: 'provider', etiqueta: t.iaProveedor, grupo: t.motorDeIA },
+    ];
+  }
+
+  protected cambiarModoIA(valor: string): void {
+    const modo = valor as 'local' | 'remote' | 'provider';
+    this.iaModo.set(modo);
+    this.iaProveedor.set(modo === 'local' ? 'local' : modo === 'remote' ? 'openai-compatible' : 'openai');
+    if (modo === 'local') {
+      this.iaDireccion.set('http://ai:8080');
+      this.iaModelo.set('qwen2.5-1.5b-instruct');
+      this.iaAutenticacion.set('none');
+      this.iaPrivacidad.set(false);
+    } else {
+      this.iaDireccion.set('');
+      this.iaAutenticacion.set('bearer');
+    }
+  }
+
+  protected opcionesDeProveedorIA(): readonly OpcionSelector[] {
+    return ['openai', 'claude', 'deepseek', 'openai-compatible'].map((valor) => ({
+      valor,
+      etiqueta: valor === 'openai-compatible' ? this.t().configuracion.iaCompatible : valor,
+      grupo: this.t().configuracion.iaProveedor,
+    }));
+  }
+
+  protected opcionesDeModeloLocal(): readonly OpcionSelector[] {
+    return [
+      { valor: 'qwen2.5-1.5b-instruct', etiqueta: 'Qwen2.5 1.5B · RAM 2 GiB · disk ~1.1 GB', grupo: this.t().configuracion.iaLocal },
+      { valor: 'qwen2.5-3b-instruct', etiqueta: 'Qwen2.5 3B · RAM 4 GiB · disk ~2.0 GB', grupo: this.t().configuracion.iaLocal },
+      { valor: 'qwen2.5-7b-instruct', etiqueta: 'Qwen2.5 7B · RAM 6 GiB · disk ~4.7 GB', grupo: this.t().configuracion.iaLocal },
+    ];
+  }
+
+  protected opcionesDeAuthIA(): readonly OpcionSelector[] {
+    const t = this.t().configuracion;
+    return [
+      { valor: 'none', etiqueta: t.iaAuth_none, grupo: t.iaAutenticacion },
+      { valor: 'bearer', etiqueta: t.iaAuth_bearer, grupo: t.iaAutenticacion },
+      { valor: 'header', etiqueta: t.iaAuth_header, grupo: t.iaAutenticacion },
+      { valor: 'basic', etiqueta: t.iaAuth_basic, grupo: t.iaAutenticacion },
+    ];
+  }
+  protected formatoBytes(bytes: number): string { return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`; }
+  protected aceptarLicencia(id: string, accepted: boolean): void { const next=new Set(this.licenciasAceptadas());accepted?next.add(id):next.delete(id);this.licenciasAceptadas.set(next); }
+  protected async cargarCatalogoIA(): Promise<void> { await this.accionModelo(async()=>{this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected async descargarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.descargarModelo(id,this.licenciasAceptadas().has(id));this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected async activarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.activarModelo(id);this.iaModelo.set(id);this.iaDireccion.set('http://ai:8080');this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  protected async eliminarModelo(id: string): Promise<void> { await this.accionModelo(async()=>{await this.setup.eliminarModelo(id);this.catalogoIA.set(await this.setup.modelosLocales());}); }
+  private async accionModelo(action:()=>Promise<void>):Promise<void>{this.guardando.set(true);this.mensaje.set(null);try{await action();}catch(error){this.mensaje.set({forma:'error',texto:this.textoDelError(error)});}finally{this.guardando.set(false);}}
+
   /** La explicación del método elegido. */
   protected ayudaDelMetodo(): string {
     switch (this.metodo()) {
@@ -298,7 +368,7 @@ export class SetupPage {
     this.busquedaZona.set('');
   }
 
-  /** Guarda el paso actual y avanza. Al cuarto, el siguiente sitio es el resumen. */
+  /** Guarda el paso actual y avanza. Después del quinto se abre el resumen. */
   protected async siguiente(): Promise<void> {
     const guardado = await this.guardarPaso(this.paso());
     if (!guardado) {
@@ -312,7 +382,7 @@ export class SetupPage {
       return;
     }
 
-    if (this.paso() === 4) {
+    if (this.paso() === 5) {
       this.enResumen.set(true);
       return;
     }
@@ -430,7 +500,18 @@ export class SetupPage {
                 timeZone: this.zonaElegida().trim(),
                 publicAppUrl: this.direccionPublica().trim(),
               })
-            : this.setup.guardarCorreo({ mail: this.correoEscrito() }));
+            : paso === 4
+              ? this.setup.guardarCorreo({ mail: this.correoEscrito() })
+              : this.setup.guardarIA({
+                  ai: {
+                    mode: this.iaModo(), provider: this.iaProveedor(),
+                    baseUrl: this.iaDireccion().trim(), model: this.iaModelo().trim(),
+                    authType: this.iaAutenticacion(), authHeader: this.iaCabecera().trim(),
+                    credential: this.iaCredencial(),
+                    privacyConfirmed: this.iaModo() === 'local' || this.iaPrivacidad(),
+                    language: this.idioma(),
+                  },
+                }));
 
       this.ponerEstado(estado, false);
       return true;
@@ -525,5 +606,25 @@ export class SetupPage {
     this.correoContrasena.set('');
     this.correoNombre.set(estado.mail.fromName);
     this.correoCorreo.set(estado.mail.fromEmail);
+    const ia = estado.ai;
+    if (ia?.mode) this.iaModo.set(ia.mode);
+    this.iaProveedor.set(ia?.provider || 'local');
+    this.iaDireccion.set(ia?.baseUrl || 'http://ai:8080');
+    this.iaModelo.set(ia?.model || 'qwen2.5-1.5b-instruct');
+    this.iaAutenticacion.set(ia?.authType || 'none');
+    this.iaCabecera.set(ia?.authHeader || '');
+    this.iaCredencial.set('');
+    this.iaPrivacidad.set(ia?.privacyConfirmed ?? false);
+  }
+
+  private textoDelError(error: unknown): string {
+    const key = claveDelError(error);
+    const memory = memoriaDelError(error);
+    if (key === 'settings.ai.insufficientMemory' && memory) {
+      return interpolar(this.textos.error(key), {
+        requerida: this.formatoBytes(memory.requiredBytes), disponible: this.formatoBytes(memory.availableBytes),
+      });
+    }
+    return this.textos.error(key);
   }
 }

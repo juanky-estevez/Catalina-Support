@@ -11,7 +11,6 @@ const CUENTA = {
   email: 'ana@ejemplo.com',
   role: 'usuario',
   origin: 'local',
-  language: 'es',
   isActive: true,
   hasPassword: true,
 };
@@ -88,10 +87,10 @@ describe('UsersService', () => {
     cambios.flush({ user: CUENTA });
 
     // **El perfil propio se cambia en `/me`**, y sólo con lo que puede cambiar cualquiera: ni el
-    // correo ni el papel viajan de aquí (docs/modules/users.md, sección 8).
-    void users.cambiarPerfil({ language: 'en' });
+    // El correo y el papel no viajan de aquí (docs/modules/users.md, sección 8).
+    void users.cambiarPerfil({ name: 'Ana María' });
     const perfil = http.expectOne({ url: '/api/users/me', method: 'PATCH' });
-    expect(perfil.request.body).toEqual({ language: 'en' });
+    expect(perfil.request.body).toEqual({ name: 'Ana María' });
     perfil.flush({ user: CUENTA });
   });
 
@@ -102,7 +101,6 @@ describe('UsersService', () => {
       email: 'ana@ejemplo.com',
       role: 'usuario',
       origin: 'local',
-      language: 'es',
     });
 
     const peticion = http.expectOne({ url: '/api/users', method: 'POST' });
@@ -112,7 +110,6 @@ describe('UsersService', () => {
       email: 'ana@ejemplo.com',
       role: 'usuario',
       origin: 'local',
-      language: 'es',
     });
 
     // `invited` es lo que distingue «cuenta creada y enlace mandado» de «cuenta creada sin enlace».

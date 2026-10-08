@@ -55,8 +55,7 @@ services:
       - ./_logs:/logs
       - ./_files:/files
     networks:
-      # El motor de IA: **el mismo contenedor que usa desarrollo**, en su propio compose (`ai.yml`),
-      # porque dos modelos no caben en esta máquina (`docs/modules/ai.md`, decisión 1).
+      # El motor de IA de producción vive en su propio compose, red y volumen.
       - default
       - catalina-support-ai
 
@@ -121,13 +120,9 @@ services:
         ls -la /out
 
 networks:
-  # La red del motor de IA, creada por `ai.yml`: aquí sólo se entra en ella.
+  # La red del motor de IA de producción. `prod.yml` la crea antes de arrancar `ai.yml`.
   catalina-support-ai:
-    # **No es externa: la crea el primero que arranca.** Con un nombre fijo, los tres archivos
-    # apuntan a la misma red, y el primero que se levanta la crea y los demás entran en ella. Así
-    # `docker compose -f dev.yml up -d` **funciona en una máquina nueva** sin crear nada a mano, que
-    # es lo que fallaba (y sin guiones: esto vale igual en Windows).
-    name: catalina-support-ai
+    name: catalina-support-ai-prod
 
 volumes:
   database:

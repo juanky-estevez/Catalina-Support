@@ -218,7 +218,7 @@ func TestRolesCerrados(t *testing.T) {
 
 // La identidad viaja en el contexto y se recupera entera.
 func TestIdentidadEnElContexto(t *testing.T) {
-	original := Identity{ID: 7, Name: "Ana", Role: RoleSoporte, Language: "es"}
+	original := Identity{ID: 7, Name: "Ana", Role: RoleSoporte}
 	ctx := WithIdentity(t.Context(), original)
 
 	recuperada, ok := FromContext(ctx)

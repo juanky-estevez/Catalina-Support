@@ -85,6 +85,11 @@ type Enlaces interface {
 	DireccionPublica() string
 }
 
+// IdiomaGlobal entrega el único idioma de la instalación para los correos de cuenta.
+type IdiomaGlobal interface {
+	Language() (string, error)
+}
+
 // Config es lo que el módulo necesita de la configuración de la instalación.
 type Config struct {
 	// AdminPassword es la contraseña de la cuenta de fábrica. Se compara en cada entrada: la
@@ -128,6 +133,7 @@ type Service struct {
 	now func() time.Time
 	// enlaces es de dónde salen la dirección pública y los enlaces (ver `SetEnlaces`).
 	enlaces Enlaces
+	idioma  IdiomaGlobal
 }
 
 // NewService construye el servicio.
@@ -155,6 +161,9 @@ func (s *Service) SetAccess(access Access) { s.access = access }
 // SetEnlaces fija de dónde salen los enlaces. Sin él, se usa la variable de entorno del arranque,
 // que es como funcionaba antes: así una instalación que ya la tuviera puesta no cambia.
 func (s *Service) SetEnlaces(enlaces Enlaces) { s.enlaces = enlaces }
+
+// SetIdiomaGlobal conecta el idioma de la instalación. La cuenta ya no decide el idioma del correo.
+func (s *Service) SetIdiomaGlobal(idioma IdiomaGlobal) { s.idioma = idioma }
 
 // baseDeLosEnlaces es la dirección pública: **la de la configuración primero** y, si no hay, la del
 // entorno. Vacío quiere decir «no hay», y quien la use decide qué hacer.
@@ -623,7 +632,6 @@ func (s *Service) factorySession() (Session, error) {
 			Name:     "Administrador",
 			Role:     auth.RoleAdministrador,
 			Origin:   auth.OriginLocal,
-			Language: "es",
 			IsActive: true,
 		},
 	}, nil
@@ -769,11 +777,11 @@ func (s *Service) sendLink(account auth.Account, purpose, template string, durat
 		return err
 	}
 
-	s.mailer.SendAsync(template, account.Language, []string{account.Email}, map[string]string{
-		"nombre": account.Name,
-		"enlace": enlace,
-		// El texto de la caducidad, en el idioma de la cuenta, que es el mismo de la plantilla.
-		"caducidad": expiryTextFor(account.Language, duration),
+	idioma := s.idiomaGlobal()
+	s.mailer.SendAsync(template, idioma, []string{account.Email}, map[string]string{
+		"nombre":    account.Name,
+		"enlace":    enlace,
+		"caducidad": expiryTextFor(idioma, duration),
 	})
 
 	return nil
@@ -836,13 +844,22 @@ func (s *Service) notifyPasswordChanged(account auth.Account, ip string) {
 		ip = "desconocida"
 	}
 
-	s.mailer.SendAsync(TemplatePasswordChanged, account.Language, []string{account.Email}, map[string]string{
+	s.mailer.SendAsync(TemplatePasswordChanged, s.idiomaGlobal(), []string{account.Email}, map[string]string{
 		"nombre": account.Name,
 		// **La fecha del aviso se escribe en la zona de la instalación** (decisión 15): es lo que lee una
 		// persona, y en UTC le saldría a una hora que no es la suya.
 		"cuando": s.now().In(s.zonaHoraria()).Format("2006-01-02 15:04"),
 		"ip":     ip,
 	})
+}
+
+func (s *Service) idiomaGlobal() string {
+	if s.idioma != nil {
+		if idioma, err := s.idioma.Language(); err == nil && (idioma == "es" || idioma == "en") {
+			return idioma
+		}
+	}
+	return "es"
 }
 
 // link construye el enlace a la pantalla de establecer contraseña.
@@ -860,7 +877,7 @@ func (s *Service) link(token string) (string, error) {
 	return base + "/set-password#token=" + token, nil
 }
 
-// expiryTextFor devuelve el texto de la caducidad en el idioma de la cuenta.
+// expiryTextFor devuelve el texto de la caducidad en el idioma global.
 func expiryTextFor(language string, duration time.Duration) string {
 	if textos, ok := expiryText[language]; ok {
 		if texto, ok := textos[duration]; ok {

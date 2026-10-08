@@ -53,35 +53,19 @@ test.describe('El armazón', () => {
     await expect(opciones).toBeVisible();
     await expect(opciones.getByRole('link', { name: 'Nuevo ticket' })).toHaveCount(0);
 
-    // Zona 3: los controles, con el nombre de quien ha entrado, el tema y el idioma.
+    // Zona 3: los controles personales. El idioma ya no está aquí: es global y se cambia en
+    // Configuración por un Administrador.
     await expect(menu.getByText('Administrador').first()).toBeVisible();
     await expect(menu.getByLabel('Tema')).toBeVisible();
-    await expect(menu.getByLabel('Cambiar idioma')).toBeVisible();
+    await expect(menu.getByLabel('Cambiar idioma')).toHaveCount(0);
     await expect(menu.getByRole('button', { name: 'Salir' })).toBeVisible();
   });
 
-  /**
-   * **El idioma y el tema son el mismo control** (decisión del responsable, 2026-09-26): los dos son
-   * desplegables, van uno debajo del otro y **miden lo mismo**. Se mide el ancho de verdad, que es lo
-   * único que distingue «son iguales» de «casi».
-   */
-  test('el desplegable del idioma ocupa el mismo ancho que el del tema', async ({ page }, info) => {
+  test('el menú no ofrece un idioma personal', async ({ page }, info) => {
     await abrirCajonSiHaceFalta(page, info);
     const menu = page.locator('aside');
-
-    const anchoDe = (etiqueta: string) =>
-      menu.getByLabel(etiqueta).evaluate((nodo) => nodo.getBoundingClientRect().width);
-
-    const anchoTema = await anchoDe('Tema');
-    const anchoIdioma = await anchoDe('Cambiar idioma');
-
-    expect(anchoIdioma).toBeGreaterThan(0);
-    expect(anchoIdioma).toBe(anchoTema);
-
-    // Y **ninguno de los dos ocupa toda la columna por su cuenta**: los dos se estiran con el menú,
-    // que es lo que los hace iguales al desplegarlo o al plegarlo.
-    const anchoMenu = await menu.evaluate((nodo) => nodo.getBoundingClientRect().width);
-    expect(anchoIdioma).toBeLessThanOrEqual(anchoMenu);
+    await expect(menu.getByLabel('Tema')).toBeVisible();
+    await expect(menu.getByLabel('Cambiar idioma')).toHaveCount(0);
   });
 
   test('el menú se pliega, se queda en iconos y lo recuerda', async ({ page }, info) => {
@@ -192,7 +176,7 @@ test.describe('El menú, por papel', () => {
     const cuenta = cuentaDePrueba();
     const alta = await request.post('/api/users', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { ...cuenta, role: 'usuario', origin: 'local', language: 'es' },
+      data: { ...cuenta, role: 'usuario', origin: 'local' },
     });
     expect(alta.status(), await alta.text()).toBe(201);
 

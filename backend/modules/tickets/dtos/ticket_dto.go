@@ -61,6 +61,16 @@ type CommentRequest struct {
 	Body string `json:"body"`
 }
 
+type ImproveWritingRequest struct {
+	Editor string `json:"editor"`
+	Draft  string `json:"draft"`
+	Tone   string `json:"tone"`
+}
+
+type ImproveWritingResponse struct {
+	Text string `json:"text"`
+}
+
 // AssigneesResponse son las personas que pueden ser responsables, por tipo de ticket.
 type AssigneesResponse struct {
 	Main     []PersonResponse `json:"main"`
@@ -217,7 +227,12 @@ type TicketDetailResponse struct {
 	History     []HistoryResponse    `json:"history"`
 	// Observers sólo viaja en la ficha, no en las listas paginadas (docs/modules/tickets.md,
 	// sección 5).
-	Observers []ObserverResponse `json:"observers"`
+	Observers    []ObserverResponse   `json:"observers"`
+	Capabilities CapabilitiesResponse `json:"capabilities"`
+}
+
+type CapabilitiesResponse struct {
+	AIWriting bool `json:"aiWriting"`
 }
 
 // TicketsResponse es la bandeja, con lo que necesita la paginación.
@@ -317,14 +332,11 @@ type InsightsResponse struct {
 	UltimaAccion ResumenResponse `json:"ultimaAccion"`
 }
 
-// ResumenResponse es un texto del motor: su estado, sus dos idiomas y la clave del error.
-//
-// **Los dos idiomas viajan juntos** porque el motor los devuelve en la misma respuesta y porque la
-// pantalla se pinta en el idioma de quien mira (docs/modules/ai.md, decisión 3).
+// ResumenResponse es un texto del motor en el idioma global y la clave del error.
 type ResumenResponse struct {
 	State    string `json:"state"`
-	Es       string `json:"es,omitempty"`
-	En       string `json:"en,omitempty"`
+	Text     string `json:"text,omitempty"`
+	Language string `json:"language,omitempty"`
 	ErrorKey string `json:"errorKey,omitempty"`
 }
 
@@ -340,8 +352,8 @@ func NewInsightsResponse(resumen services.Resumenes) InsightsResponse {
 func NewResumenResponse(resumen services.Resumen) ResumenResponse {
 	return ResumenResponse{
 		State:    resumen.Estado,
-		Es:       resumen.Es,
-		En:       resumen.En,
+		Text:     resumen.Text,
+		Language: resumen.Language,
 		ErrorKey: resumen.ErrorKey,
 	}
 }
@@ -412,11 +424,12 @@ func NewHistoryResponse(entrada services.HistoryEntry) HistoryResponse {
 // NewTicketDetailResponse traduce un ticket con todo lo que cuelga de él.
 func NewTicketDetailResponse(detalle services.Detail) TicketDetailResponse {
 	respuesta := TicketDetailResponse{
-		Ticket:      NewTicketResponse(detalle.Ticket),
-		Comments:    make([]CommentResponse, 0, len(detalle.Comments)),
-		Attachments: make([]AttachmentResponse, 0, len(detalle.Attachments)),
-		History:     make([]HistoryResponse, 0, len(detalle.History)),
-		Observers:   make([]ObserverResponse, 0, len(detalle.Observers)),
+		Ticket:       NewTicketResponse(detalle.Ticket),
+		Comments:     make([]CommentResponse, 0, len(detalle.Comments)),
+		Attachments:  make([]AttachmentResponse, 0, len(detalle.Attachments)),
+		History:      make([]HistoryResponse, 0, len(detalle.History)),
+		Observers:    make([]ObserverResponse, 0, len(detalle.Observers)),
+		Capabilities: CapabilitiesResponse{AIWriting: detalle.Capabilities.AIWriting},
 	}
 
 	for _, comentario := range detalle.Comments {

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/juanky-estevez/go-logs"
 
@@ -93,6 +94,28 @@ func (c *TicketController) Insights(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, dtos.TicketEnvelope{Ticket: dtos.NewTicketResponse(ticket)})
+}
+
+// ImproveWriting mejora un borrador sin guardarlo. El servicio valida papel, ticket y editor antes
+// de entregar al motor el contexto mínimo.
+func (c *TicketController) ImproveWriting(w http.ResponseWriter, r *http.Request) {
+	// Esta es la única operación síncrona que espera al motor. Su cliente admite 240 segundos; el
+	// margen permite devolver incluso el error de timeout sin ampliar el resto del servidor.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(270 * time.Second))
+	var entrada dtos.ImproveWritingRequest
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&entrada); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, KeyInternal)
+		return
+	}
+	texto, err := c.service.ImproveDraft(
+		r.PathValue("number"), entrada.Editor, entrada.Draft, entrada.Tone,
+		auth.MustFromContext(r.Context()),
+	)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dtos.ImproveWritingResponse{Text: texto})
 }
 
 // Create da de alta un ticket principal.
@@ -668,6 +691,11 @@ func (c *TicketController) fail(w http.ResponseWriter, err error) {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.subject.required")
 	case errors.Is(err, services.ErrBodyRequired):
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "tickets.description.required")
+	case errors.Is(err, services.ErrWritingDraftRequired), errors.Is(err, services.ErrWritingEditorInvalid),
+		errors.Is(err, services.ErrWritingToneInvalid), errors.Is(err, services.ErrWritingInvalid):
+		httpx.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, services.ErrWritingUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, err.Error())
 	case errors.Is(err, services.ErrBodyNotAllowed):
 		// El texto trae HTML que no está en la lista blanca: se dice cuál es el problema y no se guarda
 		// nada, en vez de limpiarlo por su cuenta (docs/modules/tickets.md, sección 2.3).

@@ -93,7 +93,7 @@ func (s *Service) atender(t trabajo) {
 
 		if err == nil {
 			s.contarIntento(t)
-			s.guardar(t, es, en, ajustes.Modelo)
+			s.guardar(t, es, en, ajustes)
 			return
 		}
 
@@ -135,8 +135,15 @@ func (s *Service) atender(t trabajo) {
 }
 
 // guardar escribe las dos redacciones en la fila del campo.
-func (s *Service) guardar(t trabajo, es, en, modelo string) {
-	err := s.store.GuardarResultado(t.numero, string(t.tipo), es, en, modelo, s.now())
+func (s *Service) guardar(t trabajo, es, en string, ajustes Ajustes) {
+	var err error
+	if global, ok := s.store.(interface {
+		GuardarResultadoGlobal(string, string, string, string, string, string, time.Time) error
+	}); ok && ajustes.Language != "" {
+		err = global.GuardarResultadoGlobal(t.numero, string(t.tipo), es, ajustes.Language, ajustes.Provider, ajustes.Modelo, s.now())
+	} else {
+		err = s.store.GuardarResultado(t.numero, string(t.tipo), es, en, ajustes.Modelo, s.now())
+	}
 	if err != nil {
 		logs.LogError("no se pudo guardar el resumen del ticket " + t.numero + " (" + string(t.tipo) + "): " + err.Error())
 		return

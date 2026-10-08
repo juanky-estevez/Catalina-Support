@@ -37,15 +37,6 @@
         <p class="text-sm text-apagado">{{ t().perfil.papelAyuda }}</p>
       </div>
 
-      <app-selector
-        identificador="perfil-idioma"
-        [etiqueta]="t().perfil.idioma"
-        [opciones]="opcionesDeIdioma()"
-        [ayuda]="t().perfil.idiomaAyuda"
-        [valor]="idioma()"
-        (valorChange)="idioma.set($event)"
-      />
-
       <div>
         <app-boton
           tipo="submit"

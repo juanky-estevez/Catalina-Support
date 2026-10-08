@@ -2,7 +2,7 @@ package dtos
 
 import "catalina-support/backend/modules/settings/services"
 
-// SetupRequest es lo que llega en **un paso** del asistente de primer arranque. Los cuatro pasos
+// SetupRequest es lo que llega en **un paso** del asistente de primer arranque. Los cinco pasos
 // comparten cuerpo porque comparten forma: cada uno trae lo suyo y deja lo demás vacío
 // (docs/primer-arranque.md, sección 3).
 type SetupRequest struct {
@@ -21,6 +21,9 @@ type SetupRequest struct {
 
 	// Paso 4: el correo saliente.
 	Mail MailDto `json:"mail"`
+
+	// Paso 5: la IA obligatoria. La credencial sólo entra; nunca vuelve en SetupResponse.
+	AI AIConfigurationRequest `json:"ai"`
 }
 
 // MailDto es el correo saliente tal y como llega de la pantalla. `Password` vacío quiere decir **«no la
@@ -55,6 +58,7 @@ func NewSetupStep(entrada SetupRequest) services.PasoDeInstalacion {
 			FromName:  entrada.Mail.FromName,
 			FromEmail: entrada.Mail.FromEmail,
 		},
+		AI: NewAIConfigurationInput(entrada.AI),
 	}
 }
 
@@ -64,6 +68,7 @@ func NewSetupStep(entrada SetupRequest) services.PasoDeInstalacion {
 // **Sin secretos**: de la contraseña del correo sólo se dice si hay una puesta.
 type SetupResponse struct {
 	Installed    bool   `json:"installed"`
+	AIRequired   bool   `json:"aiRequired"`
 	Name         string `json:"name"`
 	Language     string `json:"language"`
 	EntryMethod  string `json:"entryMethod"`
@@ -74,9 +79,10 @@ type SetupResponse struct {
 	Keycloak  KeycloakDto  `json:"keycloak"`
 	Mail      MailViewDto  `json:"mail"`
 
-	// AiAvailable dice si el motor de IA responde. **Es opcional**: sin él, la instalación funciona
-	// entera y sólo se queda sin los dos resúmenes (docs/modules/ai.md).
-	AiAvailable bool `json:"aiAvailable"`
+	// AiAvailable dice si el motor configurado responde ahora. Una caída posterior no bloquea los
+	// tickets: deja sus resúmenes pendientes hasta que el motor vuelva (docs/modules/ai.md).
+	AiAvailable bool                    `json:"aiAvailable"`
+	AI          AIConfigurationResponse `json:"ai"`
 }
 
 // MailViewDto es el correo saliente **sin su contraseña**: en su lugar dice si hay una guardada.
@@ -94,6 +100,7 @@ type MailViewDto struct {
 func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 	return SetupResponse{
 		Installed:    estado.Installed,
+		AIRequired:   estado.AIRequired,
 		Name:         estado.Name,
 		Language:     estado.Language,
 		EntryMethod:  estado.EntryMethod,
@@ -129,5 +136,6 @@ func NewSetupResponse(estado services.EstadoDeInstalacion) SetupResponse {
 			PasswordSet: estado.MailSet,
 		},
 		AiAvailable: estado.AiAvailable,
+		AI:          NewAIConfigurationResponse(estado.AI),
 	}
 }

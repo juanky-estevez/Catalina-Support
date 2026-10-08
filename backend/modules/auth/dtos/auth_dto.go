@@ -18,7 +18,6 @@ type UserResponse struct {
 	Email    string `json:"email"`
 	Role     string `json:"role"`
 	Origin   string `json:"origin"`
-	Language string `json:"language"`
 	// Factory distingue la cuenta de fábrica, que no está en la base de datos y no se puede tocar.
 	Factory bool `json:"factory"`
 }
@@ -32,7 +31,6 @@ func NewUserResponse(identity auth.Identity) UserResponse {
 		Email:    identity.Email,
 		Role:     identity.Role,
 		Origin:   identity.Origin,
-		Language: identity.Language,
 		Factory:  identity.Factory,
 	}
 }

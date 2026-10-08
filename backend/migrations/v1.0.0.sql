@@ -219,15 +219,12 @@ CREATE TABLE IF NOT EXISTS users (
     origin        text        NOT NULL,
     -- El identificador del directorio (el `sub` de Keycloak o el GUID de AD). Nulo en las locales.
     external_id   text,
-    -- Es lo que decide en qué idioma se le escriben los correos.
-    language      text        NOT NULL DEFAULT 'es',
     is_active     boolean     NOT NULL DEFAULT true,
     last_login_at timestamptz,
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT users_role_check CHECK (role IN ('usuario', 'soporte', 'desarrollo', 'administrador')),
     CONSTRAINT users_origin_check CHECK (origin IN ('local', 'ad', 'keycloak')),
-    CONSTRAINT users_language_check CHECK (language IN ('es', 'en')),
     -- Si el origen es de directorio, no hay contraseña local: la regla en la base, no sólo en el
     -- código (docs/usuarios-y-permisos.md, sección 5).
     CONSTRAINT users_directory_has_no_password CHECK (origin = 'local' OR password_hash IS NULL)
@@ -235,6 +232,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 COMMENT ON TABLE users IS
     'Las cuentas reales. La de fábrica (`admin`) NO está aquí: vive en la configuración.';
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_language_check;
+ALTER TABLE users DROP COLUMN IF EXISTS language;
 
 -- Un correo, una cuenta, sin distinguir mayúsculas: Ana@… y ana@… son la misma persona.
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (lower(email));
@@ -325,6 +325,9 @@ CREATE TABLE IF NOT EXISTS installation_settings (
     smtp_from_name  text NOT NULL DEFAULT '',
     smtp_from_email text NOT NULL DEFAULT '',
     language      text        NOT NULL DEFAULT 'en',
+    -- Crece al aplicar un cambio global para que las sesiones abiertas adopten el idioma en su
+    -- siguiente respuesta autenticada.
+    settings_version bigint   NOT NULL DEFAULT 1,
     primary_color text        NOT NULL DEFAULT '#1d4ed8',
     -- El NOMBRE del archivo del logo, no el archivo: vive en el disco, en _files/brand.
     -- Nulo es «no hay logo propio» y se usa el de fábrica que trae la aplicación.
@@ -352,6 +355,58 @@ COMMENT ON TABLE installation_settings IS
 -- Una instalación nueva empieza en inglés. Cambiar el valor por defecto no toca la fila de una
 -- instalación existente, así que su idioma se conserva al volver a aplicar la migración.
 ALTER TABLE installation_settings ALTER COLUMN language SET DEFAULT 'en';
+ALTER TABLE installation_settings ADD COLUMN IF NOT EXISTS settings_version bigint NOT NULL DEFAULT 1;
+
+-- La integración de IA tiene forma propia: modalidad, proveedor, autenticación y credencial
+-- cifrada. Nunca se devuelve credential_ciphertext por la API.
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id                    integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    mode                  text NOT NULL DEFAULT '',
+    provider              text NOT NULL DEFAULT '',
+    base_url              text NOT NULL DEFAULT '',
+    model                 text NOT NULL DEFAULT '',
+    auth_type             text NOT NULL DEFAULT 'none',
+    auth_header           text NOT NULL DEFAULT '',
+    credential_version    smallint,
+    credential_nonce      bytea,
+    credential_ciphertext bytea,
+    privacy_confirmed_at  timestamptz,
+    privacy_confirmed_by_id bigint REFERENCES users (id) ON DELETE SET NULL,
+    privacy_confirmed_in_setup boolean NOT NULL DEFAULT false,
+    tested_at             timestamptz,
+    updated_at            timestamptz NOT NULL DEFAULT now(),
+    updated_by_id         bigint REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT ai_settings_mode_check CHECK (mode IN ('', 'local', 'remote', 'provider')),
+    CONSTRAINT ai_settings_auth_check CHECK (auth_type IN ('none', 'bearer', 'header', 'basic'))
+);
+INSERT INTO ai_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ai_model_acceptances (
+    id             bigserial PRIMARY KEY,
+    model_id       text NOT NULL,
+    model_version  text NOT NULL,
+    checksum       text NOT NULL,
+    accepted_at    timestamptz NOT NULL DEFAULT now(),
+    accepted_by_id bigint REFERENCES users (id) ON DELETE SET NULL,
+    accepted_in_setup boolean NOT NULL DEFAULT false,
+    CONSTRAINT ai_model_acceptances_unique UNIQUE (model_id, model_version, checksum)
+);
+
+CREATE TABLE IF NOT EXISTS ai_recovery_batches (
+    id                  bigserial PRIMARY KEY,
+    reason              text NOT NULL,
+    state               text NOT NULL DEFAULT 'waiting_confirmation',
+    pending_items       integer NOT NULL DEFAULT 0,
+    estimated_requests  integer NOT NULL DEFAULT 0,
+    estimated_tokens    bigint NOT NULL DEFAULT 0,
+    confirmed_at        timestamptz,
+    confirmed_by_id     bigint REFERENCES users (id) ON DELETE SET NULL,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    updated_at          timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ai_recovery_batches_state_check CHECK (
+        state IN ('waiting_confirmation', 'running', 'paused', 'completed', 'cancelled')
+    )
+);
 
 -- El directorio de la organización (AD por LDAP). **Lo configura un Administrador desde la
 -- pantalla**, no el entorno (decisión del responsable, 2026-09-25): con el servidor vacío, ese camino
@@ -839,6 +894,11 @@ CREATE TABLE IF NOT EXISTS ai_insights (
     -- Nulas mientras no haya texto: la fila de un campo `pendiente` no tiene nada que enseñar.
     text_es       text,
     text_en       text,
+    -- Forma nueva: un solo texto, con el idioma global y el origen que lo produjo. Las columnas
+    -- anteriores se conservan durante la puesta al día y se retirarán al cerrar la migración 1.0.0.
+    text          text,
+    language      text,
+    provider      text,
     -- La clave del error (`ai.unavailable` o `ai.invalid`) cuando el estado no es `listo`. Se guarda
     -- la clave y no el texto del fallo, como en el resto de la API.
     error_key     text,
@@ -869,6 +929,9 @@ COMMENT ON COLUMN ai_insights.state IS
 -- Se indexa por el número del ticket porque es como se piden: la lista de tickets pide los suyos **en
 -- bloque**, no uno a uno (docs/modules/ai.md, decisión 9).
 CREATE INDEX IF NOT EXISTS ai_insights_ticket_number_idx ON ai_insights (ticket_number);
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS text text;
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS language text;
+ALTER TABLE ai_insights ADD COLUMN IF NOT EXISTS provider text;
 
 -- ============================================================================
 -- tickets — puesta al día: las categorías y las etiquetas

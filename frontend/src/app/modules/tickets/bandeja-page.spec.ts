@@ -38,8 +38,8 @@ const CON_CLASIFICACION: Ticket = {
   tags: ['red-wifi', 'urgente'],
   requester: ANA,
   insights: {
-    motivo: { state: 'listo', es: 'No va la red', en: 'Network is down' },
-    ultimaAccion: { state: 'listo', es: 'Se avisó', en: 'Notified' },
+    motivo: { state: 'listo', text: 'No va la red', language: 'es' },
+    ultimaAccion: { state: 'listo', text: 'Se avisó', language: 'es' },
   },
   createdAt: '2026-09-28T08:00:00Z',
   updatedAt: '2026-09-28T08:00:00Z',
@@ -105,7 +105,6 @@ describe('BandejaPage', () => {
       email: 'maria@demo.com',
       role: 'usuario',
       origin: 'local',
-      language: 'es',
       factory: false,
     });
 
@@ -176,7 +175,6 @@ describe('BandejaPage', () => {
         email: 'maria@demo.com',
         role: 'usuario',
         origin: 'local',
-        language: 'es',
         factory: false,
       });
 
@@ -217,7 +215,6 @@ describe('BandejaPage', () => {
         email: 'maria@demo.com',
         role: 'usuario',
         origin: 'local',
-        language: 'es',
         factory: false,
       });
 

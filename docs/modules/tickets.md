@@ -1,7 +1,34 @@
 # Tickets: modelo de datos, transiciones y módulos
 
 > **Estado:** as-built
-> **Última actualización:** 2026-09-27
+> **Última actualización:** 2026-10-08
+>
+> **Enmienda implementada y verificada el 2026-10-08: capacidad de redacción en el detalle.** La
+> sección 13 hace que el detalle decida si la ayuda se ofrece según papel, permiso y una IA
+> configurada. El responsable aprobó 1A–3A y la corrección que mantiene la IA obligatoria.
+>
+> **Corrección aprobada e implementada el 2026-10-08.** El repaso de implementación encontró que Playwright no
+> puede abrir un ticket de una instalación sellada sin IA: el bloqueo obligatorio actúa antes. El
+> responsable mantuvo la IA obligatoria. Se corrige la evidencia esperada sin cambiar el contrato ni
+> permitir el producto sin motor configurado. La evidencia final sigue esta corrección.
+>
+> **Enmienda implementada y verificada el 2026-10-08: mejora de redacción con IA.** La sección 12
+> describe los editores que pueden solicitarla y cómo `tickets` entrega a `ai` el contexto mínimo
+> autorizado. Las decisiones 1A–21A fueron aprobadas; pasaron backend, frontend y Playwright en PC y
+> móvil sin tocar producción.
+>
+> **Corrección propuesta el 2026-10-08.** La ruta inicialmente asignada a `/api/ai/**` contradecía
+> la regla que obliga a una pantalla de tickets a usar su propia API. El responsable eligió 20A:
+> `tickets` publica la operación, valida y delega en `ai`. Requiere aprobación documental antes de
+> implementar; el responsable la aprobó explícitamente.
+>
+> **Corrección propuesta el 2026-10-08.** El plazo HTTP global de 60 segundos es menor que los 240
+> segundos admitidos por el motor. El responsable eligió 21A: esta ruta fija 270 segundos y ninguna
+> otra cambia. El responsable aprobó explícitamente el ajuste.
+>
+> **Enmienda propuesta el 2026-10-06.** Lo existente continúa as-built. La sección 11 adapta los
+> resúmenes y avisos al idioma global: la API devuelve un texto por campo y los correos ya no se
+> agrupan por idioma de cuenta. El repaso quedó cerrado y la propuesta fue aprobada.
 >
 > **Enmendado el 2026-09-27 (tercera vez)**, a petición del responsable, al usarlo: **las etiquetas
 > pasan a poder mantenerse** —se crean, se **renombran** (y el cambio vale para **todos** los tickets
@@ -1103,7 +1130,7 @@ Los huecos del segundo repaso (11 al 15) están aplicados en los vhosts, en `dev
 | 70 | **La vista del ticket, por papel** | **Corrección del responsable, 2026-09-27**: al abrir un ticket, **Soporte ve el principal** y **Desarrollo el interno**, y los dos pueden cambiar a Principal · Los dos · Interno cuando quieran. **Si abres el número de un interno, se ve el interno** aunque seas Soporte: es lo que espera quien pulsa ese enlace. Y **«Los dos» enseña sólo las conversaciones** —las dos columnas de la izquierda—, sin las fichas: con las cuatro columnas «se ve muy saturado» |
 | 71 | **«Qué se puede hacer» se va** | **Corrección del responsable, 2026-09-27**: el título de la tarjeta de acciones de la ficha **se malinterpretaba** y se retira. Los botones siguen diciendo lo que hacen, que es lo que hacía falta |
 | 72 | **Las etiquetas se mantienen, con el mismo peso que las categorías** | **Corrección del responsable, 2026-09-27**: en la pantalla no había forma de **crear ni de corregir** una etiqueta y **las categorías se llevaban todo el protagonismo**. Se elige **una pantalla con dos mitades iguales** —no dos módulos—, y las etiquetas se pueden **crear**, **renombrar** y **retirar**. Renombrar **vale para todos los tickets** que la lleven, y retirar **la quita de ellos**, avisando antes de a cuántos afecta: una etiqueta vive en muchos tickets, y cambiar una no puede cambiar sólo uno. **Siguen naciendo solas** al escribirlas en un ticket |
-| 73 | **Quién mantiene las etiquetas** —**corregida por la 83**: lo mantiene sólo el Administrador** — | **Propuesta mía, 2026-09-27**, por simetría con las categorías (decisión 64), **implementada así el 2026-09-28** por el encargo del responsable —él pidió poder crearlas y corregirlas, y no dijo quién—, y **pendiente de que la corrija si no es lo que quiere**: crear y renombrar, **Soporte y el Administrador**; **retirar, sólo el Administrador**, porque retirar una etiqueta toca todos los tickets que la llevan. **Desarrollo tampoco las mantiene**: es el catálogo, y lo mantiene quien mantiene el de categorías |
+| 73 | **Quién mantiene las etiquetas** —**corregida por la 83**: lo mantiene sólo el Administrador** — | **Propuesta histórica, 2026-09-27**, implementada inicialmente el 2026-09-28: crear y renombrar correspondían a Soporte y al Administrador; retirar, sólo al Administrador. La decisión 83 la reemplazó y cerró expresamente: hoy todo el catálogo lo mantiene únicamente el Administrador |
 | 80 | **El control de estados, y el comentario obligatorio al cerrar** | **Corrección del responsable, 2026-09-29**, sobre la 78: el desplegable **no es una lista de acciones**, es **para cambiar de estado el ticket**, y se presenta **la lista de estados** en los principales y en los internos. Y **cerrar siempre se confirma en una ventana y pide un comentario obligatorio**, también desde el backend (ver la 81). La lista enseña **los estados a los que el ticket puede pasar ahora**, con **el actual como primera opción** (marcado, sin poder elegirlo), y **el que necesita un texto lo pide en esa misma ventana**: el motivo al escalar, qué se ha hecho al resolver, la pregunta al ponerse en espera, y **el comentario al cerrar**. **Las acciones con nombre no desaparecen: son estados** —lo comprobó quien lo implementó en el propio código—: en un interno, **«En espera» es devolver el caso a Soporte sin cerrarlo** (regla 2 de la sección 3.3) y **«Cerrado» sin resolver es devolverlo y cerrarlo** (regla 8), que es lo que hacían «Necesito algo de Soporte» y «No es un cambio de código»; y en un principal, **«En espera» es preguntarle al usuario** y **«Cerrado» desde cerrado es reabrirlo**, que es lo que hacían «Preguntar al usuario» y «Reabrir» |
 | 82 | **Las etiquetas son de Soporte y Desarrollo, y el alta no las pide** | **Decisión del responsable, 2026-09-29**: **el usuario no pone etiquetas** —ni las ve en su ticket—: son una forma de **clasificar y filtrar** que usan **Soporte y Desarrollo**. Así que **el alta no lleva campo de etiquetas** (la categoría sí, que es obligatoria y la elige quien abre el ticket) y **la línea de etiquetas de la ficha no se le enseña al usuario**. Y se etiqueta **mejor**: en la ficha, un botón abre **un modal con todas las etiquetas del catálogo** —con cuántos tickets lleva cada una—, un **buscador**, y **casillas para marcar y desmarcar varias a la vez**; las que el ticket ya lleva salen marcadas y **«Guardar» aplica todo de una vez** (y «Cancelar» no cambia nada) |
 | 90 | **El número manda, y el cartel de «interno» sobra** | **Decisión del responsable, 2026-09-29**: en la cabecera del ticket, **el número se ve más** —es el texto más grande de la fila, y crece en pantallas anchas— y **desaparece el cartel «El ticket interno»** que iba al lado: con el número del interno y su estado ya se sabe cuál se está mirando, y el cartel era ruido. **Y los botones de sólo icono se achican**: medían 44 px y los lápices de la ficha pesaban demasiado; ahora 36, que sigue por encima de lo que se puede pulsar |
@@ -1145,3 +1172,72 @@ para implementarse, en ese orden:
 
 `flujos.md` queda después: describe el recorrido paso a paso de cada caso (alta, triaje, escalado,
 resolución, cierre y reapertura) con sus correos, y no bloquea empezar por `auth`.
+
+## 11. Implementación: resúmenes y avisos en el idioma global
+
+El contrato `Resumen` y los DTO de lista y detalle dejan de transportar dos textos. Cada campo lleva
+estado, un único `text`, `language`, proveedor/modelo y clave de error. La pantalla muestra el texto
+conservado aunque su idioma sea anterior al global; durante una regeneración individual muestra
+pendiente.
+
+El módulo continúa reconstruyendo el texto para `ai`, pero le entrega también el idioma global. Un
+cambio global no toca los resúmenes existentes ni crea un lote. Los nuevos y los que se recalculan
+por un movimiento del ticket o por «Volver a resumir» usan el idioma global vigente.
+
+Los avisos de tickets dejan de leer `persona.Language` y de agrupar destinatarios por idioma. Piden
+a `mail` un único envío en el idioma global. No cambian destinatarios, momentos, permisos, estados,
+comentarios, adjuntos ni transiciones. El responsable confirmó este alcance el 2026-10-06. El
+El 2026-10-07 el responsable corrigió el alcance: no habrá regeneración acumulada ni confirmación de
+costo para resúmenes; la confirmación comercial corresponde sólo a traducir plantillas. No quedan
+decisiones abiertas; corrección aprobada explícitamente.
+
+## 12. Implementación: mejora de borradores desde un ticket
+
+Soporte y Desarrollo ven «Mejorar con IA» junto a los editores de descripción y comentario que ya
+pueden utilizar, tanto al crear contenido como al editarlo. El Usuario que requiere soporte no lo ve
+ni puede invocarlo por API. El Administrador tampoco recibe esta capacidad: su papel continúa siendo
+de observación y configuración, sin intervención operativa en tickets.
+
+`POST /api/tickets/{number}/writing/improve` recibe el tipo de editor (`description` o `comment`),
+el borrador y la tonalidad. Antes de delegar en `ai`, el backend aplica
+los permisos existentes del ticket y del campo. Para un principal obtiene el nombre de quien lo
+abrió; para un interno obtiene el nombre de la persona de Soporte vinculada al caso. `tickets` no
+expone conversación ni adjuntos a este recorrido y `ai` no escribe directamente en ninguna tabla de
+tickets.
+
+El controlador amplía sólo durante esta operación la fecha límite de escritura a 270 segundos. La
+validación, autorización y lectura del destinatario ocurren antes de llamar al motor; un rechazo no
+consume generación. El límite global de las demás respuestas continúa en 60 segundos.
+
+Aceptar una propuesta sólo cambia el contenido local del editor. Guardar la descripción o publicar
+el comentario sigue siendo una acción separada, con las validaciones, saneamiento, adjuntos,
+menciones e historial existentes. No cambian estados, avisos, permisos de edición ni transiciones.
+
+La suite completa del backend y las 224 pruebas del frontend pasan. Playwright recorre la operación
+en PC y móvil contra el adaptador compatible desechable: confirma revisión previa, aplicación local
+sin comentario publicado y ausencia del botón para el Usuario. Producción no se levantó ni cambió.
+
+## 13. Implementación: capacidad de redacción en el detalle
+
+La respuesta de detalle incorpora `capabilities.aiWriting`, calculada por el backend para la persona
+y el ticket solicitados. Vale `true` únicamente cuando coinciden las tres condiciones: el papel es
+Soporte o Desarrollo, puede usar al menos uno de los editores de redacción presentes en esa vista y
+existe una IA configurada. La ausencia o caída temporal del motor no cambia los permisos existentes
+ni la autorización de `POST /api/tickets/{number}/writing/improve`.
+
+`tickets` pregunta internamente a `ai` si hay configuración, sin importar el módulo de configuración
+ni publicar otra ruta. El detalle no expone modalidad, proveedor, modelo, dirección, credencial ni
+salud. El frontend toma esta capacidad como única señal para montar el botón y el modal.
+
+La capacidad se vuelve a calcular en cada lectura del detalle. Si cambia la configuración mientras
+la ficha está abierta, la pantalla adopta el cambio en su siguiente recarga normal; no se añade
+sondeo ni conexión en tiempo real. Las pruebas del servicio cubren adaptador ausente, configuración
+falsa y configuración verdadera, además de los cuatro papeles y un ticket cerrado. Una prueba del
+módulo de IA confirma que una dirección configurada conserva la capacidad aunque no responda. El
+recorrido Playwright se limita al caso configurado, porque el bloqueo global impide entrar a tickets
+sin la IA obligatoria. El responsable eligió 1A, 2A y 3A y confirmó mantener esa obligatoriedad; no
+quedan decisiones abiertas.
+
+La suite completa del backend y las 225 pruebas del frontend pasan el 2026-10-08. El recorrido
+configurado de Playwright pasa en PC y móvil. El entorno desechable se eliminó al terminar y
+producción no se tocó.

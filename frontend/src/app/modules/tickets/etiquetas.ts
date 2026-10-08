@@ -148,7 +148,8 @@ export function nombreDe(persona: { name: string; lastName: string } | undefined
  * aquí sólo se sustituyen los huecos.
  */
 /**
- * El texto de uno de los dos resúmenes del motor de IA, en el idioma de quien mira.
+ * El texto de uno de los dos resúmenes del motor de IA. Conserva el idioma con el que fue escrito:
+ * cambiar el idioma global no borra ni oculta información ya generada.
  *
  * **La pantalla nunca enseña una clave ni un hueco mudo**: si el motor está escribiendo, si no está o
  * si falló, se dice con palabras (`docs/modules/ai.md`, decisiones 2 y 8). Un resumen vacío dice
@@ -156,7 +157,7 @@ export function nombreDe(persona: { name: string; lastName: string } | undefined
  */
 export function textoDelResumen(
   resumen: Resumen | undefined,
-  idioma: Idioma,
+  _idioma: Idioma,
   textos: Textos,
 ): string {
   if (!resumen) {
@@ -170,11 +171,8 @@ export function textoDelResumen(
       return textos.tickets.resumenSinMotor;
     case 'error':
       return textos.tickets.resumenError;
-    case 'listo': {
-      const texto = (idioma === 'en' ? resumen.en : resumen.es) ?? '';
-
-      return texto.trim() || textos.tickets.resumenVacio;
-    }
+    case 'listo':
+      return (resumen.text ?? '').trim() || textos.tickets.resumenVacio;
     default:
       return textos.tickets.resumenVacio;
   }

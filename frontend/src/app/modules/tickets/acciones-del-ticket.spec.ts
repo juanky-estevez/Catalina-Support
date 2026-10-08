@@ -116,7 +116,6 @@ describe('AccionesDelTicket', () => {
       email: 'maria@demo.com',
       role: rol,
       origin: 'local',
-      language: 'es',
       factory: false,
     });
 

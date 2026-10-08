@@ -134,6 +134,21 @@ describe('TicketsService', () => {
     await expect(peticion).resolves.toEqual({ ticket: TICKET });
   });
 
+  it('mejorar un borrador usa la ruta modular del ticket y manda sólo editor, texto y tono', async () => {
+    const peticion = tickets.mejorarRedaccion(
+      'CS-2026-0001', 'comment', 'Hola Ana, ya funciona.', 'friendly',
+    );
+    const pidiendo = http.expectOne({
+      url: '/api/tickets/CS-2026-0001/writing/improve',
+      method: 'POST',
+    });
+    expect(pidiendo.request.body).toEqual({
+      editor: 'comment', draft: 'Hola Ana, ya funciona.', tone: 'friendly',
+    });
+    pidiendo.flush({ text: 'Hola, Ana. El servicio ya funciona.' });
+    await expect(peticion).resolves.toEqual({ text: 'Hola, Ana. El servicio ya funciona.' });
+  });
+
   it('cada acción va a su ruta, y el estado no va por el `PATCH`', async () => {
     void tickets.asignar('CS-2026-0001', 7);
     const asignar = http.expectOne({ url: '/api/tickets/CS-2026-0001/assign', method: 'POST' });
