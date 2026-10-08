@@ -941,6 +941,7 @@ enseñan juntos y siempre igual:
 | Dónde | El logo | El nombre |
 | --- | --- | --- |
 | **Pantalla de entrada** | Arriba del formulario, centrado, **hasta 128 px en móvil y 160 px de tablet para arriba**: es lo primero que se ve | Debajo del título de la tarjeta, donde está el formulario: es lo primero que se lee |
+| **Primer arranque** | Junto a la cabecera, **80 px de alto**: ocupa el mismo bloque visual que el título y su explicación sin competir con el contenido del paso | El nombre todavía no se enseña aquí: se está configurando |
 | **Menú lateral** | Arriba, junto al nombre, **hasta 32 px de alto** | Arriba, junto al logo |
 | **Pestaña del navegador** | — | Es el título de la pestaña, en todas las pantallas |
 | **Configuración** | Los dos huecos con su vista previa y los botones de subir y volver al de fábrica | El campo, con su ayuda: si se deja vacío vuelve el nombre de fábrica |
