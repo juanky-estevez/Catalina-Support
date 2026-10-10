@@ -11,11 +11,15 @@ que lo que Soporte no puede resolver llegue a Desarrollo ya filtrado y con conte
 ruido de las herramientas grandes**: pocos estados, pocos campos obligatorios, ninguna notificación
 que no aporte y ningún paso que exista sólo porque otro producto lo tiene.
 
-Es **software libre** con licencia **MIT** (`LICENSE`): se puede usar, estudiar, modificar y
-distribuir, en local para probarlo o en producción para usarlo de verdad. **Todo corre en
+Es **software libre** con licencia **GNU AGPL v3 únicamente** ([`AGPL-3.0-only`](LICENSE)): se puede
+usar, estudiar, modificar y distribuir, también comercialmente. Si se ofrece por red una versión
+modificada, sus usuarios deben poder obtener el código fuente correspondiente. **Todo corre en
 contenedores** y **la configuración se hace desde la propia interfaz**: no hay que editar archivos
 en el servidor para poner el nombre de la instalación, el método con el que entra la gente, su
 región horaria o su dirección pública.
+
+> **Estado:** desarrollo previo a 1.0. La migración se llama `v1.0.0.sql`, pero todavía no existe una
+> versión estable ni una etiqueta `v1.0.0`.
 
 ## Probar en local: instalación vacía
 
@@ -354,14 +358,22 @@ contenedores. Si interrumpes una pasada, ejecuta la limpieza antes de comenzar o
 `seed` para limpiar las pruebas: ese comando modifica tu instalación de desarrollo.
 Las pasadas no se ejecutan simultáneamente y la instancia de pruebas debe empezar sin sello.
 
-## Participar y donar
+## Participar
 
 El proyecto sigue **documentación antes que código**: lee [AGENTS.md](AGENTS.md) y
 [el índice de documentos](docs/README.md). Propón el cambio en el documento del área y espera su
 aprobación antes de programarlo.
 
-> **Pendiente del responsable:** vías de contacto, invitación a participar y donaciones.
+Consulta [cómo contribuir](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), los
+[canales de soporte](SUPPORT.md) y la [política de seguridad](SECURITY.md). Las contribuciones
+sustanciales requieren aceptar el [CLA](CLA.md); cada contribuyente conserva su autoría.
+
+Issues se usa para defectos y propuestas concretas; Discussions, para preguntas e ideas abiertas.
+Las vulnerabilidades se reportan de forma privada desde la pestaña Security.
 
 ## Licencia
 
-[MIT](LICENSE). Puedes usarlo, estudiarlo, modificarlo y distribuirlo.
+[GNU Affero General Public License v3.0 únicamente](LICENSE). Consulta también el [aviso de
+copyright](NOTICE), la [política de marca](TRADEMARKS.md) y los [avisos de componentes de
+terceros](THIRD_PARTY_NOTICES.md). Las copias que ya se hubieran recibido bajo MIT conservan los
+permisos concedidos con aquellas copias.

@@ -1,0 +1,33 @@
+title = "Catalina Support"
+minVersion = "v8.25.0"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Development-only session signing key documented in dev.env"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)config/env/dev\.env$''']
+regexes = ['''^\+?TOKEN_SECRET=922e915370685ac1352594cabc3423fe8dccbdee205b22b12b6f4e84a8e6c262$''']
+
+[[allowlists]]
+description = "Development-only AI encryption key documented in dev.env"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)config/env/dev\.env$''']
+regexes = ['''^\+?AI_CREDENTIAL_KEY=i32lYVpxAST1wiiVLf\+pNTUtexhWfmUVQF86GDtPOn0=$''']
+
+[[allowlists]]
+description = "Same development-only AI key in the isolated test environment"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)tests\.yml$''']
+regexes = ['''^\s+AI_CREDENTIAL_KEY: i32lYVpxAST1wiiVLf\+pNTUtexhWfmUVQF86GDtPOn0=$''']
+
+[[allowlists]]
+description = "Unsigned JWT fixture used to verify rejection of the none algorithm"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)backend/shared/auth/auth_test\.go$''']
+regexes = ['''sinFirma := "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0\.eyJzdWIiOiIxIiwiZXhwIjo5OTk5OTk5OTk5fQ\."''']

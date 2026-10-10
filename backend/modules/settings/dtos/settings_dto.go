@@ -154,6 +154,9 @@ type BrandResponse struct {
 	// la marca es lo que la aplicación pide al arrancar, y así el menú y la pantalla de entrada la
 	// tienen sin una segunda llamada (docs/modules/settings.md, sección 5.9).
 	Version         string    `json:"version"`
+	License         string    `json:"license"`
+	SourceURL       string    `json:"sourceUrl"`
+	Development     bool      `json:"development"`
 	Language        string    `json:"language"`
 	SettingsVersion int64     `json:"settingsVersion"`
 	PrimaryColor    string    `json:"primaryColor"`
@@ -221,6 +224,9 @@ func NewBrandResponse(public services.Public) BrandResponse {
 	return BrandResponse{
 		Name:            public.Name,
 		Version:         public.Version,
+		License:         public.License,
+		SourceURL:       public.SourceURL,
+		Development:     public.Development,
 		Language:        public.Language,
 		SettingsVersion: public.SettingsVersion,
 		TimeZone:        public.TimeZone,

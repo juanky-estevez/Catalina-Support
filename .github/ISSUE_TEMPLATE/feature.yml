@@ -1,0 +1,33 @@
+name: Propuesta de función
+description: Explica una necesidad antes de diseñar la solución.
+title: "[Propuesta]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necesidad
+      description: Quién tiene el problema y en qué recorrido aparece.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Ejemplo concreto
+      description: Describe el antes y el resultado que ayudaría.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance sugerido
+      description: Incluye límites o alternativas si los conoces.
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Principios
+      options:
+        - label: La propuesta respeta una mesa de ayuda simple y sin ruido.
+          required: true
+        - label: Entiendo que el diseño requiere primero un documento aprobado.
+          required: true

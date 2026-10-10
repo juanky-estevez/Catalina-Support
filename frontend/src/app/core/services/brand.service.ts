@@ -26,6 +26,9 @@ export interface Marca {
    * (`docs/modules/settings.md`, sección 5.9).
    */
   readonly version: string;
+  readonly license?: string;
+  readonly sourceUrl?: string;
+  readonly development?: boolean;
   readonly language?: string;
   readonly settingsVersion?: number;
   /**
@@ -126,7 +129,21 @@ export class BrandService {
    */
   readonly versionDelSistema = computed(() => {
     const version = this.marcaActual()?.version?.trim();
-    return version ? `v${version}` : '';
+    if (!version) {
+      return '';
+    }
+    return this.marcaActual()?.development ? `v${version} · dev` : `v${version}`;
+  });
+
+  /** Fuente correspondiente y licencia, únicamente cuando el backend entrega una URL HTTPS válida. */
+  readonly fuente = computed(() => {
+    const marca = this.marcaActual();
+    const url = marca?.sourceUrl?.trim() ?? '';
+    const licencia = marca?.license?.trim() ?? '';
+    if (!licencia || !esURLHTTPS(url)) {
+      return null;
+    }
+    return { url, licencia };
   });
 
   /**
@@ -245,5 +262,13 @@ export class BrandService {
     raiz.setProperty('--institucional-oscuro', marca.colors.dark);
     raiz.setProperty('--institucional-texto-claro', marca.colors.onLight);
     raiz.setProperty('--institucional-texto-oscuro', marca.colors.onDark);
+  }
+}
+
+function esURLHTTPS(valor: string): boolean {
+  try {
+    return new URL(valor).protocol === 'https:';
+  } catch {
+    return false;
   }
 }

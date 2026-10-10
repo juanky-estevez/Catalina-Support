@@ -159,6 +159,14 @@ import { Tarjeta } from '../../shared/components/tarjeta';
           @if (versionDelSistema(); as version) {
             <p class="text-xs text-apagado">{{ version }}</p>
           }
+          @if (fuente(); as fuente) {
+            <a
+              class="text-xs text-apagado underline hover:text-texto"
+              [href]="fuente.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ t().entrada.codigoFuente }} · {{ fuente.licencia }}</a>
+          }
         </div>
       </div>
     </main>
@@ -221,6 +229,7 @@ export class LoginPage implements OnInit {
 
   /** La versión del sistema, con su `v`, en el pie de la pantalla. */
   protected readonly versionDelSistema = this.marca.versionDelSistema;
+  protected readonly fuente = this.marca.fuente;
 
   /**
    * Si ya hay sesión, esta pantalla no tiene nada que hacer: se vuelve al inicio.

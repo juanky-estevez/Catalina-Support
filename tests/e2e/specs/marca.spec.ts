@@ -92,17 +92,27 @@ test.describe('La marca', () => {
   test('la versión del sistema se lee en la entrada y en el menú', async ({ page, request }, info) => {
     test.skip(!FABRICA.password, 'Falta ADMIN_PASSWORD: sin ella no se puede entrar al menú');
 
-    const marca = (await (await request.get('/api/settings/brand')).json()) as { version?: string };
+    const marca = (await (await request.get('/api/settings/brand')).json()) as {
+      version?: string;
+      license?: string;
+      sourceUrl?: string;
+      development?: boolean;
+    };
     expect(marca.version, 'la marca pública tiene que decir la versión').toBeTruthy();
-    const esperada = `v${marca.version}`;
+    expect(marca.license).toBe('AGPL-3.0-only');
+    expect(marca.sourceUrl).toMatch(/^https:\/\//);
+    const esperada = `v${marca.version}${marca.development ? ' · dev' : ''}`;
 
     // En el pie de la pantalla de entrada, antes de entrar.
     await page.goto('/login');
     const enLaEntrada = page.getByText(esperada, { exact: true });
     await expect(enLaEntrada).toBeVisible();
 
-    // Y es un texto, no un enlace: no lleva a ningún sitio.
+    // La versión es un texto; el enlace separado identifica la fuente y la licencia.
     await expect(page.getByRole('link', { name: esperada })).toHaveCount(0);
+    const fuenteEnEntrada = page.getByRole('link', { name: /Código fuente y licencia/ });
+    await expect(fuenteEnEntrada).toHaveAttribute('href', marca.sourceUrl!);
+    await expect(fuenteEnEntrada).toContainText('AGPL-3.0-only');
 
     // En el menú lateral, en la fila de salir. En móvil el menú es un cajón y hay que abrirlo, que es
     // como lo haría una persona.
@@ -111,6 +121,8 @@ test.describe('La marca', () => {
 
     const enElMenu = page.getByText(esperada, { exact: true });
     await expect(enElMenu).toBeVisible();
+    const fuenteEnMenu = page.getByRole('link', { name: /Código fuente y licencia/ });
+    await expect(fuenteEnMenu).toHaveAttribute('href', marca.sourceUrl!);
 
     // **Alineada a la derecha**: empieza más a la derecha que el botón de salir, y acaba dentro del
     // menú. Es lo que la distingue de un control más.

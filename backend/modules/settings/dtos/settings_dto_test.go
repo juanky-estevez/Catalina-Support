@@ -16,8 +16,11 @@ import (
 // da igual para esto, y por eso no hace falta un repositorio.
 func TestLaMarcaPublicaLlevaLaVersion(t *testing.T) {
 	respuesta := NewBrandResponse(services.Public{
-		Name:    "Mesa de ayuda de Acme",
-		Version: version.Version,
+		Name:        "Mesa de ayuda de Acme",
+		Version:     version.Version,
+		License:     version.License,
+		SourceURL:   version.SourceURL,
+		Development: version.Development,
 	})
 
 	if respuesta.Version != version.Version {
@@ -36,6 +39,12 @@ func TestLaMarcaPublicaLlevaLaVersion(t *testing.T) {
 	}
 	if suelto["version"] != version.Version {
 		t.Fatalf("el JSON debería llevar `version` y llevó %v", suelto["version"])
+	}
+	if suelto["license"] != "AGPL-3.0-only" || suelto["sourceUrl"] != version.SourceURL {
+		t.Fatalf("la marca debería identificar licencia y fuente, y llevó %v", suelto)
+	}
+	if suelto["development"] != true {
+		t.Fatalf("el árbol abierto debería identificarse como desarrollo, y llevó %v", suelto["development"])
 	}
 }
 

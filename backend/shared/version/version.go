@@ -15,3 +15,14 @@ package version
 // Version es la versión de esta instalación, sin la `v`: la `v` la pone la interfaz al enseñarla
 // (docs/modules/settings.md, sección 5.9).
 const Version = "1.0.0"
+
+// Development distingue el árbol todavía abierto de una versión publicada con etiqueta. Al cerrar
+// una versión pasa a false en el mismo cambio que crea la etiqueta y actualiza SourceURL.
+const Development = true
+
+// License es el identificador SPDX de la licencia aplicable a este árbol.
+const License = "AGPL-3.0-only"
+
+// SourceURL identifica el código fuente correspondiente. Durante el desarrollo lleva al repositorio;
+// una versión publicada debe llevar a la etiqueta exacta de Version.
+const SourceURL = "https://github.com/juanky-estevez/Catalina-Support"

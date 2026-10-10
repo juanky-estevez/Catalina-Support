@@ -173,6 +173,16 @@
           <span class="shrink-0 pr-1 text-xs text-apagado">{{ version }}</span>
         }
       </div>
+
+      @if (!plegadoEfectivo() && fuente(); as fuente) {
+        <a
+          class="px-3 text-xs text-apagado underline hover:text-texto"
+          [href]="fuente.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          (click)="cerrarCajon()"
+        >{{ t().menu.codigoFuente }} · {{ fuente.licencia }}</a>
+      }
     </div>
   </aside>
 

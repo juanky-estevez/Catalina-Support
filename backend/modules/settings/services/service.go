@@ -31,9 +31,9 @@ const (
 
 // Las claves de error del módulo (docs/modules/settings.md, sección 7).
 var (
-	ErrLanguageUnknown     = errors.New("settings.language.unknown")
+	ErrLanguageUnknown        = errors.New("settings.language.unknown")
 	ErrLanguageReviewRequired = errors.New("settings.language.reviewRequired")
-	ErrPrimaryColorInvalid = errors.New("settings.primaryColor.invalid")
+	ErrPrimaryColorInvalid    = errors.New("settings.primaryColor.invalid")
 	// ErrTimeZoneUnknown: la zona horaria que se ha escrito no es un nombre que exista. Se guarda el
 	// nombre IANA, no un desfase, y se comprueba con la base de datos de zonas del sistema
 	// (docs/modules/settings.md, decisión 15).
@@ -678,6 +678,9 @@ type Public struct {
 	// configuración de la instalación —es un dato del software— y por eso es una constante del código
 	// y no una columna (docs/modules/settings.md, sección 5.9).
 	Version         string
+	License         string
+	SourceURL       string
+	Development     bool
 	Language        string
 	SettingsVersion int64
 	Colors          Colors
@@ -710,6 +713,9 @@ func (s *Service) PublicBrand() (Public, error) {
 	publico := Public{
 		Name:            nombreDeLaInstalacion(instalacion.InstallationName),
 		Version:         version.Version,
+		License:         version.License,
+		SourceURL:       version.SourceURL,
+		Development:     version.Development,
 		Language:        instalacion.Language,
 		SettingsVersion: instalacion.SettingsVersion,
 		Colors:          colorsFrom(instalacion.PrimaryColor),

@@ -277,6 +277,7 @@ export const ES = {
     cerrar: 'Cerrar el menú',
     plegar: 'Plegar el menú',
     desplegar: 'Desplegar el menú',
+    codigoFuente: 'Código fuente y licencia',
   },
 
   // Los cuatro papeles, como se llaman en la interfaz. Los valores son los del backend.
@@ -878,6 +879,7 @@ export const ES = {
     comoAdministrador: 'Entrar como administrador',
     cuentaDeFabrica:
       'La contraseña de la cuenta de fábrica vive en la configuración de la instalación.',
+    codigoFuente: 'Código fuente y licencia',
   },
 
   olvido: {

@@ -1,7 +1,11 @@
 # Arquitectura
 
-> **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Estado:** aprobado
+> **Última actualización:** 2026-10-10
+>
+> **Enmienda propuesta el 2026-10-10: preparación del repositorio público.** La sección 19 coordina
+> la auditoría completa, la reescritura única del historial y los metadatos de fuente. Lo existente
+> continúa as-built; la visibilidad de GitHub queda fuera hasta una aprobación final separada.
 >
 > **Bloque 7 implementado y verificado, 2026-10-08.** La sección 18 cierra las dos deudas técnicas
 > declaradas en la sección 12: automatizar las fronteras de los módulos del frontend y decidir que
@@ -1203,3 +1207,31 @@ La verificación del 2026-10-08 terminó correctamente: el comprobador y sus cua
 frontend; `npm run build`, también con la frontera previa; y `go test ./...` para todo el backend.
 La auditoría final no encontró documentos en `propuesta` o `aprobado`, ni contradicciones vigentes de
 las registradas en 18.1. `git diff --check` terminó limpio. No quedan decisiones abiertas.
+
+## 19. Propuesta: frontera de publicación y trazabilidad de la fuente
+
+La apertura se prepara sobre el repositorio completo, no como un exportado sin historial. Antes de
+cambiar su visibilidad se auditan el árbol actual y cada revisión de Git para detectar secretos,
+datos personales, infraestructura real, binarios y avisos de terceros. Los hallazgos conocidos y el
+procedimiento de parada están en `docs/proyecto-abierto.md`, sección 6.
+
+La limpieza aprobada reescribe una sola vez los commits con correo personal y reemplaza referencias
+reales de infraestructura por ejemplos o configuración no versionada. Como la reescritura cambia
+identificadores, se termina primero el contenido, se conserva una referencia privada recuperable,
+se verifica el historial nuevo y sólo después se decide retirar la referencia. Un hallazgo sensible
+nuevo detiene el proceso para informar al responsable antes de otra mutación.
+
+La reescritura local se ejecutó el 2026-10-10 después de crear y verificar un bundle privado. Las
+ramas `main` y `dev` ya no contienen el correo personal, los dominios reales ni las rutas reales; el
+escaneo de secretos sólo requiere dos huellas históricas exactas para valores declarados de
+desarrollo. Las ramas remotas todavía no se reemplazan y el repositorio continúa privado.
+
+La trazabilidad visible usa la marca pública como fuente única: el backend entrega versión,
+`AGPL-3.0-only` y URL del código correspondiente. Las versiones publicadas enlazan su etiqueta; el
+desarrollo enlaza el repositorio y se identifica como tal. Estos metadatos pertenecen a la
+compilación, no a la base ni a la configuración administrativa.
+
+Los archivos comunitarios y la automatización de CLA forman una frontera de mantenimiento en la
+raíz y `.github`; no introducen dependencias de ejecución. Las acciones se fijan por hash y se
+revisan sus permisos mínimos. El cambio de visibilidad, producción, el dominio público y cualquier
+etiqueta de versión permanecen fuera de esta implementación.

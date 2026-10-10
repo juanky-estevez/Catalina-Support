@@ -14,7 +14,7 @@ set -euo pipefail
 # y renombrarlo los dejaría apuntando al inodo viejo.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="/srv/catalina-support"
+OUT_DIR="${CATALINA_PROD_DIR:-/srv/catalina-support}"
 # **Se despliega desde la carpeta de despliegue**, no desde el repositorio: `prod.yml` lleva las rutas
 # de los volúmenes **relativas a sí mismo**, así que el archivo (y lo que necesita: `config/`) tienen
 # que estar al lado de los artefactos. Así el despliegue funciona desde cualquier carpeta y en
@@ -106,6 +106,13 @@ verify() {
   esac
 }
 
+publish_notices() {
+  local target="$1"
+  cp "$REPO_DIR/THIRD_PARTY_NOTICES.md" "$OUT_DIR/$target/THIRD_PARTY_NOTICES.md"
+  rm -rf "$OUT_DIR/$target/third_party_licenses"
+  cp -a "$REPO_DIR/third_party_licenses" "$OUT_DIR/$target/third_party_licenses"
+}
+
 if [ -n "$ONLY" ]; then
   TARGETS=("$ONLY")
 else
@@ -115,6 +122,7 @@ fi
 for t in "${TARGETS[@]}"; do
   build "$t"
   verify "$t"
+  publish_notices "$t"
 done
 
 # La respuesta a «¿qué hay desplegado ahora mismo?» sin adivinar.

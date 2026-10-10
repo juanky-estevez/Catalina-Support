@@ -5,7 +5,7 @@ go 1.27
 require (
 	github.com/go-ldap/ldap/v3 v3.4.14
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/juanky-estevez/go-logs v1.0.0
+	github.com/juanky-estevez/go-logs v1.0.1
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.46.0
 	golang.org/x/net v0.59.0

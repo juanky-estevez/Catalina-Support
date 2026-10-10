@@ -89,15 +89,16 @@ completo.
 | `docs/modules/tickets.md` | **as-built**: capacidad de redacción calculada dentro del detalle del ticket |
 | `docs/flujos.md` | **as-built**: todos los correos de sus recorridos usan el idioma global vigente |
 | `docs/ambientes.md` | **as-built**: matriz, evidencia y limpieza del repaso visual verificadas |
-| `docs/interfaz-y-experiencia.md` | **as-built**: oculta la ayuda cuando no existe IA configurada |
-| `docs/modules/settings.md` | **as-built**: transporta el error estructurado de memoria local |
+| `docs/interfaz-y-experiencia.md` | **aprobado**: enlace visible de código fuente y licencia; lo anterior sigue as-built |
+| `docs/modules/settings.md` | **aprobado**: licencia y fuente correspondiente en la marca pública; lo anterior sigue as-built |
 | `docs/primer-arranque.md` | **as-built**: cinco pasos obligatorios; Correo ocupa el cuarto e IA el quinto |
 | `docs/modules/ai.md` | **as-built**: condición interna de configuración, distinta de la salud del motor |
 | `docs/modules/mail.md` | **as-built**: traduce con IA borradores revisables o permite edición manual al cambiar el idioma global |
 | `docs/modules/auth.md` | **as-built**: identidad y sesión no llevan idioma; los correos usan el idioma global sin cambiar los tres caminos |
 | `docs/modules/users.md` | **as-built**: `users.language`, sus campos de API y sus controles ya no existen |
-| `docs/arquitectura.md` | **as-built**: bloque 7 cerró la coherencia documental y automatizó las fronteras del frontend |
+| `docs/arquitectura.md` | **aprobado**: auditoría y trazabilidad para la publicación; lo anterior sigue as-built |
 | `docs/prueba-local.md` | **as-built**: recorrido visual reproducible completado sobre datos desechables |
+| `docs/proyecto-abierto.md` | **aprobado**: publicación abierta en ejecución; dependencias y avisos ya están regularizados |
 | _(por definir)_ | _(se añade una fila por área cuando exista su documento)_ |
 
 La tabla se mantiene en `AGENTS.md`; el índice con el estado de cada documento vive en
@@ -251,7 +252,7 @@ y el Administrador no reciben esta función. Se verificó en PC y móvil sin toc
 consulta la salud para pintar el botón: una caída temporal conserva la acción y el intento muestra
 su error en el modal. La IA continúa obligatoria y el cambio se refleja al recargar el ticket.
 
-**El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (MIT)**,
+**El `README.md` presenta el proyecto a quien llega de fuera**: qué es, que es **software libre (AGPL-3.0-only)**,
 cómo **participar**, y **cómo levantarlo** —en local con `dev.yml` y en serio con `prod-build.sh`, la
 migración, nginx y lo que se configura desde la propia interfaz—. Queda **un hueco marcado** para las
 donaciones y la invitación a participar: el responsable lo rellenará con los datos que quiera publicar.

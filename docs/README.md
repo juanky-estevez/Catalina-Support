@@ -1,7 +1,25 @@
 # Documentación de Catalina-Support
 
 > **Estado:** as-built
-> **Última actualización:** 2026-10-08
+> **Última actualización:** 2026-10-10
+>
+> **Propuesta coordinada del 2026-10-10:** `proyecto-abierto.md`, `arquitectura.md`,
+> `modules/settings.md` e `interfaz-y-experiencia.md` preparan la publicación bajo AGPL-3.0-only,
+> CLA sin cesión, política de marca, perfil comunitario, auditoría y enlace a la fuente. El
+> responsable cerró 1A–25A. El repositorio sigue privado y no se modifica licencia, historial,
+> configuración de GitHub ni código hasta aprobar los documentos.
+>
+> **Primer hallazgo cerrado el 2026-10-10:** la auditoría encontró dos vulnerabilidades críticas y
+> cuatro altas en el lockfile de Angular. El responsable aprobó 26A; Angular quedó en 22.2.2, la
+> auditoría terminó limpia y pasaron las pruebas, la compilación y el recorrido afectado.
+>
+> **Segundo hallazgo cerrado el 2026-10-10:** `go-logs v1.0.0`, dependencia directa del backend, no
+> publicaba licencia. El responsable aprobó 27A y autorizó el cambio concreto: `go-logs v1.0.1` se
+> publicó bajo MIT y Catalina Support ya resuelve y verificó ese artefacto licenciado.
+>
+> **Tercer hallazgo cerrado el 2026-10-10:** `proyecto-abierto.md` incorporó un inventario
+> versionado de 29 dependencias de producción, sus textos completos, generación reproducible,
+> comprobación de CI y copia junto a los artefactos, conforme a 28A–37A.
 >
 > **Bloque 7 implementado y verificado el 2026-10-08.** `arquitectura.md` cierra la coherencia
 > documental, automatiza las fronteras del frontend y deja decidido que no habrá un sistema de
@@ -262,16 +280,17 @@ escribe código sin un documento aprobado antes.
 | Documento | Estado | Cubre |
 | --- | --- | --- |
 | `README.md` (este archivo) | as-built | Índice, convenciones y estados |
+| `proyecto-abierto.md` | **aprobado** | Publicación abierta en ejecución; dependencias y avisos de terceros ya están regularizados |
 | `prueba-local.md` | **as-built** | Recorrido visual reproducible completado sobre datos desechables y limpiado |
-| `arquitectura.md` | **as-built** | Bloque 7: coherencia documental y fronteras automáticas del frontend; sin logging de aplicación |
+| `arquitectura.md` | **aprobado** | Prepara auditoría, reescritura controlada y trazabilidad de la fuente; lo anterior sigue as-built |
 | `propósito-y-alcance.md` | **as-built** (3 enmiendas) | Qué problema resuelve la mesa de ayuda, los dos equipos y los cuatro papeles, el modelo de tickets (principal e interno, numeración y estados) y qué queda fuera. Sin decisiones abiertas. Las tres enmiendas son del 2026-09-22, antes de aprobarlo: el detalle del acceso, el repaso (el sexto aviso, el límite de 25 MB, las marcas de editado y eliminado) y la **regla 5** que cambió al escribir `flujos.md` |
 | `usuarios-y-permisos.md` | **as-built** | Soporte y Desarrollo tienen el permiso acotado de mejorar sus borradores con IA |
 | `flujos.md` | **as-built** | Los recorridos conservan destinatarios y datos; todos sus correos usan el idioma global vigente |
-| `modules/settings.md` | **as-built** | Transporta memoria requerida/disponible en fallos de activación local |
+| `modules/settings.md` | **aprobado** | Añade licencia y fuente correspondiente a la marca pública; lo anterior sigue as-built |
 | `modules/mail.md` | **as-built** | Usa el idioma global y genera borradores revisables o manuales de las once plantillas al cambiarlo |
 | `modules/auth.md` | **as-built** | Identidad y sesión no llevan idioma personal; los correos de cuenta usan el idioma global |
 | `modules/users.md` | **as-built** | Las cuentas no guardan ni exponen idioma; alta, ficha y perfil usan el contrato global |
-| `interfaz-y-experiencia.md` | **as-built** | Oculta la ayuda de redacción cuando el detalle no declara una IA configurada |
+| `interfaz-y-experiencia.md` | **aprobado** | Añade el enlace accesible de código fuente y licencia; lo anterior sigue as-built |
 | `primer-arranque.md` | **as-built** (6 enmiendas) | Cinco pasos: idioma y nombre, entrada, ubicación, correo e IA obligatoria; verificado en PC y móvil |
 | `ambientes.md` | **as-built** | Matriz visual aislada verificada y limpiada; producción no se tocó |
 | `modules/ai.md` | **as-built** | Expone internamente sólo si existe una configuración activa, sin comprobar salud |

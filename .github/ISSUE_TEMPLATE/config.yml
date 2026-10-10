@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Preguntas y ayuda
+    url: https://github.com/juanky-estevez/Catalina-Support/discussions
+    about: Usa Discussions para instalación, configuración e ideas abiertas.
+  - name: Vulnerabilidad de seguridad
+    url: https://github.com/juanky-estevez/Catalina-Support/security/advisories/new
+    about: Envía los detalles de forma privada.

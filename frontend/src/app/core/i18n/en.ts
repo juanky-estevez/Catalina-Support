@@ -274,6 +274,7 @@ export const EN: Textos = {
     cerrar: 'Close the menu',
     plegar: 'Collapse the menu',
     desplegar: 'Expand the menu',
+    codigoFuente: 'Source code and license',
   },
 
   papeles: {
@@ -839,6 +840,7 @@ export const EN: Textos = {
     // installation would be left with nobody able to change the method back**.
     comoAdministrador: 'Sign in as administrator',
     cuentaDeFabrica: 'The factory account password lives in the installation settings.',
+    codigoFuente: 'Source code and license',
   },
 
   olvido: {

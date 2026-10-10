@@ -496,10 +496,13 @@ Un script, `scripts/prod-build.sh`, con el mismo guion que el de Calibyou. **Est
      dominio cerrado (503) fue lo que evitó que se notara en producción.
 4. **Verifica que el artefacto existe** antes de seguir: `frontend/index.html` y
    `backend/catalina-support` ejecutable. Si falta, corta sin desplegar.
-5. **Escribe `BUILD_INFO`** en `/srv/catalina-support` con el commit, la rama, si el árbol
+5. **Copia los avisos de terceros**: `THIRD_PARTY_NOTICES.md` y `third_party_licenses/` quedan
+   dentro de cada artefacto construido. Esta copia está implementada y su comprobación real queda
+   para el repaso final de producción, que continúa aparcado.
+6. **Escribe `BUILD_INFO`** en `/srv/catalina-support` con el commit, la rama, si el árbol
    estaba sucio, la fecha y qué artefactos se construyeron. Es la respuesta a «¿qué hay desplegado
    ahora mismo?» sin adivinar.
-6. **Despliega**: `docker compose -f prod.yml up -d` y **reinicia el backend**. El frontend no se
+7. **Despliega**: `docker compose -f prod.yml up -d` y **reinicia el backend**. El frontend no se
    reinicia: el contenedor de nginx lee los estáticos del disco en cada petición.
 
 ```bash

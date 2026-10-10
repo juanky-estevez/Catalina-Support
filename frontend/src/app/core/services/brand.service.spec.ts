@@ -16,6 +16,9 @@ function marcaConNombre(name: string, version = '1.0.0', timeZone = 'America/Gua
   return {
     name,
     version,
+    license: 'AGPL-3.0-only',
+    sourceUrl: 'https://github.com/juanky-estevez/Catalina-Support',
+    development: false,
     timeZone,
     primaryColor: '#1d4ed8',
     colors: {
@@ -119,6 +122,32 @@ describe('BrandService', () => {
     await otra;
 
     expect(marca.versionDelSistema()).toBe('');
+  });
+
+  it('identifica una compilación de desarrollo y expone su fuente HTTPS', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush({
+      ...marcaConNombre('Catalina Support'),
+      development: true,
+    });
+    await carga;
+
+    expect(marca.versionDelSistema()).toBe('v1.0.0 · dev');
+    expect(marca.fuente()).toEqual({
+      url: 'https://github.com/juanky-estevez/Catalina-Support',
+      licencia: 'AGPL-3.0-only',
+    });
+  });
+
+  it('no inventa un enlace si la fuente falta o no usa HTTPS', async () => {
+    const carga = marca.cargar();
+    http.expectOne('/api/settings/brand').flush({
+      ...marcaConNombre('Catalina Support'),
+      sourceUrl: 'javascript:alert(1)',
+    });
+    await carga;
+
+    expect(marca.fuente()).toBeNull();
   });
 
   // **La zona horaria de la instalación viaja en la marca**: es la que decide cómo se leen todas las

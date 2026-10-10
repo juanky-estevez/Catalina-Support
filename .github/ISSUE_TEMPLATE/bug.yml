@@ -1,0 +1,44 @@
+name: Defecto
+description: Reporta un comportamiento reproducible.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: No incluyas secretos ni vulnerabilidades. Para seguridad usa el reporte privado.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qué sucede
+      description: Explica el resultado actual y el esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Cómo reproducirlo
+      description: Incluye los pasos mínimos y datos de prueba.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión o commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Sistema, navegador y comandos relevantes.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Comprobaciones
+      options:
+        - label: Busqué incidencias existentes.
+          required: true
+        - label: Eliminé secretos y datos personales.
+          required: true
